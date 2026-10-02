@@ -5,7 +5,7 @@ GrapheneOS but for the PC: as little code as possible, every component
 verified, nothing running that isn't needed.
 
 > **Status:** work in progress. Boots in QEMU (UEFI), has networking and
-> verified TLS. No graphical session yet. Not for daily use.
+> verified TLS. Added a graphical session. Not for daily use YET.
 
 ## Design
 
@@ -89,7 +89,7 @@ The kernel configuration is in [`kernel/`](kernel/).
 ## Roadmap
 
 - [x] Build tools: meson, samurai, pkgconf, Python; service logging via svlogd
-- [ ] Wayland stack with CPU rendering (pixman), dwl, foot, wmenu
+- [x] Wayland stack with CPU rendering (pixman), dwl, foot, wmenu
 - [ ] Bare hardware: RX570, Intel 7265 WiFi, SATA SSD
 - [ ] App manager: git + JSON, optional on-device compile with SHA256 verification
 - [ ] Mesa / GPU acceleration (decision on LLVM)
