@@ -1,19 +1,8 @@
-## LICENSE NOTICE
-    cig - a minimal, hardened GNU/Linux distribution.
-    Copyright (C) 2026 moneroism
+# cig
 
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see https://www.gnu.org/licenses/.
+A minimal, hardened Linux distribution built from source, in the spirit of
+GrapheneOS but for the PC: as little code as possible, every component
+verified, nothing running that isn't needed.
 
 > **Status:** work in progress. Boots in QEMU (UEFI), has networking and
 > verified TLS. No graphical session yet. Not for daily use.
@@ -28,7 +17,7 @@
 | Init | sinit (PID 1, ~100 lines) + BusyBox runit (supervision) | Minimal PID 1; supervisor runs as an ordinary process |
 | Boot | EFISTUB, no bootloader | Zero bootloader code; command line is compiled in and cannot be changed at boot |
 | TLS | OpenSSL 3.5 LTS | Compatibility; pinned to the LTS branch |
-| Planned desktop | Wayland: dwl, foot, wmenu | No X11, no D-Bus, no systemd |
+| Desktop | Wayland: dwl, foot, fuzzel | No X11, no D-Bus, no systemd; CPU rendering for now |
 
 ### Hardening
 
@@ -57,10 +46,12 @@ the current build are in [`record/`](record/).
 ## Build
 
 Host: Void Linux (x86_64). The build is split into phases; each script is
-safe to re-run and skips finished steps.
+safe to re-run and skips finished steps. All scripts are in [`scripts/`](scripts/)
+and are run as `~/cig/scripts/<name>`.
 
 | # | Script | Where | What |
 |---|---|---|---|
+| 0 | `fetch-sources.sh` | host | Get linux-hardened and linux-firmware at the versions pinned in `record/` |
 | 1 | `build-toolchain.sh` | Void | musl cross-toolchain (binutils, gcc, musl) |
 | 2 | `build-temp.sh` | Void | Temporary system (BusyBox, bash, make, gawk, native gcc) |
 | 3 | `enter-chroot.sh` | Void (sudo) | Enter the new system |
@@ -68,13 +59,15 @@ safe to re-run and skips finished steps.
 | 5 | `install-boot.sh` | Void | Kernel with built-in cmdline, modules, firmware, os-release |
 | 6 | `run-vm.sh` | Void | Boot the image in QEMU with UEFI |
 | 7 | `prepare-essentials.sh` → `build-essentials.sh` | Void → chroot | zlib, e2fsprogs, OpenSSL, curl, git, wpa_supplicant, networking |
-
-`fix-busybox.sh` repairs BusyBox from the host if its links ever get broken.
+| 8 | `prepare-buildtools.sh` → `build-buildtools.sh` | Void → chroot | pkgconf, samurai, Python 3.13, meson, service logging |
+| 9 | `prepare-wayland.sh` → `build-wayland.sh` | Void → chroot | Wayland core: libinput stack, seatd, wlroots 0.19 (CPU rendering, no Xwayland) |
+| 10 | `prepare-desktop.sh` → `build-desktop.sh` | Void → chroot | fonts (JetBrains Mono), foot, fuzzel, dwl 0.8, session (`startdwl`) |
 
 Expected layout:
 
 ```
-~/cig/              this repository
+~/cig/                this repository
+~/cig/scripts/        build scripts
 ~/cig/linux-hardened  kernel source, tag v6.18.54-hardened1 (not committed)
 ~/cig/linux-firmware  firmware source (not committed)
 ~/lfs.img           disk image (not committed)
@@ -90,13 +83,19 @@ The kernel configuration is in [`kernel/`](kernel/).
 | git | 2.x, `NO_RUST=1` | git 2.54+ builds Rust by default; git 3.0 makes Rust mandatory |
 | BusyBox | 1.36.1 | Latest release marked stable |
 | GNU make, flex | built as C17 | Pre-C23 code; GCC 15+ defaults to C23 |
+| Python | 3.13.x | Last series with GPG-signed releases (3.14+ uses Sigstore only); build tool only |
+| ninja | samurai | Same job in C, ~4k lines, instead of C++ |
 
 ## Roadmap
 
-- [ ] Build tools: meson (or muon), ninja, pkgconf; service logging via svlogd
+- [x] Build tools: meson, samurai, pkgconf, Python; service logging via svlogd
 - [ ] Wayland stack with CPU rendering (pixman), dwl, foot, wmenu
 - [ ] Bare hardware: RX570, Intel 7265 WiFi, SATA SSD
 - [ ] App manager: git + JSON, optional on-device compile with SHA256 verification
 - [ ] Mesa / GPU acceleration (decision on LLVM)
 - [ ] hardened_malloc, sandboxing, read-only root
 - [ ] Minimal power helper so a normal user can power off
+
+## License
+
+GPL-3.0-or-later. See [`LICENSE`](LICENSE).
