@@ -1,0 +1,15 @@
+# large upstream clones (pinned versions are recorded in record/)
+linux-hardened/
+linux-firmware/
+
+# downloads and staging
+stage/
+
+# disk images and VM state
+*.img
+*.fd
+
+# never commit keys
+*.pem
+*.key
+signing_key*
