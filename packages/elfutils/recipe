@@ -1,0 +1,25 @@
+# elfutils - libelf (needed to build the kernel: objtool) plus eu-* tools.
+# Alpine's musl patch is pinned to a fixed aports commit.
+name=elfutils
+version=0.195
+_aports=8f13294206888f3dd44ed74a8eb3dd9934499e81
+source="https://sourceware.org/elfutils/ftp/$version/elfutils-$version.tar.bz2
+    musl-macros.patch::https://gitlab.alpinelinux.org/alpine/aports/-/raw/$_aports/main/elfutils/musl-macros.patch"
+signature="https://sourceware.org/elfutils/ftp/$version/elfutils-$version.tar.bz2.sig -"
+sha256="37629fdf7f1f3dc2818e138fca2b8094177d6c2d0f701d3bb650a561218dc026 8e3924f08d4af34a45d0059224ea42b7afdc43837d053243e855cdaf295dde67"
+wrksrc="elfutils-$version"
+depends="zlib musl-fts musl-obstack"
+makedepends="argp-standalone musl-compat bison flex pkgconf"
+style=custom
+pre_build() {
+    patch -p1 < "$WORK/src/musl-macros.patch"
+}
+do_build() {
+    # elfutils builds with -Werror; a newer GCC must not fail on new warnings
+    CFLAGS="$CFLAGS -Wno-error" ./configure --prefix=/usr --sysconfdir=/etc \
+        --program-prefix=eu- --disable-nls \
+        --disable-debuginfod --disable-libdebuginfod \
+        --without-bzlib --without-lzma --without-zstd
+    make
+}
+do_install() { make DESTDIR="$DEST" install; }

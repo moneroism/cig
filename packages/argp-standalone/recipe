@@ -1,0 +1,27 @@
+# argp-standalone - argument parser (glibc's argp) for musl; build dependency of elfutils
+name=argp-standalone
+version=1.5.0
+source="argp-standalone-$version.tar.gz::https://github.com/argp-standalone/argp-standalone/archive/refs/tags/$version.tar.gz"
+sha256="c29eae929dfebd575c38174f2c8c315766092cec99a8f987569d0cad3c6d64f6"
+makedepends="autoconf automake"
+keep_static=1
+style=custom
+do_build() {
+    if [ -f meson.build ]; then
+        meson setup build --prefix=/usr --libdir=lib --buildtype=release \
+            --wrap-mode=nodownload -Ddefault_library=static
+        ninja -C build
+    else
+        autoreconf -vif
+        CFLAGS="$CFLAGS -fPIC" ./configure --prefix=/usr
+        make
+    fi
+}
+do_install() {
+    install -D -m 644 argp.h "$DEST/usr/include/argp.h"
+    if [ -f build/libargp.a ]; then
+        install -D -m 644 build/libargp.a "$DEST/usr/lib/libargp.a"
+    else
+        install -D -m 644 libargp.a "$DEST/usr/lib/libargp.a"
+    fi
+}

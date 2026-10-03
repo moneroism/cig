@@ -1,0 +1,7 @@
+# libtool - shared library build helper (build tool)
+name=libtool
+version=2.5.4
+source="https://ftp.gnu.org/gnu/libtool/libtool-$version.tar.xz"
+signature="https://ftp.gnu.org/gnu/libtool/libtool-$version.tar.xz.sig"
+sha256="f81f5860666b0bc7d84baddefa60d1cb9fa6fceb2398cc3baca6afaa60266675"
+style=gnu

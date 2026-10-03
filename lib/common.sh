@@ -35,7 +35,7 @@ load_recipe() {
     local f; f=$(recipe_path "$1")
     [ -f "$f" ] || die "no recipe: packages/$1/recipe"
     # reset everything a recipe may set
-    name= version= rel=1 source= sha256= depends= makedepends= style=
+    name= version= rel=1 source= signature= sha256= depends= makedepends= style=
     configure_args= meson_args= make_args= wrksrc= keep_static= nostrip= config_files=
     unset -f pre_build do_build do_install post_install 2>/dev/null || true
     PKGDIR="$CIG_REPO/packages/$1"
@@ -295,23 +295,63 @@ pkg_remove() {
     info "$p: removed"
 }
 
+# verify_sig <file> <sigfile>: GPG check (keys fetched from keyservers as needed)
+verify_sig() {
+    local f=$1 sig=$2 out key ks gh="$CIG_VAR/gnupg"
+    command -v gpg >/dev/null || die "gpg not found. Run 'cigbuild pin' on the host (e.g. CIG_VAR=~/.cache/cig ~/cig/cigbuild pin ...)"
+    mkdir -p "$gh"; chmod 700 "$gh"
+    _gpgv() {
+        case "$sig" in
+            *.sign)   # kernel.org: signature covers the uncompressed tarball
+                case "$f" in
+                    *.xz) xz -dc "$f" | gpg --homedir "$gh" --status-fd 1 --verify "$sig" - 2>/dev/null ;;
+                    *.gz) gzip -dc "$f" | gpg --homedir "$gh" --status-fd 1 --verify "$sig" - 2>/dev/null ;;
+                    *)    gpg --homedir "$gh" --status-fd 1 --verify "$sig" "$f" 2>/dev/null ;;
+                esac ;;
+            *) gpg --homedir "$gh" --status-fd 1 --verify "$sig" "$f" 2>/dev/null ;;
+        esac
+    }
+    out=$(_gpgv || true)
+    if echo "$out" | grep -q NO_PUBKEY; then
+        key=$(echo "$out" | awk '/NO_PUBKEY/ {print $3; exit}')
+        for ks in hkps://keyserver.ubuntu.com hkps://keys.openpgp.org hkps://pgp.mit.edu; do
+            gpg --homedir "$gh" --keyserver "$ks" --recv-keys "$key" >/dev/null 2>&1 && break
+        done
+        out=$(_gpgv || true)
+    fi
+    echo "$out" | grep -q BADSIG && die "BAD SIGNATURE on $(basename "$f")"
+    SIGNER=$(echo "$out" | awk '/VALIDSIG/ {print $3; exit}')
+    [ -n "$SIGNER" ] || die "could not verify the signature of $(basename "$f") (key not found?)"
+}
+
 pkg_pin() {
-    local p=$1 e f have known i=0 new="" changed=0
-    local -a sums
+    local p=$1 e f have known i=0 new="" changed=0 sig sigf
+    local -a sums sigs
     load_recipe "$p"
     read -r -a sums <<< "$sha256"
+    read -r -a sigs <<< "$signature"
     for e in $source; do
         f=$(src_name "$e")
         if [ -n "${sums[$i]:-}" ]; then new="$new ${sums[$i]}"; i=$((i+1)); continue; fi
-        # prefer a checksum recorded when the bootstrap verified the file's signature
+        # 1. a checksum recorded when the bootstrap verified this file's signature
         known=$(grep -h "  $f\$" /sources/SHA256SUMS 2>/dev/null | head -n1 | cut -d' ' -f1 || true)
         if [ -n "$known" ]; then
-            have=$known; info "$p: $f -> $have (from the signature-verified bootstrap record)"
+            have=$known; info "$p: $f -> verified by the bootstrap record"
         else
             [ -s "$CIG_VAR/sources/$f" ] || curl -fL --proto '=https' --tlsv1.2 \
-                -o "$CIG_VAR/sources/$f" "$(src_url "$e")" || die "download failed"
+                -o "$CIG_VAR/sources/$f" "$(src_url "$e")" || die "download failed: $(src_url "$e")"
             have=$(sha256sum "$CIG_VAR/sources/$f" | cut -d' ' -f1)
-            warn "$p: $f -> $have (trust on first use: check the upstream signature before committing)"
+            sig=${sigs[$i]:--}
+            if [ "$sig" != "-" ]; then
+                # 2. upstream GPG signature
+                sigf="$CIG_VAR/sources/$(basename "$sig")"
+                curl -fsL --proto '=https' --tlsv1.2 -o "$sigf" "$sig" || die "signature download failed: $sig"
+                verify_sig "$CIG_VAR/sources/$f" "$sigf"
+                info "$p: $f -> GPG signature OK (key $SIGNER)"
+            else
+                # 3. nothing to verify against
+                warn "$p: $f -> no upstream signature; trusted on first use"
+            fi
         fi
         new="$new $have"; changed=1; i=$((i+1))
     done
