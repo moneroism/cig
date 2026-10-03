@@ -5,6 +5,11 @@ version=6.3.0
 source="https://ftp.gnu.org/gnu/gmp/gmp-$version.tar.xz"
 signature="https://ftp.gnu.org/gnu/gmp/gmp-$version.tar.xz.sig"
 sha256="a3c2b80201b89e68616f4ad30bc66aee4927c3ce50e33929ca819d5c43538898"
-style=gnu
-# --enable-fat: runtime CPU detection instead of tuning for the build machine
-configure_args="--enable-fat"
+style=custom
+# gmp 6.3.0's configure tests use pre-C23 code; GCC 15+ defaults to C23.
+# --enable-fat: runtime CPU detection instead of tuning for the build machine.
+do_build() {
+    CFLAGS="$CFLAGS -std=gnu17" ./configure --prefix=/usr --disable-static --enable-fat
+    make
+}
+do_install() { make DESTDIR="$DEST" install; }

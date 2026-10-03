@@ -1,0 +1,14 @@
+# mpfr - multiple-precision floating point. Needed for GCC plugin headers.
+name=mpfr
+version=4.2.2
+source="https://www.mpfr.org/mpfr-$version/mpfr-$version.tar.xz"
+signature="https://www.mpfr.org/mpfr-$version/mpfr-$version.tar.xz.asc"
+sha256="b67ba0383ef7e8a8563734e2e889ef5ec3c3b898a01d00fa0a6869ad81c6ce01"
+depends="gmp"
+style=custom
+# built as C17, like gmp: older configure tests break under GCC 15+'s C23 default
+do_build() {
+    CFLAGS="$CFLAGS -std=gnu17" ./configure --prefix=/usr --disable-static
+    make
+}
+do_install() { make DESTDIR="$DEST" install; }
