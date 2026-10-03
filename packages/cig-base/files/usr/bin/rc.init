@@ -11,6 +11,12 @@ mount -t devpts -o nosuid,noexec,gid=5,mode=0620 devpts /dev/pts
 mount -t tmpfs  -o nosuid,nodev,noexec,mode=1777 tmpfs /dev/shm
 mount -t tmpfs  -o nosuid,nodev,mode=0755 tmpfs /run
 
+# /dev/fd and the std streams: bash process substitution <(...) needs /dev/fd
+ln -sfn /proc/self/fd /dev/fd
+ln -sfn /proc/self/fd/0 /dev/stdin
+ln -sfn /proc/self/fd/1 /dev/stdout
+ln -sfn /proc/self/fd/2 /dev/stderr
+
 mount -o remount,rw /
 mount -a
 
