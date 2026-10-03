@@ -1,0 +1,24 @@
+# busybox - core userland in one binary. Trimmed config: files/busybox.config
+# (no network servers, no su, no setuid, no BusyBox TLS).
+name=busybox
+version=1.36.1
+source="https://busybox.net/downloads/busybox-$version.tar.bz2"
+signature="https://busybox.net/downloads/busybox-$version.tar.bz2.sig"
+sha256="b8cc24c9574d809e7279c3be349795c5d5ceb6fdf19ca709f80cde50e47de314"
+style=custom
+do_build() {
+    cp "$PKGDIR/files/busybox.config" .config
+    make oldconfig < /dev/null
+    make
+}
+do_install() {
+    install -D -m 755 busybox "$DEST/usr/bin/busybox"
+}
+# applet links are created on the target, only where no real program exists
+post_install() {
+    local p
+    /usr/bin/busybox --list-full | while read -r p; do
+        p="/${p#/}"
+        [ -e "$p" ] || [ -L "$p" ] || /usr/bin/busybox ln -s /usr/bin/busybox "$p"
+    done
+}

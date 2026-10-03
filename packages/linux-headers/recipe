@@ -1,0 +1,14 @@
+# linux-headers - kernel API headers for userspace (from the same tarball as the kernel)
+name=linux-headers
+version=6.18.54
+source="https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-$version.tar.xz"
+signature="https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-$version.tar.sign"
+sha256="9df30b02dd8102bbd0be52556288ef6889ddbe7f1ddb96fbf847d0becf3eacac"
+style=custom
+do_build() { make headers; }
+do_install() {
+    mkdir -p "$DEST/usr/include"
+    ( cd usr/include && find . -name '*.h' ) | while read -r h; do
+        install -D -m 644 "usr/include/$h" "$DEST/usr/include/$h"
+    done
+}

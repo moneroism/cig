@@ -1,0 +1,29 @@
+# gcc - C and C++ compiler. PIE + stack protector by default.
+name=gcc
+version=16.2.0
+source="https://ftp.gnu.org/gnu/gcc/gcc-$version/gcc-$version.tar.xz"
+signature="https://ftp.gnu.org/gnu/gcc/gcc-$version/gcc-$version.tar.xz.sig"
+sha256="e6738e29597f733270731aa90600f37ffdc045079dfc27ec7e8192cc81085c3e"
+depends="binutils musl gmp mpfr mpc zlib"
+style=custom
+pre_build() {
+    sed -e '/m64=/s/lib64/lib/' -i gcc/config/i386/t-linux64
+}
+do_build() {
+    mkdir build && cd build
+    ../configure --prefix=/usr LD=ld \
+        --enable-languages=c,c++ \
+        --enable-default-pie --enable-default-ssp \
+        --enable-host-pie --enable-host-bind-now \
+        --enable-shared --enable-threads=posix --enable-tls --enable-__cxa_atexit \
+        --disable-multilib --disable-bootstrap --disable-fixincludes \
+        --disable-nls --disable-libsanitizer --disable-libssp --disable-libvtv \
+        --disable-symvers --disable-libstdcxx-pch --with-system-zlib
+    make MAKEINFO=true
+}
+do_install() {
+    cd build && make MAKEINFO=true DESTDIR="$DEST" install
+    ln -sf gcc "$DEST/usr/bin/cc"
+    mkdir -p "$DEST/usr/lib/bfd-plugins"
+    ln -sf "../../libexec/gcc/x86_64-pc-linux-musl/$version/liblto_plugin.so" "$DEST/usr/lib/bfd-plugins/"
+}

@@ -1,0 +1,50 @@
+# linux-firmware - device firmware. Never CPU microcode.
+#
+# The whole collection is downloaded, but only what this machine needs is installed:
+#   CIG_FIRMWARE=all             everything (install media)
+#   /etc/cig/firmware.list       explicit list, one path per line (written by the installer)
+#   otherwise                    detect: firmware requested by the drivers in use right now
+# What got installed is listed in /usr/share/cig/firmware.list
+name=linux-firmware
+version=20260916
+source="https://cdn.kernel.org/pub/linux/kernel/firmware/linux-firmware-$version.tar.xz"
+signature="https://cdn.kernel.org/pub/linux/kernel/firmware/linux-firmware-$version.tar.sign"
+sha256="f80dcb757a623deda62200c08e0e1a88c76fb6b54964f31b35fa74da1c90ccc5"
+style=custom
+nostrip=1
+
+do_build() {
+    sh copy-firmware.sh --ignore-duplicates "$WORK/all" 2>/dev/null || sh copy-firmware.sh "$WORK/all"
+    rm -rf "$WORK/all/intel-ucode" "$WORK/all/amd-ucode"
+}
+
+_detect() {
+    # firmware= entries of the cig kernel's modules for every driver loaded now
+    local kdir m f
+    kdir=$(ls -dt /usr/lib/modules/*/ 2>/dev/null | head -n1)
+    [ -n "$kdir" ] || return 0
+    lsmod | awk 'NR > 1 { print $1 }' | while read -r m; do
+        f=$(find "$kdir" \( -name "$m.ko" -o -name "$(echo "$m" | tr _ -).ko" \) | head -n1)
+        [ -n "$f" ] && strings "$f" | sed -n 's/^firmware=//p'
+    done | sort -u
+}
+
+do_install() {
+    local list="$WORK/wanted" f
+    if [ "${CIG_FIRMWARE:-}" = all ]; then
+        ( cd "$WORK/all" && find . \( -type f -o -type l \) | sed 's#^\./##' ) > "$list"
+    elif [ -f /etc/cig/firmware.list ]; then
+        grep -v '^#' /etc/cig/firmware.list | sed '/^$/d' > "$list"
+    else
+        _detect > "$list"
+    fi
+    mkdir -p "$DEST/usr/lib/firmware" "$DEST/usr/share/cig"
+    : > "$DEST/usr/share/cig/firmware.list"
+    while read -r f; do
+        case "$f" in intel-ucode/*|amd-ucode/*) continue ;; esac
+        [ -e "$WORK/all/$f" ] || continue
+        install -D -m 644 "$WORK/all/$f" "$DEST/usr/lib/firmware/$f"   # follows links
+        echo "$f" >> "$DEST/usr/share/cig/firmware.list"
+    done < "$list"
+    echo "firmware files installed: $(wc -l < "$DEST/usr/share/cig/firmware.list")"
+}

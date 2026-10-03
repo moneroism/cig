@@ -1,0 +1,12 @@
+# make - GNU make. Pre-C23 code: built as C17.
+name=make
+version=4.4.1
+source="https://ftp.gnu.org/gnu/make/make-$version.tar.gz"
+signature="https://ftp.gnu.org/gnu/make/make-$version.tar.gz.sig"
+sha256="dd16fb1d67bfab79a72f5e8390735c49e3e8e70b4945a15ab1f81ddb78658fb3"
+style=custom
+do_build() {
+    CFLAGS="$CFLAGS -std=gnu17" ./configure --prefix=/usr --without-guile --disable-nls
+    make
+}
+do_install() { make DESTDIR="$DEST" install; }

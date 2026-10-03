@@ -25,7 +25,7 @@ mkdir -p "$CIG_VAR"/{sources,build,pkgs,db,logs}
 . "$CIG_REPO/lib/hardware.sh"
 
 # packages that come from bootstrap/, not from recipes
-BOOTSTRAP_PROVIDES=" musl binutils gcc linux-headers busybox bash make m4 gawk sinit "
+BOOTSTRAP_PROVIDES=" "   # everything has a recipe now
 
 # ---------------- recipes ----------------
 
@@ -201,6 +201,29 @@ pkg_build() {
     BUILDING=${BUILDING/ $p / }
 }
 
+# install_files <dir>: put every file of an unpacked package in place.
+# Each file is written next to its target and then renamed over it, so even
+# files in use right now (libc, the shell, busybox) are replaced atomically.
+install_files() {
+    local src=$1 f d dst
+    ( cd "$src" && find . -mindepth 1 -type d | sed 's#^\./##' ) | while read -r d; do
+        [ -e "/$d" ] || mkdir -p "/$d"
+    done
+    while read -r f; do
+        dst="/$f"
+        if [ -d "$dst" ] && [ ! -L "$dst" ]; then
+            warn "$name: /$f is a directory on this system, not replaced"; continue
+        fi
+        rm -f "$dst.cig-new"
+        if [ -L "$src/$f" ]; then
+            ln -s "$(readlink "$src/$f")" "$dst.cig-new"
+        else
+            cp -p "$src/$f" "$dst.cig-new"
+        fi
+        mv -f "$dst.cig-new" "$dst"
+    done < "$src/.FILES"
+}
+
 pkg_install() {
     local p=$1 d tmp f t owner old
     load_recipe "$p"
@@ -246,8 +269,7 @@ pkg_install() {
     [ -f "$CIG_VAR/db/$name/FILES" ] && old="$CIG_VAR/db/$name/FILES.old" \
         && cp "$CIG_VAR/db/$name/FILES" "$old"
 
-    ( cd "$tmp" && find . -mindepth 1 -maxdepth 1 ! -name '.PKGINFO' ! -name '.FILES' ! -name '.INSTALL' \
-        -exec cp -a {} / \; )
+    install_files "$tmp"
 
     mkdir -p "$CIG_VAR/db/$name"
     cp "$tmp/.PKGINFO" "$CIG_VAR/db/$name/PKGINFO"
@@ -334,7 +356,7 @@ pkg_pin() {
         f=$(src_name "$e")
         if [ -n "${sums[$i]:-}" ]; then new="$new ${sums[$i]}"; i=$((i+1)); continue; fi
         # 1. a checksum recorded when the bootstrap verified this file's signature
-        known=$(grep -h "  $f\$" /sources/SHA256SUMS 2>/dev/null | head -n1 | cut -d' ' -f1 || true)
+        known=$(awk -v f="$f" '$2 == f || $2 == "./" f { print $1; exit }' /sources/SHA256SUMS 2>/dev/null || true)
         if [ -n "$known" ]; then
             have=$known; info "$p: $f -> verified by the bootstrap record"
         else
