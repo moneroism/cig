@@ -11,7 +11,7 @@ makedepends="pkgconf"
 style=custom
 do_build() {
     ./configure --prefix=/usr --disable-static \
-        --disable-all-programs --enable-libsmartcols --enable-libfdisk --enable-fdisks \
+        --disable-all-programs --enable-libsmartcols --enable-libfdisk --enable-fdisks --disable-cfdisk \
         --enable-libuuid --enable-libblkid --disable-libmount \
         --without-python --without-systemd --without-udev --without-ncurses --without-ncursesw \
         --without-readline --without-tinfo --without-btrfs --disable-nls \
