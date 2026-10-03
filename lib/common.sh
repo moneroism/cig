@@ -20,6 +20,7 @@ export CFLAGS="${CFLAGS:--O2 -pipe}"
 export CXXFLAGS="${CXXFLAGS:--O2 -pipe}"
 export LDFLAGS="${LDFLAGS:--Wl,-z,relro,-z,now}"
 umask 022
+export PYTHONDONTWRITEBYTECODE=1   # no bytecode caches written into /usr
 
 mkdir -p "$CIG_VAR"/{sources,build,pkgs,db,logs}
 . "$CIG_REPO/lib/hardware.sh"

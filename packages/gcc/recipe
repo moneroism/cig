@@ -6,6 +6,7 @@ signature="https://ftp.gnu.org/gnu/gcc/gcc-$version/gcc-$version.tar.xz.sig"
 sha256="e6738e29597f733270731aa90600f37ffdc045079dfc27ec7e8192cc81085c3e"
 depends="binutils musl gmp mpfr mpc zlib"
 style=custom
+keep_static=1   # libgcc.a, libstdc++.a: gcc needs them to link
 pre_build() {
     sed -e '/m64=/s/lib64/lib/' -i gcc/config/i386/t-linux64
 }

@@ -2,7 +2,7 @@
 # No upstream source: everything is in files/ next to this recipe.
 name=cig-base
 version=0.1
-rel=2
+rel=3
 source=""
 sha256=""
 style=custom
