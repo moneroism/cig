@@ -24,6 +24,7 @@ export PYTHONDONTWRITEBYTECODE=1   # no bytecode caches written into /usr
 
 mkdir -p "$CIG_VAR"/{sources,build,pkgs,db,logs}
 . "$CIG_REPO/lib/hardware.sh"
+. "$CIG_REPO/lib/fixlinks.sh"
 
 # packages that come from bootstrap/, not from recipes
 BOOTSTRAP_PROVIDES=" "   # everything has a recipe now
@@ -120,6 +121,7 @@ normalize_dest() {
         fi
     done
     [ -d "$DEST/usr/lib64" ] && { cp -a "$DEST/usr/lib64/." "$DEST/usr/lib/"; rm -rf "$DEST/usr/lib64"; }
+    fix_links
     # no documentation is shipped
     rm -rf "$DEST"/usr/share/{doc,info,man,gtk-doc}
     find "$DEST" -name '*.la' -delete
