@@ -10,3 +10,5 @@ configure_args="--with-openssl --with-ca-bundle=/etc/ssl/cert.pem
     --disable-ldap --disable-ldaps --disable-rtsp --disable-dict --disable-telnet
     --disable-tftp --disable-pop3 --disable-imap --disable-smtp --disable-gopher
     --disable-mqtt --disable-smb --disable-manual"
+group="network"
+default=on

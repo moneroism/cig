@@ -1,0 +1,22 @@
+# cig-tools - cig's own tools: cigbuild, smoke, cig-install, and the recipes.
+# Built from this repository (no download); version = the cig release.
+name=cig-tools
+version=$(cat "$CIG_REPO/VERSION")
+source=""
+sha256=""
+style=custom
+group="base"
+nostrip=1
+do_build() { :; }
+do_install() {
+    local s="$DEST/usr/share/cig"
+    mkdir -p "$s" "$DEST/usr/bin"
+    cp "$CIG_REPO/VERSION" "$s/"
+    cp "$CIG_REPO/cigbuild" "$CIG_REPO/smoke" "$s/"
+    cp -R "$CIG_REPO/lib" "$CIG_REPO/packages" "$CIG_REPO/installer" "$s/"
+    chmod -R u+rwX,go+rX,go-w "$s"          # readable for all, keep execute bits
+    chmod 755 "$s/cigbuild" "$s/smoke" "$s/installer/cig-install"
+    ln -s ../share/cig/cigbuild "$DEST/usr/bin/cigbuild"
+    ln -s ../share/cig/smoke "$DEST/usr/bin/smoke"
+    ln -s ../share/cig/installer/cig-install "$DEST/usr/bin/cig-install"
+}

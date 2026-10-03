@@ -6,3 +6,4 @@ sha256="545a6dd100e17a089b009562a946d76ff0578d060c237d94d39fadc555f7b549"
 style=custom
 do_build()   { cp config.def.h config.h; make CC=cc; }
 do_install() { make PREFIX=/usr DESTDIR="$DEST" install; }
+group="base"

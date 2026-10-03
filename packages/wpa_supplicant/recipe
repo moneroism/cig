@@ -27,3 +27,5 @@ do_install() {
         install -D -m 755 "$b" "$DEST/usr/sbin/$b"
     done
 }
+group="network"
+default=on

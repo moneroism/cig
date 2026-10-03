@@ -1,0 +1,13 @@
+# build-tools - compilers and build tools, needed to compile and update packages on this system
+# Meta package: installs nothing itself, only pulls in its dependencies.
+name=build-tools
+version=1
+source=""
+sha256=""
+depends="gcc binutils make m4 gawk bison flex perl python meson samurai pkgconf
+    autoconf automake libtool linux-headers elfutils openssl gmp mpfr mpc"
+style=custom
+group="build"
+default=on
+do_build()   { :; }
+do_install() { :; }

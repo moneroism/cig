@@ -1,11 +1,12 @@
 # cig-base - system configuration: init scripts, services, hardening, /etc defaults.
 # No upstream source: everything is in files/ next to this recipe.
+# version = the cig release (VERSION in the repository root).
 name=cig-base
-version=0.1
-rel=3
+version=$(cat "$CIG_REPO/VERSION")
 source=""
 sha256=""
 style=custom
+group="base"
 
 # files the user may edit: kept on reinstall, new version saved as *.new
 config_files="etc/sysctl.conf etc/mdev.conf etc/profile etc/shells etc/issue
@@ -20,11 +21,15 @@ do_install() {
     chmod 755 "$DEST"/usr/bin/* "$DEST"/usr/sbin/* "$DEST/usr/share/udhcpc/default.script"
     find "$DEST/etc/sv" -name run -exec chmod 755 {} +
     chmod 600 "$DEST/etc/wpa_supplicant/wpa_supplicant.conf"
+    # release version
+    sed -i "s/^PRETTY_NAME=.*/PRETTY_NAME=\"cig $version\"/" "$DEST/usr/lib/os-release"
+    printf 'VERSION="%s"\nVERSION_ID=%s\n' "$version" "$version" >> "$DEST/usr/lib/os-release"
+    printf 'cig %s \\r (\\l)\n\n' "$version" > "$DEST/etc/issue"
     ln -sf ../usr/lib/os-release "$DEST/etc/os-release"
 }
 
 post_install() {
-    local g
+    local g s
     # standard groups
     for g in wheel:10 audio:11 video:12 input:24 users:100; do
         grep -q "^${g%%:*}:" /etc/group || echo "${g%%:*}:x:${g#*:}:" >> /etc/group

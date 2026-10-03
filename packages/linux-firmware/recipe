@@ -33,6 +33,8 @@ do_install() {
     local list="$WORK/wanted" f
     if [ "${CIG_FIRMWARE:-}" = all ]; then
         ( cd "$WORK/all" && find . \( -type f -o -type l \) | sed 's#^\./##' ) > "$list"
+    elif [ -n "${CIG_FIRMWARE_LIST:-}" ]; then
+        { grep -v "^#" "$CIG_FIRMWARE_LIST" || true; } | sed "/^$/d" > "$list"
     elif [ -f /etc/cig/firmware.list ]; then
         grep -v '^#' /etc/cig/firmware.list | sed '/^$/d' > "$list"
     else
@@ -48,3 +50,4 @@ do_install() {
     done < "$list"
     echo "firmware files installed: $(wc -l < "$DEST/usr/share/cig/firmware.list")"
 }
+group="base"

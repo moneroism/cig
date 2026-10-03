@@ -22,3 +22,4 @@ post_install() {
         [ -e "$p" ] || [ -L "$p" ] || /usr/bin/busybox ln -s /usr/bin/busybox "$p"
     done
 }
+group="base"

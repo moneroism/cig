@@ -13,3 +13,5 @@ do_install() {
     mkdir -p "$DEST/etc/xdg/foot"
     printf 'login-shell=yes\n' > "$DEST/etc/xdg/foot/foot.ini"
 }
+group="desktop"
+default=on

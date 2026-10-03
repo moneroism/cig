@@ -12,3 +12,5 @@ do_install() {
         -exec install -m 644 {} "$DEST/usr/share/fonts/jetbrains-mono/" \;
 }
 post_install() { fc-cache -f; }
+group="desktop"
+default=on

@@ -19,3 +19,4 @@ post_install() {
     chmod 4755 /usr/bin/doas
     chmod 0400 /etc/doas.conf
 }
+group="base"

@@ -74,3 +74,4 @@ do_install() {
 post_install() {
     cig-kernel-install || echo "kernel not deployed yet: mount the EFI partition at /boot and run cig-kernel-install"
 }
+group="base"

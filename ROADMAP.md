@@ -17,6 +17,26 @@ hardware waits until cig has booted on real hardware.
 | Auditable | One readable inventory says what is installed and why; the system can be checked against it |
 | For others, not one machine | Installer, install media and documentation are part of the project |
 
+## Versions
+
+| Version | Meaning |
+|---|---|
+| **X.0.0** | stable release, production-ready on real hardware (1.0.0 = first stable) |
+| **0.X.0** | beta / testing release: may run on hardware, but unstable |
+| **x.y.Z** | hotfixes and small additions to that release (0.1.1, 1.0.1) |
+
+The current version is in `VERSION` in the repository root; `cig-base` writes it
+into `/usr/lib/os-release` of every installed system.
+
+| Version | Reached when |
+|---|---|
+| 0.1.0 | Phase 0 + 1: boots in QEMU, fully managed by smoke ← current |
+| 0.2.0 | Phase 2: the installer installs a bootable system |
+| 0.3.0 | Phase 3: first bare-metal boot |
+| 0.4.0 | Phase 4: optional components, install media |
+| 0.5.0 | Phase 5: security layers |
+| 1.0.0 | stable on real hardware |
+
 ## Names
 
 | Name | What it is |
@@ -31,7 +51,7 @@ LFS and Musl-LFS; cig does not follow either book.
 
 ## Phases
 
-### Phase 0 – Foundation ✅ done
+### Phase 0 – Foundation ✅ done (0.1.0)
 
 - musl toolchain, BusyBox userland, sinit + runit, EFISTUB boot
 - networking, OpenSSL, curl, git, wpa_supplicant
@@ -43,7 +63,7 @@ LFS and Musl-LFS; cig does not follow either book.
 
 **Exit criteria (met):** the whole system rebuilds from recipes and boots in QEMU.
 
-### Phase 1 – smoke ⏭ next
+### Phase 1 – smoke ✅ done (0.1.0)
 
 - packages installed into `/usr/pkg/<name>/<version>/`, linked into `/usr` (symlink farm)
 - inventory as a plain text file: name, version, reason (`explicit` / `dependency`),
@@ -56,7 +76,7 @@ LFS and Musl-LFS; cig does not follow either book.
 
 **Exit criteria:** the running system is fully managed by smoke and `smoke audit` is clean.
 
-### Phase 2 – Installer (shell TUI)
+### Phase 2 – Installer (shell TUI) ⏭ next (0.2.0)
 
 Numbered menus and `[x]` checkboxes, no extra dependencies. Menus are built
 from recipe data (group, default), not from a fixed list.
@@ -79,7 +99,7 @@ Testing: in QEMU, the running VM installs onto a second, empty disk.
 
 **Exit criteria:** an install onto an empty VM disk boots on its own.
 
-### Phase 3 – First bare-metal boot
+### Phase 3 – First bare-metal boot (0.3.0)
 
 - install onto the SATA SSD of the development PC, run from the cig chroot on the
   host (no install media needed yet)
@@ -90,7 +110,7 @@ Testing: in QEMU, the running VM installs onto a second, empty disk.
 
 Only after this phase are hardware-specific decisions made.
 
-### Phase 4 – Optional components and install media
+### Phase 4 – Optional components and install media (0.4.0)
 
 - components as recipes, offered in the installer:
   ALSA (default on), PipeWire (optional), Bluetooth = BlueZ + D-Bus (optional),
@@ -101,7 +121,7 @@ Only after this phase are hardware-specific decisions made.
 
 **Exit criteria:** cig installs from USB on a machine other than the development PC.
 
-### Phase 5 – Security layers
+### Phase 5 – Security layers (0.5.0)
 
 Each layer is optional in the installer.
 

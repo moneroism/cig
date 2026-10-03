@@ -16,3 +16,4 @@ do_install() {
     mkdir -p "$DEST/usr/bin"
     ln -sf ../lib/libc.so "$DEST/usr/bin/ldd"
 }
+group="base"
