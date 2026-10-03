@@ -1,7 +1,7 @@
 # musl - the C library
 name=musl
 version=1.2.6
-rel=2
+rel=3
 source="https://musl.libc.org/releases/musl-$version.tar.gz"
 signature="https://musl.libc.org/releases/musl-$version.tar.gz.asc"
 sha256="d585fd3b613c66151fc3249e8ed44f77020cb5e6c1e635a616d3f9f82460512a"
@@ -9,3 +9,9 @@ style=custom
 keep_static=1   # libm.a, libpthread.a ... are stubs that -lm, -lpthread need
 do_build()   { ./configure --prefix=/usr; make; }
 do_install() { make DESTDIR="$DEST" install; }
+
+# musl's libc.so also works as ldd; config.guess runs "ldd --version" to detect musl
+do_install() {
+    make DESTDIR="$DEST" install
+    ln -sf ../lib/libc.so "$DEST/usr/bin/ldd"
+}
