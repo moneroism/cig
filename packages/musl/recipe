@@ -13,5 +13,6 @@ do_install() { make DESTDIR="$DEST" install; }
 # musl's libc.so also works as ldd; config.guess runs "ldd --version" to detect musl
 do_install() {
     make DESTDIR="$DEST" install
+    mkdir -p "$DEST/usr/bin"
     ln -sf ../lib/libc.so "$DEST/usr/bin/ldd"
 }
