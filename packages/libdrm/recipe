@@ -1,11 +1,14 @@
-# libdrm - kernel graphics interface. Core + amdgpu; other vendors off.
+# libdrm - kernel graphics interface.
+# Core always; GPU vendor helpers only for the GPUs this build targets
+# (see lib/hardware.sh: detected, chosen in the installer, or "generic").
 name=libdrm
 version=2.4.134
 source="https://dri.freedesktop.org/libdrm/libdrm-$version.tar.xz"
 sha256="ac5e74d157830eb8bee44c6a6bf3ad49774ef0dd2a72bdad74a8f20308b52a95"
 makedepends="meson pkgconf"
 style=meson
-meson_args="-Damdgpu=enabled -Dintel=disabled -Dradeon=disabled -Dnouveau=disabled
-    -Dvmwgfx=disabled -Dfreedreno=disabled -Dvc4=disabled -Detnaviv=disabled
+meson_args="-Damdgpu=$(gpu_feature amd) -Dradeon=$(gpu_feature amd)
+    -Dintel=$(gpu_feature intel) -Dnouveau=$(gpu_feature nvidia) -Dvmwgfx=$(gpu_feature vmware)
+    -Dfreedreno=disabled -Dvc4=disabled -Detnaviv=disabled
     -Dexynos=disabled -Domap=disabled -Dtegra=disabled
     -Dvalgrind=disabled -Dcairo-tests=disabled -Dman-pages=disabled -Dtests=false -Dudev=false"

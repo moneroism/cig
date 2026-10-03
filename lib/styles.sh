@@ -18,7 +18,9 @@ meson_known_opts() {
         case "$a" in
             -D*=*)
                 n=${a#-D}; n=${n%%=*}
-                if [ -n "$f" ] && ! grep -qE "option\(['\"]$n['\"]" "$f"; then
+                # match the quoted name anywhere: many projects write option(
+                #     'name', ...) across several lines
+                if [ -n "$f" ] && ! grep -qE "['\"]$n['\"]" "$f"; then
                     echo "   (skipping option not defined by this version: $a)" >&2
                     continue
                 fi ;;

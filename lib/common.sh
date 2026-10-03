@@ -22,6 +22,7 @@ export LDFLAGS="${LDFLAGS:--Wl,-z,relro,-z,now}"
 umask 022
 
 mkdir -p "$CIG_VAR"/{sources,build,pkgs,db,logs}
+. "$CIG_REPO/lib/hardware.sh"
 
 # packages that come from bootstrap/, not from recipes
 BOOTSTRAP_PROVIDES=" musl binutils gcc linux-headers busybox bash make m4 gawk sinit "
@@ -136,6 +137,7 @@ make_package() {
     {
         echo "name=$name"; echo "version=$version"; echo "rel=$rel"
         echo "depends=\"$depends\""
+        echo "gpus=\"$(cig_gpus)\""
         echo "built=$(date -u +%Y-%m-%dT%H:%MZ)"
     } > "$DEST/.PKGINFO"
     ( cd "$DEST" && find . \( -type f -o -type l \) ! -name '.PKGINFO' ! -name '.FILES' ! -name '.INSTALL' \
@@ -200,7 +202,7 @@ pkg_build() {
 pkg_install() {
     local p=$1 d tmp f t owner old
     load_recipe "$p"
-    if is_installed "$p" && [ -f "$CIG_VAR/db/$p/PKGINFO" ] \
+    if [ -z "${CIG_FORCE:-}" ] && is_installed "$p" && [ -f "$CIG_VAR/db/$p/PKGINFO" ] \
         && [ "$(installed_version "$p")" = "$version-$rel" ]; then
         info "$p $version-$rel: already installed"; return
     fi
@@ -253,6 +255,14 @@ pkg_install() {
         bash -c ". '$CIG_VAR/db/$name/INSTALL'; post_install" || warn "$name: post_install failed"
     fi
     info "$name $version-$rel: installed"
+}
+
+# rebuild from source and reinstall in place (files the new build no longer
+# contains are removed, like an upgrade)
+pkg_rebuild() {
+    load_recipe "$1"
+    rm -f "$PKGFILE" "$PKGFILE.sha256"
+    CIG_FORCE=1 pkg_install "$1"
 }
 
 pkg_remove() {

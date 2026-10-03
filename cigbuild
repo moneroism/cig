@@ -8,6 +8,7 @@
 #
 #   cigbuild build   <pkg>...   fetch + verify + build + package (deps first)
 #   cigbuild install <pkg>...   build if needed, then install
+#   cigbuild rebuild <pkg>...   build again from source and reinstall
 #   cigbuild remove  <pkg>...   remove an installed package
 #   cigbuild fetch   <pkg>...   download + verify sources only
 #   cigbuild pin     <pkg>...   fill in missing sha256 values in a recipe
@@ -21,7 +22,7 @@ CIG_VAR="${CIG_VAR:-/var/cig}"
 . "$CIG_REPO/lib/common.sh"
 . "$CIG_REPO/lib/styles.sh"
 
-usage() { sed -n '8,16p' "$0" | sed 's/^# \{0,1\}//'; exit 1; }
+usage() { sed -n '8,17p' "$0" | sed 's/^# \{0,1\}//'; exit 1; }
 
 cmd=${1:-}; shift || true
 [ -n "$cmd" ] || usage
@@ -29,6 +30,7 @@ cmd=${1:-}; shift || true
 case "$cmd" in
     build)   [ $# -gt 0 ] || usage; for p in "$@"; do pkg_build "$p"; done ;;
     install) [ $# -gt 0 ] || usage; for p in "$@"; do pkg_install "$p"; done ;;
+    rebuild) [ $# -gt 0 ] || usage; for p in "$@"; do pkg_rebuild "$p"; done ;;
     remove)  [ $# -gt 0 ] || usage; for p in "$@"; do pkg_remove "$p"; done ;;
     fetch)   [ $# -gt 0 ] || usage; for p in "$@"; do load_recipe "$p"; fetch_sources; done ;;
     pin)     [ $# -gt 0 ] || usage; for p in "$@"; do pkg_pin "$p"; done ;;
