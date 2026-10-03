@@ -16,7 +16,7 @@ die() { echo "!! $*" >&2; exit 1; }
 
 [ "$(id -u)" -eq 0 ] || die "run with sudo"
 mountpoint -q "$LFS" || die "$LFS is not mounted"
-[ -x "$LFS/usr/bin/gcc" ] || die "temporary system not built yet (run build-temp.sh)"
+[ -x "$LFS/usr/bin/gcc" ] || [ -L "$LFS/usr/bin/gcc" ] || die "temporary system not built yet (run build-temp.sh)"
 
 # ---- one-time handover ----
 if [ ! -f "$LFS/etc/.handed-to-root" ]; then

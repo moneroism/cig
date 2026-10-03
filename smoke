@@ -16,7 +16,8 @@
 #   smoke why     <pkg>            why a package is installed
 #   smoke files   <pkg>            files of a package
 #   smoke mark    <reason> <pkg>   set reason: explicit | dependency | build
-#   smoke audit                    check the system against the inventory
+#   smoke audit [--quick]          check the system against the inventory
+#                                  (--quick skips the package checksums)
 #   smoke adopt                    move packages installed by old cigbuild under smoke
 
 set -euo pipefail
@@ -33,7 +34,7 @@ die()  { echo "!! smoke: $*" >&2; exit 1; }
 info() { echo "==> $*"; }
 warn() { echo "   ! $*" >&2; }
 
-usage() { sed -n '10,19p' "$0" | sed 's/^# \{0,1\}//'; exit 1; }
+usage() { sed -n '10,20p' "$0" | sed 's/^# \{0,1\}//'; exit 1; }
 
 # ---------------- inventory ----------------
 # One line per package:
@@ -371,70 +372,86 @@ resolve() {
 }
 
 audit() {
-    local problems=0 n D p real line ign="$ROOT/etc/smoke/audit.ignore" idx
+    local quick=${1:-} problems=0 n D p real t i line ign="$ROOT/etc/smoke/audit.ignore"
+    local -A INVP OWNER COPYPAT LINK IGN
     flag() { echo "  $*"; problems=$((problems + 1)); }
-    ignored() { [ -f "$ign" ] && grep -v '^#' "$ign" | grep -qxF "$1"; }
 
-    echo "smoke audit"
+    echo "smoke audit${quick:+ (quick: package checksums skipped)}"
     echo "-- inventory"
     if [ ! -f "$INV" ]; then echo "  no inventory at /usr/pkg/INVENTORY"; return 1; fi
     inv_sealed || flag "INVENTORY was changed outside smoke (checksum mismatch)"
+
+    # load everything once; lookups below happen inside bash, no process per file
+    while read -r n _ _ _ _ D; do
+        [ -n "$n" ] && INVP[$n]=$D
+    done < <(grep -v '^#' "$INV" || true)
+    if [ -f "$ign" ]; then
+        while read -r p; do [ -n "$p" ] && IGN[$p]=1; done < <(grep -v '^#' "$ign" || true)
+    fi
 
     echo "-- package folders"
     for D in "$PKGROOT"/*/; do
         [ -d "$D" ] || continue
         n=$(basename "$D")
-        if ! inv_has "$n"; then flag "/usr/pkg/$n is not in the inventory (installed outside smoke?)"; continue; fi
+        if [ -z "${INVP[$n]:-}" ]; then flag "/usr/pkg/$n is not in the inventory (installed outside smoke?)"; continue; fi
         for p in "$D"*/; do
             [ -d "$p" ] || continue
-            [ "$(basename "$p")" = "$(inv_field "$n" 6)" ] || flag "/usr/pkg/$n/$(basename "$p"): stale build folder"
+            [ "$(basename "$p")" = "${INVP[$n]}" ] || flag "/usr/pkg/$n/$(basename "$p"): stale build folder"
         done
     done
-    for n in $(inv_names); do
-        D="$PKGROOT/$n/$(inv_field "$n" 6)"
+    i=0
+    for n in "${!INVP[@]}"; do
+        D="$PKGROOT/$n/${INVP[$n]}"
         [ -d "$D" ] || { flag "$n is in the inventory but its folder is missing"; continue; }
-        while read -r line; do
-            flag "$n: modified file: ${line%%:*}"
-        done < <(cd "$D" && sha256sum -c .meta/SUMS 2>/dev/null | grep -v ': OK$' || true)
+        # file -> owner index, and each package's copy_files patterns
+        while read -r p; do OWNER[$p]=$n; done < "$D/.meta/FILES"
+        COPYPAT[$n]=$( . "$D/.meta/LAYOUT" 2>/dev/null; echo "${copy_files:-}" )
+        if [ -z "$quick" ]; then
+            i=$((i + 1)); printf '\r   checking package files: %d/%d %-30s' "$i" "${#INVP[@]}" "$n" >&2
+            while read -r line; do
+                flag "$n: modified file: ${line%%:*}"
+            done < <(cd "$D" && sha256sum -c .meta/SUMS 2>/dev/null | grep -v ': OK$' || true)
+        fi
     done
+    [ -z "$quick" ] && printf '\r%60s\r' '' >&2
 
     echo "-- /usr"
-    # index: path -> package, plus each package's copy_files patterns
-    idx="$CIG_VAR/build/.smoke-audit-index"
-    mkdir -p "$(dirname "$idx")"; : > "$idx"
-    for n in $(inv_names); do
-        D="$PKGROOT/$n/$(inv_field "$n" 6)"
-        [ -f "$D/.meta/FILES" ] && sed "s#^#$n #" "$D/.meta/FILES" >> "$idx"
-    done
-    while read -r p; do
+    # every link target in one pass
+    while IFS= read -r line; do
+        LINK[${line%% -> *}]=${line#* -> }
+    done < <(find "$ROOT/usr" -path "$ROOT/usr/pkg" -prune -o -type l -exec ls -ld {} + 2>/dev/null \
+             | sed -n "s#^.* \\($ROOT/usr/[^ ]*\\) -> \\(.*\\)\$#\\1 -> \\2#p" | sed "s#^$ROOT##")
+
+    while IFS= read -r p; do
         p=${p#"$ROOT"}
-        ignored "$p" && continue
-        if [ -L "$ROOT$p" ]; then
-            real=$(resolve "$p")
+        [ -n "${IGN[$p]:-}" ] && continue
+        if [ -n "${LINK[$p]+x}" ]; then
+            # follow links inside bash (max 8 hops)
+            real=$p
+            for t in 1 2 3 4 5 6 7 8; do
+                [ -n "${LINK[$real]+x}" ] || break
+                case "${LINK[$real]}" in /*) real=${LINK[$real]} ;; *) real="${real%/*}/${LINK[$real]}" ;; esac
+            done
             case "$real" in
                 /usr/pkg/*)
-                    n=$(echo "$real" | cut -d/ -f4)
-                    inv_has "$n" || flag "$p -> $real (package not in inventory)"
+                    n=${real#/usr/pkg/}; n=${n%%/*}
+                    [ -n "${INVP[$n]:-}" ] || flag "$p -> $real (package not in inventory)"
                     [ -e "$ROOT$real" ] || flag "$p -> $real (broken link)" ;;
                 *)  [ -e "$ROOT$real" ] || flag "$p -> $real (broken link)" ;;
             esac
         else
-            # real files are only allowed where a package declared copy_files
-            n=$(awk -v f="${p#/}" '$2 == f { print $1; exit }' "$idx")
+            n=${OWNER[${p#/}]:-}
             if [ -z "$n" ]; then
                 flag "$p: not managed by any package"
-            else
-                D="$PKGROOT/$n/$(inv_field "$n" 6)"
-                ( . "$D/.meta/LAYOUT"; matches_any "${p#/}" $copy_files ) \
-                    || flag "$p: real file where $n installs a link (replaced?)"
+            elif ! matches_any "${p#/}" ${COPYPAT[$n]}; then
+                flag "$p: real file where $n installs a link (replaced?)"
             fi
         fi
     done < <(find "$ROOT/usr" -path "$ROOT/usr/pkg" -prune -o \( -type f -o -type l \) -print 2>/dev/null | sort)
-    rm -f "$idx"
 
     echo "-- /etc (changed configuration, for information)"
-    for n in $(inv_names); do
-        D="$PKGROOT/$n/$(inv_field "$n" 6)"
+    for n in "${!INVP[@]}"; do
+        D="$PKGROOT/$n/${INVP[$n]}"
         [ -d "$D/.meta/root/etc" ] || continue
         while read -r p; do
             if [ ! -e "$ROOT/$p" ]; then echo "  /$p ($n): missing"
@@ -493,7 +510,7 @@ case "$cmd" in
     why)        [ $# -eq 1 ] || usage; why_pkg "$1" ;;
     files)      [ $# -eq 1 ] || usage; files_pkg "$1" ;;
     mark)       [ $# -eq 2 ] || usage; mark_pkg "$1" "$2" ;;
-    audit)      audit ;;
+    audit)      case "${1:-}" in --quick) audit quick ;; "") audit ;; *) usage ;; esac ;;
     adopt)      adopt ;;
     installed)  [ $# -eq 1 ] || usage; inv_has "$1" ;;      # for cigbuild
     *)          usage ;;
