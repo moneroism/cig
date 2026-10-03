@@ -13,6 +13,7 @@ pre_build() {
 do_build() {
     mkdir build && cd build
     ../configure --prefix=/usr LD=ld \
+        --build=x86_64-pc-linux-musl --host=x86_64-pc-linux-musl --target=x86_64-pc-linux-musl \
         --enable-languages=c,c++ \
         --enable-default-pie --enable-default-ssp \
         --enable-host-pie --enable-host-bind-now \

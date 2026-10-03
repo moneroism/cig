@@ -9,6 +9,7 @@ style=custom
 do_build() {
     mkdir build && cd build
     ../configure --prefix=/usr --sysconfdir=/etc \
+        --build=x86_64-pc-linux-musl --host=x86_64-pc-linux-musl --target=x86_64-pc-linux-musl \
         --enable-ld=default --enable-plugins --enable-shared \
         --disable-werror --disable-nls --enable-gprofng=no --with-system-zlib \
         --enable-64-bit-bfd --enable-new-dtags --enable-default-hash-style=gnu
