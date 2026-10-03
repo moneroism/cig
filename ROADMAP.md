@@ -131,6 +131,21 @@ Also in this phase:
 - user power helper (poweroff/reboot without doas)
 - Python removed from finished systems (build tool only)
 
+### Phase 7 – Code quality
+
+After everything is running:
+
+- run packages and cig's own tools under sanitizers (AddressSanitizer,
+  UndefinedBehaviorSanitizer, LeakSanitizer) in a separate test build
+- compile with strict warning flags (`-Wall -Wextra`, selected `-Werror`) and fix or
+  document what they find
+- additional hardening flags where they don't break software
+  (`-fstack-clash-protection`, `-fcf-protection`, `-ftrivial-auto-var-init=zero`)
+- static analysis of cig's own code (shellcheck for the scripts)
+- memory leak and fuzz testing of the parts exposed to input (network, file parsers)
+
+**Exit criteria:** every package has a recorded sanitizer/strict-flags result.
+
 ## Housekeeping (whenever convenient)
 
 - rename bootstrap leftovers: `/mnt/lfs` → `/mnt/cig`, `lfs.img` → `cig.img`,
@@ -138,4 +153,5 @@ Also in this phase:
 - rewrite the bootstrap scripts as part of the install media build
 - pkgconf: replace the 2.9.99 pre-release with the newest stable release
 - `cig-kernel-install`: don't overwrite the fallback kernel with an identical one
+- package `cigbuild` and `smoke` themselves as recipes (instead of links to the repo)
 - git 3.0 will require Rust: decide between adding Rust and staying on git 2.x

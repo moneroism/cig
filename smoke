@@ -20,6 +20,7 @@
 #   smoke adopt                    move packages installed by old cigbuild under smoke
 
 set -euo pipefail
+umask 022     # system files are world-readable, whatever the caller's umask is
 
 ROOT="${SMOKE_ROOT:-}"                  # empty = this system; a directory for testing
 PKGROOT="$ROOT/usr/pkg"
