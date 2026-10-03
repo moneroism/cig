@@ -367,10 +367,10 @@ do_install() {
 
     step "Mounting"
     mkdir -p "$T"
-    run mount "$(part 2)" "$T"
+    run mount -t ext4 "$(part 2)" "$T"
     mkdir -p "$T/boot" "$T/home"
-    run mount "$(part 1)" "$T/boot"
-    [ "$SEP_HOME" = yes ] && run mount "$(part 3)" "$T/home"
+    run mount -t vfat "$(part 1)" "$T/boot"
+    [ "$SEP_HOME" = yes ] && run mount -t ext4 "$(part 3)" "$T/home"
 
     step "Base layout"
     mkdir -p "$T"/{usr/bin,usr/lib,usr/sbin,etc/cig,var/log,var/tmp,dev,proc,sys,run,tmp,root}
