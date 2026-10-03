@@ -36,7 +36,7 @@ load_recipe() {
     [ -f "$f" ] || die "no recipe: packages/$1/recipe"
     # reset everything a recipe may set
     name= version= rel=1 source= sha256= depends= makedepends= style=
-    configure_args= meson_args= make_args= wrksrc= keep_static= nostrip=
+    configure_args= meson_args= make_args= wrksrc= keep_static= nostrip= config_files=
     unset -f pre_build do_build do_install post_install 2>/dev/null || true
     PKGDIR="$CIG_REPO/packages/$1"
     # shellcheck disable=SC1090
@@ -133,6 +133,8 @@ normalize_dest() {
 
 make_package() {
     local tmp="$WORK/meta"
+    # everything a package installs belongs to root, whoever built it
+    chown -R root:root "$DEST"
     rm -rf "$tmp"; mkdir -p "$tmp"
     {
         echo "name=$name"; echo "version=$version"; echo "rel=$rel"
@@ -224,6 +226,15 @@ pkg_install() {
             grep -qxF "$f" "$owner" && die "$name: /$f already belongs to $(basename "$(dirname "$owner")")"
         done
     done < "$tmp/.FILES"
+
+    # config files the user changed are kept; the new version goes next to them
+    for f in $config_files; do
+        [ -f "$tmp/$f" ] || continue
+        if [ -f "/$f" ] && ! cmp -s "$tmp/$f" "/$f"; then
+            mv "$tmp/$f" "$tmp/$f.new"
+            warn "$name: /$f was changed locally, kept it. New version: /$f.new"
+        fi
+    done
 
     # never write through a BusyBox link
     while read -r f; do

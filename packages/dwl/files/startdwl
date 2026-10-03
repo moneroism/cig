@@ -1,0 +1,7 @@
+#!/bin/sh
+# startdwl - start a dwl session from a tty, as your normal user
+[ -n "$XDG_RUNTIME_DIR" ] || export XDG_RUNTIME_DIR="/run/user/$(id -u)"
+[ -d "$XDG_RUNTIME_DIR" ] || { echo "no $XDG_RUNTIME_DIR - reboot once so rc.init creates it"; exit 1; }
+export LIBSEAT_BACKEND=seatd
+export WLR_RENDERER=pixman
+exec dwl "$@" 2> "$XDG_RUNTIME_DIR/dwl.log"

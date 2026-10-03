@@ -1,0 +1,3 @@
+#!/bin/sh
+# POSIX c99 compiler command
+exec cc -std=c99 "$@"

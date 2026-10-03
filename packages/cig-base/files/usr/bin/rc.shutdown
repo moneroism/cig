@@ -1,0 +1,15 @@
+#!/bin/sh
+# rc.shutdown - called by sinit with "poweroff" or "reboot"
+PATH=/usr/bin:/usr/sbin
+[ -x /etc/rc.local.shutdown ] && /etc/rc.local.shutdown
+killall5 -15; sleep 2; killall5 -9
+hwclock -w -u 2>/dev/null
+sync
+umount -a -r -t ext4,vfat,tmpfs 2>/dev/null   # real filesystems only, keep /proc
+mount -o remount,ro / 2>/dev/null
+sync
+# BusyBox directly: plain poweroff/reboot are the wrappers that signal sinit
+case "$1" in
+    reboot) busybox reboot -f ;;
+    *)      busybox poweroff -f ;;
+esac

@@ -1,0 +1,42 @@
+# cig-base - system configuration: init scripts, services, hardening, /etc defaults.
+# No upstream source: everything is in files/ next to this recipe.
+name=cig-base
+version=0.1
+rel=2
+source=""
+sha256=""
+style=custom
+
+# files the user may edit: kept on reinstall, new version saved as *.new
+config_files="etc/sysctl.conf etc/mdev.conf etc/profile etc/shells etc/issue
+    etc/wpa_supplicant/wpa_supplicant.conf"
+
+do_build() { :; }
+do_install() {
+    cp -R "$PKGDIR/files/." "$DEST/"
+    # permissions are set here, never taken from the repo checkout
+    find "$DEST" -type d -exec chmod 755 {} +
+    find "$DEST" -type f -exec chmod 644 {} +
+    chmod 755 "$DEST"/usr/bin/* "$DEST"/usr/sbin/* "$DEST/usr/share/udhcpc/default.script"
+    find "$DEST/etc/sv" -name run -exec chmod 755 {} +
+    chmod 600 "$DEST/etc/wpa_supplicant/wpa_supplicant.conf"
+    ln -sf ../usr/lib/os-release "$DEST/etc/os-release"
+}
+
+post_install() {
+    local g
+    # standard groups
+    for g in wheel:10 audio:11 video:12 input:24 users:100; do
+        grep -q "^${g%%:*}:" /etc/group || echo "${g%%:*}:x:${g#*:}:" >> /etc/group
+    done
+    install -d -m 750 /var/log
+    for s in seatd wpa_supplicant udhcpc-eth0 udhcpc-wlan0; do install -d -m 750 "/var/log/$s"; done
+    mkdir -p /etc/service
+    # default services; network ones are enabled by the installer
+    for s in getty-tty1 getty-tty2; do
+        [ -e "/etc/service/$s" ] || ln -s "/etc/sv/$s" "/etc/service/$s"
+    done
+    if [ -x /usr/bin/seatd ] && [ ! -e /etc/service/seatd ]; then
+        ln -s /etc/sv/seatd /etc/service/seatd
+    fi
+}

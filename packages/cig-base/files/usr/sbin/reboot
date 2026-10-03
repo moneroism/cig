@@ -1,0 +1,3 @@
+#!/bin/sh
+# ask sinit (PID 1) to reboot
+exec kill -INT 1

@@ -1,0 +1,3 @@
+#!/bin/sh
+ip link set eth0 up 2>/dev/null
+exec udhcpc -f -i eth0 2>&1

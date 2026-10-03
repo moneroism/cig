@@ -1,0 +1,5 @@
+export PATH=/usr/bin:/usr/sbin
+umask 027
+PS1='\u@\h:\w\$ '
+[ -d "/run/user/$(id -u)" ] && export XDG_RUNTIME_DIR="/run/user/$(id -u)"
+for f in /etc/profile.d/*.sh; do [ -r "$f" ] && . "$f"; done

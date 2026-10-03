@@ -12,3 +12,8 @@ style=make
 pre_build() {
     cp config.def.h config.h
 }
+
+do_install() {
+    style_install
+    install -D -m 755 "$PKGDIR/files/startdwl" "$DEST/usr/bin/startdwl"
+}

@@ -1,0 +1,3 @@
+#!/bin/sh
+# ask sinit (PID 1) to power off
+exec kill -USR1 1

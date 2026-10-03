@@ -1,0 +1,5 @@
+NAME="cig"
+ID=cig
+PRETTY_NAME="cig"
+BUILD_ID=rolling
+HOME_URL="https://github.com/moneroism/cig"
