@@ -1,17 +1,17 @@
 # util-linux - only sfdisk (GPT partitioning for the installer) and its libraries.
-# libuuid/libblkid come from e2fsprogs.
+# Also provides libuuid and libblkid (used by e2fsprogs).
 name=util-linux
 version=2.41.2
 source="https://cdn.kernel.org/pub/linux/utils/util-linux/v${version%.*}/util-linux-$version.tar.xz"
 signature="https://cdn.kernel.org/pub/linux/utils/util-linux/v${version%.*}/util-linux-$version.tar.sign"
 sha256="6062a1d89b571a61932e6fc0211f36060c4183568b81ee866cf363bce9f6583e"
-depends="e2fsprogs"
+
 makedepends="pkgconf"
 style=custom
 do_build() {
     ./configure --prefix=/usr --disable-static \
         --disable-all-programs --enable-libsmartcols --enable-libfdisk --enable-sfdisk \
-        --disable-libuuid --disable-libblkid --disable-libmount \
+        --enable-libuuid --enable-libblkid --disable-libmount \
         --without-python --without-systemd --without-udev --without-ncurses --without-ncursesw \
         --without-readline --without-tinfo --without-btrfs --disable-nls \
         --disable-bash-completion --disable-asciidoc \

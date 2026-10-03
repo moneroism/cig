@@ -1,12 +1,14 @@
 # e2fsprogs - ext4 filesystem tools (mkfs, fsck, tune2fs)
 name=e2fsprogs
 version=1.47.4
+rel=2
+depends="util-linux"
 source="https://cdn.kernel.org/pub/linux/kernel/people/tytso/e2fsprogs/v$version/e2fsprogs-$version.tar.xz"
 sha256="fd5bf388cbdbe006a3d3b318d983b2948382440acc85a87f1e7d108653e8db0b"
 style=custom
 do_build() {
     mkdir build && cd build
-    ../configure --prefix=/usr --sysconfdir=/etc --enable-elf-shlibs \
+    ../configure --prefix=/usr --sysconfdir=/etc --enable-elf-shlibs --disable-libuuid --disable-libblkid \
         --disable-uuidd --disable-fsck --disable-nls
     make MAKEINFO=true
 }
