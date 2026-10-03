@@ -1,12 +1,15 @@
 # musl-compat - small glibc-compatibility headers some software expects:
 # <error.h> and <sys/cdefs.h>. Written for cig; no upstream source.
+# Installed in a PRIVATE include directory: only recipes that need them add
+# -I/usr/include/musl-compat (installed system-wide they collide with gnulib).
 name=musl-compat
 version=1
+rel=2
 source=""
 sha256=""
 style=custom
 do_build() { :; }
 do_install() {
-    install -D -m 644 "$PKGDIR/files/error.h" "$DEST/usr/include/error.h"
-    install -D -m 644 "$PKGDIR/files/cdefs.h" "$DEST/usr/include/sys/cdefs.h"
+    install -D -m 644 "$PKGDIR/files/error.h" "$DEST/usr/include/musl-compat/error.h"
+    install -D -m 644 "$PKGDIR/files/cdefs.h" "$DEST/usr/include/musl-compat/sys/cdefs.h"
 }
