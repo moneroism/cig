@@ -57,7 +57,7 @@ src_url()  { case "$1" in *::*) echo "${1#*::}" ;; *) echo "$1" ;; esac; }
 
 fetch_sources() {
     local i=0 e f url want have
-    local -a sums; read -r -a sums <<< "$sha256"
+    local -a sums; read -r -a sums <<< "$(echo $sha256)"
     for e in $source; do
         f=$(src_name "$e"); url=$(src_url "$e")
         # reuse the copy the bootstrap already downloaded (checksum still enforced)
@@ -328,8 +328,8 @@ pkg_pin() {
     local p=$1 e f have known i=0 new="" changed=0 sig sigf
     local -a sums sigs
     load_recipe "$p"
-    read -r -a sums <<< "$sha256"
-    read -r -a sigs <<< "$signature"
+    read -r -a sums <<< "$(echo $sha256)"
+    read -r -a sigs <<< "$(echo $signature)"
     for e in $source; do
         f=$(src_name "$e")
         if [ -n "${sums[$i]:-}" ]; then new="$new ${sums[$i]}"; i=$((i+1)); continue; fi

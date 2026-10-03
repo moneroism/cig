@@ -45,7 +45,7 @@ fi
 
 # ---- mount virtual filesystems ----
 cleanup() {
-    for m in etc/resolv.conf cig dev/shm dev/pts dev proc sys run; do
+    for m in boot etc/resolv.conf cig dev/shm dev/pts dev proc sys run; do
         grep -q " $LFS/$m " /proc/mounts && umount "$LFS/$m" || true
     done
 }
@@ -66,6 +66,13 @@ if [ -x "$REPO/cigbuild" ]; then
     mkdir -p "$LFS/cig"
     mountpoint -q "$LFS/cig" || mount --bind "$REPO" "$LFS/cig"
     ln -sfn /cig/cigbuild "$LFS/usr/bin/cigbuild"
+fi
+
+# the EFI partition (partition 1 of the same disk) at /boot, for kernel installs
+ROOTDEV=$(findmnt -no SOURCE "$LFS")
+ESPDEV="${ROOTDEV%2}1"
+if [ -b "$ESPDEV" ] && ! grep -q " $LFS/boot " /proc/mounts; then
+    mount "$ESPDEV" "$LFS/boot"
 fi
 
 # downloads inside the chroot use the host's DNS (the image's own

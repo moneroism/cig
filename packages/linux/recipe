@@ -1,0 +1,75 @@
+# linux - linux-hardened kernel, configured for this machine.
+#
+#   CIG_KERNEL_PROFILE=local    (default) only drivers for hardware in use
+#                               (lsmod of the running system, or CIG_KERNEL_LSMOD=<file>)
+#   CIG_KERNEL_PROFILE=generic  all drivers of the base config (install media)
+#   CIG_KERNEL_EXTRA_MODULES="a b"   always include these modules (local profile)
+#   CIG_KERNEL_CMDLINE_EXTRA="..."   appended to the built-in command line
+#   CIG_ROOT=PARTLABEL=cig-root      root device (default)
+#
+# The module signing key is generated during the build and deleted after.
+name=linux
+_kver=6.18.54
+_hardened=hardened1
+version=$_kver.$_hardened
+_tag="v$_kver-$_hardened"
+_aports=8f13294206888f3dd44ed74a8eb3dd9934499e81
+source="https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-$_kver.tar.xz
+    https://github.com/anthraxx/linux-hardened/releases/download/$_tag/linux-hardened-$_tag.patch
+    alpine-lts.x86_64.config::https://gitlab.alpinelinux.org/alpine/aports/-/raw/$_aports/main/linux-lts/lts.x86_64.config"
+signature="https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-$_kver.tar.sign
+    https://github.com/anthraxx/linux-hardened/releases/download/$_tag/linux-hardened-$_tag.patch.sig
+    -"
+sha256="9df30b02dd8102bbd0be52556288ef6889ddbe7f1ddb96fbf847d0becf3eacac 78fe6fe4d5e3612206e3753e8aab74fd8080137ff5beb02f9d4491bd99624069 39e09418cd8e0142ac49f1ffe21256e9cd94363bb0a6b05bce312e345a5d51cd"
+wrksrc="linux-$_kver"
+makedepends="elfutils openssl perl bison flex"
+style=custom
+nostrip=1          # stripping would destroy the module signatures
+
+_cmdline() {
+    echo "root=${CIG_ROOT:-PARTLABEL=cig-root} rootfstype=ext4 rootwait ro init=/usr/bin/sinit" \
+         "loglevel=4 slab_nomerge init_on_alloc=1 init_on_free=1 page_alloc.shuffle=1" \
+         "randomize_kstack_offset=on vsyscall=none debugfs=off ${CIG_KERNEL_CMDLINE_EXTRA:-}"
+}
+
+_cig_settings() {
+    scripts/kconfig/merge_config.sh -m .config "$PKGDIR/files/cig.config"
+    scripts/config --set-str CMDLINE "$(_cmdline | sed 's/ *$//')"
+    make olddefconfig
+}
+
+pre_build() {
+    patch -p1 < "$WORK/src/linux-hardened-$_tag.patch"
+}
+
+do_build() {
+    cp "$WORK/src/alpine-lts.x86_64.config" .config
+    _cig_settings
+
+    if [ "${CIG_KERNEL_PROFILE:-local}" = local ]; then
+        local l="$WORK/lsmod" m
+        if [ -n "${CIG_KERNEL_LSMOD:-}" ]; then cp "$CIG_KERNEL_LSMOD" "$l"; else lsmod > "$l"; fi
+        for m in ${CIG_KERNEL_EXTRA_MODULES:-}; do echo "$m 0 0" >> "$l"; done
+        echo "local profile: $(($(wc -l < "$l") - 1)) modules from the running system"
+        make LSMOD="$l" localmodconfig < /dev/null
+        _cig_settings            # localmodconfig must not undo cig's settings
+    fi
+
+    make bzImage modules
+}
+
+do_install() {
+    local kver
+    kver=$(make -s kernelrelease)
+    make INSTALL_MOD_PATH="$DEST/usr" INSTALL_MOD_STRIP=1 DEPMOD=true modules_install
+    install -D -m 644 arch/x86/boot/bzImage "$DEST/usr/lib/modules/$kver/vmlinuz"
+    install -m 644 .config "$DEST/usr/lib/modules/$kver/config"
+    rm -f "$DEST/usr/lib/modules/$kver/build" "$DEST/usr/lib/modules/$kver/source"
+    install -D -m 755 "$PKGDIR/files/cig-kernel-install" "$DEST/usr/sbin/cig-kernel-install"
+    # the private signing key never leaves the build
+    rm -f certs/signing_key.pem
+}
+
+post_install() {
+    cig-kernel-install || echo "kernel not deployed yet: mount the EFI partition at /boot and run cig-kernel-install"
+}

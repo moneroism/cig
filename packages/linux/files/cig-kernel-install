@@ -1,0 +1,30 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-3.0-or-later
+# cig-kernel-install [version] - put a built kernel on the EFI system partition.
+#   /boot/EFI/cig/vmlinuz.efi       new kernel
+#   /boot/EFI/cig/vmlinuz-old.efi   previous kernel (fallback)
+# If /etc/cig/efi-fallback exists, also copy to EFI/BOOT/BOOTX64.EFI
+# (for firmware without boot entries, removable disks, VMs).
+set -e
+M=/usr/lib/modules
+kver=${1:-$(ls -t "$M"/*/vmlinuz 2>/dev/null | head -n1 | cut -d/ -f5)}
+[ -n "$kver" ] && [ -f "$M/$kver/vmlinuz" ] || { echo "cig-kernel-install: no kernel found" >&2; exit 1; }
+
+depmod "$kver" 2>/dev/null || true
+
+mounted=0
+if ! mountpoint -q /boot; then
+    if mount /boot 2>/dev/null; then mounted=1
+    else echo "cig-kernel-install: EFI partition not mounted at /boot; kernel $kver NOT deployed" >&2; exit 1
+    fi
+fi
+mkdir -p /boot/EFI/cig
+[ -f /boot/EFI/cig/vmlinuz.efi ] && cp /boot/EFI/cig/vmlinuz.efi /boot/EFI/cig/vmlinuz-old.efi
+cp "$M/$kver/vmlinuz" /boot/EFI/cig/vmlinuz.efi
+if [ -f /etc/cig/efi-fallback ]; then
+    mkdir -p /boot/EFI/BOOT
+    cp "$M/$kver/vmlinuz" /boot/EFI/BOOT/BOOTX64.EFI
+fi
+sync
+[ "$mounted" = 1 ] && umount /boot
+echo "cig-kernel-install: $kver deployed to the EFI partition"
