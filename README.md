@@ -1,104 +1,223 @@
 # cig
 
-A minimal, hardened Linux distribution built from source, in the spirit of
-GrapheneOS but for the PC: as little code as possible, every component
-verified, nothing running that isn't needed.
+A minimal, hardened GNU/Linux distribution built from source, in the spirit
+of GrapheneOS but for the PC: as little code as possible, every source
+verified, nothing running that isn't needed, and nothing hardcoded to one
+machine.
 
-> **Status:** work in progress. Boots in QEMU (UEFI), has networking and
-> verified TLS. Added a graphical session. Not for daily use YET.
+> **Status:** work in progress. Boots in QEMU (UEFI) with its own
+> linux-hardened kernel, signed modules and lockdown; networking, verified TLS
+> and a Wayland desktop (dwl + foot) work. Everything is built from recipes with
+> `cigbuild` and managed by `smoke`; `smoke audit` is clean. Next: the installer,
+> then the first bare-metal boot. Not for daily use. See [`ROADMAP.md`](ROADMAP.md).
+
+## Principles
+
+- **Minimal attack surface.** Small implementations are preferred (musl,
+  BusyBox, sinit, samurai); features nobody uses are compiled out.
+- **Every source verified.** Recipes pin a SHA256; `cigbuild pin` checks the
+  upstream GPG signature before a checksum is pinned. Sources without an
+  upstream signature are marked as trust-on-first-use, openly.
+- **Compiled on the machine.** The kernel is configured for the hardware it
+  runs on, with a module signing key that is generated during the build and
+  deleted afterwards, so every installation has its own key.
+- **Nothing hardcoded.** Hardware-dependent choices (GPU drivers, kernel
+  drivers, firmware) are detected or chosen, never fixed to one machine.
+  Every optional component can be deselected.
+- **Upstream defaults.** No theming; users configure their own system.
+- **Auditable.** One readable inventory says what is installed and why;
+  `smoke audit` checks the whole system against it.
 
 ## Design
 
-| Area | Choice | Why |
-|---|---|---|
-| Kernel | [linux-hardened](https://github.com/anthraxx/linux-hardened) 6.18 LTS | Mainline + hardening patches, stripped to the hardware actually used |
-| C library | musl | ~10x less code than glibc |
-| Userland | BusyBox (trimmed) | One binary, no network daemons, no setuid |
-| Init | sinit (PID 1, ~100 lines) + BusyBox runit (supervision) | Minimal PID 1; supervisor runs as an ordinary process |
-| Boot | EFISTUB, no bootloader | Zero bootloader code; command line is compiled in and cannot be changed at boot |
-| TLS | OpenSSL 3.5 LTS | Compatibility; pinned to the LTS branch |
-| Desktop | Wayland: dwl, foot, wmenu (optional) | Upstream defaults, no theming. No X11; D-Bus only if Bluetooth is selected |
+| Area | Choice |
+|---|---|
+| Kernel | [linux-hardened](https://github.com/anthraxx/linux-hardened) 6.18 LTS, configured per machine |
+| C library | musl |
+| Userland | BusyBox (trimmed: no network daemons, no `su`, no setuid, no BusyBox TLS) |
+| Init | sinit (PID 1, ~100 lines) + BusyBox runit applets for supervision |
+| Devices | devtmpfs + BusyBox mdev, libudev-zero, seatd (no udev, no logind) |
+| Boot | EFISTUB, no bootloader; the command line is compiled in |
+| Admin | doas, for members of `wheel` (the only setuid program) |
+| Packages | `cigbuild` builds, `smoke` installs: every package in its own folder under `/usr/pkg` |
+| TLS | OpenSSL 3.5 LTS |
+| Desktop | Wayland: dwl, foot; CPU rendering (pixman) for now. No X11. |
+| D-Bus | none (planned only as a dependency of optional Bluetooth) |
 
 ### Hardening
 
-- Kernel modules must be signed; the signing key is deleted after the build,
-  so no new module can ever be signed for an installed kernel.
-- Kernel lockdown (integrity mode); optional runtime lock of module loading.
-- Built-in kernel command line: `slab_nomerge`, `init_on_alloc`, `init_on_free`,
+- Module signing enforced; the private key is deleted after the build.
+- Kernel lockdown (integrity); optional runtime lock of module loading
+  (`/etc/lock-modules`).
+- GCC hardening plugins of linux-hardened (latent_entropy, stackleak, randstruct).
+- Built-in command line: `slab_nomerge`, `init_on_alloc`, `init_on_free`,
   `page_alloc.shuffle`, `randomize_kstack_offset`, `vsyscall=none`, `debugfs=off`.
 - sysctl: restricted kernel pointers and dmesg, ptrace scope 2, no unprivileged
-  BPF or user namespaces, no kexec, IPv6 privacy addresses.
-- Everything compiled with PIE and stack protector by default.
-- `/tmp` in RAM with `noexec`; `/home` with `nosuid,nodev`; the ESP is not
-  mounted during normal use.
-- No microcode is shipped. Only two firmware files sets are installed
-  (Intel 7265 WiFi, AMD Polaris GPU), with checksums.
-- curl is built with HTTP(S) and FILE only; wpa_supplicant with WPA2/WPA3-Personal
-  only (no WPS, no EAP, no D-Bus), with MAC randomization.
+  BPF or user namespaces, no kexec, no SysRq, IPv6 privacy addresses
+  (`/etc/sysctl.conf`, additions in `/etc/sysctl.d/`).
+- Everything compiled with PIE and stack protector by default; full RELRO.
+- `/tmp` in RAM with `noexec`; `/home` with `nosuid,nodev`; the EFI partition
+  is not mounted during normal use.
+- No CPU microcode is ever shipped. Firmware: only the files the machine's
+  drivers request.
+- curl: HTTP(S) and FILE only. wpa_supplicant: WPA2/WPA3-Personal only (no WPS,
+  EAP or D-Bus), MAC randomization.
 
-### Supply chain
-
-Every source tarball is verified by GPG signature before use. Where upstream
-publishes no signature (perl, the CA bundle, libnl), this is stated openly
-and checksums are recorded. Signer fingerprints, versions and SHA256 sums of
-the current build are in [`record/`](record/).
-
-## Build
-
-Host: Void Linux (x86_64). The build is split into phases; each script is
-safe to re-run and skips finished steps. All scripts are in [`scripts/`](scripts/)
-and are run as `~/cig/scripts/<name>`.
-
-| # | Script | Where | What |
-|---|---|---|---|
-| 0 | `fetch-sources.sh` | host | Get linux-hardened and linux-firmware at the versions pinned in `record/` |
-| 1 | `build-toolchain.sh` | Void | musl cross-toolchain (binutils, gcc, musl) |
-| 2 | `build-temp.sh` | Void | Temporary system (BusyBox, bash, make, gawk, native gcc) |
-| 3 | `enter-chroot.sh` | Void (sudo) | Enter the new system |
-| 4 | `prepare-base.sh` → `build-base.sh` | Void → chroot | Final toolchain, trimmed BusyBox, sinit, init config |
-| 5 | `install-boot.sh` | Void | Kernel with built-in cmdline, modules, firmware, os-release |
-| 6 | `run-vm.sh` | Void | Boot the image in QEMU with UEFI |
-| 7 | `prepare-essentials.sh` → `build-essentials.sh` | Void → chroot | zlib, e2fsprogs, OpenSSL, curl, git, wpa_supplicant, networking |
-| 8 | `prepare-buildtools.sh` → `build-buildtools.sh` | Void → chroot | pkgconf, samurai, Python 3.13, meson, service logging |
-| 9 | `prepare-wayland.sh` → `build-wayland.sh` | Void → chroot | Wayland core: libinput stack, seatd, wlroots 0.19 (CPU rendering, no Xwayland) |
-| 10 | `prepare-desktop.sh` → `build-desktop.sh` | Void → chroot | fonts (JetBrains Mono), foot, dwl 0.8, session (`startdwl`) |
-| 11 | `prepare-admin.sh` → `build-admin.sh` | Void → chroot | doas for `wheel`, upstream default configs |
-
-Expected layout:
+## Repository
 
 ```
-~/cig/                this repository
-~/cig/scripts/        build scripts
-~/cig/linux-hardened  kernel source, tag v6.18.54-hardened1 (not committed)
-~/cig/linux-firmware  firmware source (not committed)
-~/lfs.img           disk image (not committed)
+cigbuild            build tool: recipe -> verified source -> package
+smoke               package manager: install, remove, inventory, audit
+lib/                shared code (recipes, build styles, hardware detection)
+packages/<name>/    one recipe per package (+ files/ for extra files)
+scripts/            bootstrap and VM helpers (see below)
+kernel/             earlier kernel configs (reference)
+ROADMAP.md          goals and phases
 ```
 
-The kernel configuration is in [`kernel/`](kernel/).
+## cigbuild
+
+Builds packages. Runs inside cig itself (chroot, installer, installed
+system); needs only bash, curl and BusyBox. Pinning with signature checks
+needs gpg, so it is done on the host.
+
+```
+cigbuild build   <pkg>...   fetch + verify + build a package (dependencies via smoke)
+cigbuild install <pkg>...   same as: smoke install
+cigbuild rebuild <pkg>...   build again from source; smoke switches to the new build
+cigbuild pin     <pkg>...   verify upstream signature, pin the SHA256
+cigbuild info    <pkg>      show a recipe
+cigbuild pkgfile <pkg>      path of the package file for the current recipe
+```
+
+Packages are tarballs with a file list and checksum in `/var/cig/pkgs/`.
+All package contents are owned by root. After `/bin`, `/sbin` and `/lib` are
+merged into `/usr`, relative links that would point outside the package are
+rewritten automatically.
+
+### Recipe format
+
+```sh
+name=dwl
+version=0.8
+source="https://codeberg.org/dwl/dwl/releases/download/v$version/dwl-v$version.tar.gz"
+signature=""                 # signature URL per source, or "-"
+sha256="ccc8bbb3..."         # filled in by: cigbuild pin dwl
+depends="wlroots libinput libxkbcommon wayland"
+makedepends="wayland-protocols pkgconf"
+style=make                   # gnu | meson | make | custom
+```
+
+Optional: `rel`, `configure_args`, `meson_args`, `make_args`, `wrksrc`,
+`keep_static` (keep `*.a`, e.g. gcc's libgcc.a, musl's stubs), `nostrip`,
+`config_files`, `link_dirs` (link a whole directory, e.g. kernel modules),
+`copy_files` (install as a real copy, e.g. python), and the functions
+`pre_build`, `do_build`, `do_install`, `post_install`. Sources may be written as
+`filename::url`. Meson options that a package version doesn't define are
+dropped and reported in the build log.
+
+### Hardware-dependent builds
+
+| Variable | Effect |
+|---|---|
+| `CIG_GPUS="amd intel"` | GPU vendors to build for (default: detected from `/sys`) |
+| `CIG_PROFILE=generic` | build for all common hardware (prebuilt packages, install media) |
+| `CIG_KERNEL_PROFILE=local\|generic` | kernel drivers: this machine (`lsmod`) or everything |
+| `CIG_KERNEL_EXTRA_MODULES` | always include these kernel modules |
+| `CIG_KERNEL_CMDLINE_EXTRA` | appended to the built-in command line |
+| `CIG_ROOT` | root device (default `PARTLABEL=cig-root`) |
+| `CIG_FIRMWARE=all` | install all firmware instead of the detected set |
+| `/etc/cig/firmware.list` | explicit firmware list (the installer writes this) |
+| `/etc/cig/efi-fallback` | also install the kernel as `EFI/BOOT/BOOTX64.EFI` |
+
+The kernel base config is Alpine's `linux-lts` (pinned commit) with cig's
+settings from `packages/linux/files/cig.config` on top; a reviewed cig base
+config is planned.
+
+## smoke
+
+Installs, removes and audits packages.
+
+```
+/usr/pkg/<name>/<version>-<rel>-<id>/     the package's files
+/usr/pkg/<name>/<...>/.meta/              file list, checksums, install hook, pristine /etc files
+/usr/bin, /usr/lib, ...                   links into /usr/pkg
+/etc                                      real files (editable)
+/usr/pkg/INVENTORY                        what is installed and why (sealed with a checksum)
+```
+
+```
+smoke install <pkg>...         install (builds with cigbuild if needed)
+smoke remove  <pkg>...         remove, then dependencies nothing needs anymore
+smoke autoremove               remove orphaned dependencies
+smoke list                     packages, reason, who needs them
+smoke why     <pkg>            why a package is installed
+smoke files   <pkg>            files of a package
+smoke mark    <reason> <pkg>   explicit | dependency | build
+smoke audit [--quick]          check the system against the inventory
+```
+
+Install reasons: **explicit** (asked for), **dependency** (needed by another
+package; removed automatically when nothing needs it), **build** (build tools;
+never removed automatically).
+
+Every build gets its own folder, so links switch atomically: even the running C
+library or shell is replaced safely, and the old build is removed afterwards.
+Config files changed by the user are kept; the new version is saved as `*.new`.
+
+`smoke audit` reports: package folders not in the inventory, modified package
+files, files in `/usr` that are not links into `/usr/pkg`, broken links, links
+replaced by real files, changed configuration, orphaned dependencies, and a
+hand-edited inventory (smoke then refuses to write until it is resolved).
+`--quick` skips the package checksums. Paths in `/etc/smoke/audit.ignore` are
+skipped.
+
+## Building
+
+Host: Void Linux (x86_64). The bootstrap creates a disk image with a musl
+toolchain and a minimal system; from there `cigbuild` builds everything.
+
+| # | Step | Where |
+|---|---|---|
+| 1 | `scripts/fetch-sources.sh` | host |
+| 2 | `scripts/build-toolchain.sh`, `scripts/build-temp.sh` | host |
+| 3 | `scripts/enter-chroot.sh` | host (sudo), mounts the repo at `/cig`, links `cigbuild` and `smoke` |
+| 4 | `scripts/prepare-base.sh` → `build-base.sh` | host → chroot |
+| 5 | `cigbuild pin ...` | host (gpg) |
+| 6 | `smoke install <packages>` | chroot |
+| 7 | `scripts/run-vm.sh` | host: boot the image in QEMU (UEFI) |
+
+The bootstrap scripts will be replaced by the install media and installer.
+
+cig is an independent distribution built from scratch. The bootstrap method
+(cross toolchain → temporary tools → chroot → final system) was inspired by
+Linux From Scratch and Musl-LFS; cig does not follow either book.
 
 ## Pinned versions and why
 
 | Package | Pin | Reason |
 |---|---|---|
-| gawk | 5.3.2 | gawk 5.4.x makes GCC 16's option generator produce broken output |
+| gawk | 5.3.x | gawk 5.4 makes GCC 16's option generator produce broken output |
 | git | 2.x, `NO_RUST=1` | git 2.54+ builds Rust by default; git 3.0 makes Rust mandatory |
-| BusyBox | 1.36.1 | Latest release marked stable |
-| GNU make, flex | built as C17 | Pre-C23 code; GCC 15+ defaults to C23 |
-| Python | 3.13.x | Last series with GPG-signed releases (3.14+ uses Sigstore only); build tool only |
-| ninja | samurai | Same job in C, ~4k lines, instead of C++ |
+| Python | 3.13.x | last series with GPG-signed releases; build tool only |
+| make, flex, gmp, mpfr, mpc | built as C17 | pre-C23 code; GCC 15+ defaults to C23 |
+| ninja | samurai | same job in C, ~4k lines |
+| pkgconf | 2.9.99 | pre-release; to be replaced by the newest stable release |
+| musl | provides `ldd` | autoconf's `config.guess` detects musl via `ldd --version` |
+| gcc, binutils | explicit `x86_64-pc-linux-musl` | never let the build guess the system type |
 
 ## Roadmap
 
-- [x] Build tools: meson, samurai, pkgconf, Python; service logging via svlogd
-- [x] Wayland stack with CPU rendering (pixman), dwl, foot, wmenu
-- [ ] Bare hardware: RX570, Intel 7265 WiFi, SATA SSD
-- [ ] App manager: git + JSON, optional on-device compile with SHA256 verification
-- [ ] Mesa / GPU acceleration (decision on LLVM)
-- [ ] hardened_malloc, sandboxing, read-only root
-- [x] doas for admin tasks (`doas poweroff`)
-- [ ] Generic kernel, package split, install media, shell TUI installer with hardware detection
-- [ ] Optional components: PipeWire, Bluetooth (BlueZ + D-Bus), wmenu
-- [ ] `sudo` compatibility command that calls doas
+See [`ROADMAP.md`](ROADMAP.md). In short:
+
+- [x] Phase 0 – Foundation: toolchain, userland, init, desktop, cigbuild, kernel, firmware
+- [x] Phase 1 – smoke: symlink farm, inventory with install reasons, autoremove, audit
+- [ ] Phase 2 – Installer (shell TUI), tested in QEMU
+- [ ] Phase 3 – First bare-metal boot
+- [ ] Phase 4 – Optional components (ALSA, PipeWire, Bluetooth, wmenu), install media
+- [ ] Phase 5 – Security layers (allowlisting), read-only root, own kernel base config
+- [ ] Phase 6 – Mesa, hardened_malloc, sandboxing, app catalog
+- [ ] Phase 7 – Code quality: sanitizers, strict flags, fuzzing
 
 ## License
 
