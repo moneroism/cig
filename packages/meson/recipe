@@ -1,0 +1,17 @@
+# meson - build system (installed as a plain Python package, no pip)
+name=meson
+version=1.12.1
+source="https://github.com/mesonbuild/meson/releases/download/$version/meson-$version.tar.gz"
+sha256="ab0a6ca09f8ef70c564c8241fb5a23957886a0b53fb58412b5e07eaf07dba743"
+depends="python samurai"
+style=custom
+do_build() { :; }
+do_install() {
+    local site
+    site=$(python3 -c 'import sysconfig; print(sysconfig.get_paths()["purelib"])')
+    mkdir -p "$DEST$site" "$DEST/usr/bin"
+    cp -a mesonbuild "$DEST$site/"
+    printf '#!/usr/bin/python3\nimport sys\nfrom mesonbuild.mesonmain import main\nsys.exit(main())\n' \
+        > "$DEST/usr/bin/meson"
+    chmod 755 "$DEST/usr/bin/meson"
+}

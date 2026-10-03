@@ -17,7 +17,7 @@ verified, nothing running that isn't needed.
 | Init | sinit (PID 1, ~100 lines) + BusyBox runit (supervision) | Minimal PID 1; supervisor runs as an ordinary process |
 | Boot | EFISTUB, no bootloader | Zero bootloader code; command line is compiled in and cannot be changed at boot |
 | TLS | OpenSSL 3.5 LTS | Compatibility; pinned to the LTS branch |
-| Desktop | Wayland: dwl, foot, fuzzel | No X11, no D-Bus, no systemd; CPU rendering for now |
+| Desktop | Wayland: dwl, foot, wmenu (optional) | Upstream defaults, no theming. No X11; D-Bus only if Bluetooth is selected |
 
 ### Hardening
 
@@ -61,7 +61,8 @@ and are run as `~/cig/scripts/<name>`.
 | 7 | `prepare-essentials.sh` → `build-essentials.sh` | Void → chroot | zlib, e2fsprogs, OpenSSL, curl, git, wpa_supplicant, networking |
 | 8 | `prepare-buildtools.sh` → `build-buildtools.sh` | Void → chroot | pkgconf, samurai, Python 3.13, meson, service logging |
 | 9 | `prepare-wayland.sh` → `build-wayland.sh` | Void → chroot | Wayland core: libinput stack, seatd, wlroots 0.19 (CPU rendering, no Xwayland) |
-| 10 | `prepare-desktop.sh` → `build-desktop.sh` | Void → chroot | fonts (JetBrains Mono), foot, fuzzel, dwl 0.8, session (`startdwl`) |
+| 10 | `prepare-desktop.sh` → `build-desktop.sh` | Void → chroot | fonts (JetBrains Mono), foot, dwl 0.8, session (`startdwl`) |
+| 11 | `prepare-admin.sh` → `build-admin.sh` | Void → chroot | doas for `wheel`, upstream default configs |
 
 Expected layout:
 
@@ -94,8 +95,29 @@ The kernel configuration is in [`kernel/`](kernel/).
 - [ ] App manager: git + JSON, optional on-device compile with SHA256 verification
 - [ ] Mesa / GPU acceleration (decision on LLVM)
 - [ ] hardened_malloc, sandboxing, read-only root
-- [ ] Minimal power helper so a normal user can power off
+- [x] doas for admin tasks (`doas poweroff`)
+- [ ] Generic kernel, package split, install media, shell TUI installer with hardware detection
+- [ ] Optional components: PipeWire, Bluetooth (BlueZ + D-Bus), wmenu
+- [ ] `sudo` compatibility command that calls doas
 
 ## License
 
-GPL-3.0-or-later. See [`LICENSE`](LICENSE).
+```
+cig - a minimal, hardened GNU/Linux distribution.
+Copyright (C) 2026 moneroism
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see https://www.gnu.org/licenses/.
+```
+
+The full license text is in [`LICENSE`](LICENSE).

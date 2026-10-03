@@ -13,3 +13,4 @@
 *.pem
 *.key
 signing_key*
+*.tar.gz

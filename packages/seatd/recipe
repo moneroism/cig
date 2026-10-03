@@ -1,0 +1,9 @@
+# seatd - device access for the session, without logind / D-Bus
+name=seatd
+version=0.9.1
+source="seatd-$version.tar.gz::https://git.sr.ht/~kennylevinsen/seatd/archive/$version.tar.gz"
+sha256="819979c922a0be258aed133d93920bce6a3d3565a60588d6d372ce9db2712cd3"
+makedepends="meson pkgconf"
+style=meson
+meson_args="-Dlibseat-logind=disabled -Dlibseat-seatd=enabled -Dlibseat-builtin=enabled
+    -Dserver=enabled -Dexamples=disabled -Dman-pages=disabled"

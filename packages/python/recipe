@@ -1,0 +1,13 @@
+# python - build tool only (meson, some build scripts). 3.13: GPG-signed releases.
+name=python
+version=3.13.16
+source="https://www.python.org/ftp/python/$version/Python-$version.tar.xz"
+sha256="f4b1bfb3c79b5bb11b8d228a12504163b4c0dab4d679828d8f5f26b6cb6ab35d"
+depends="zlib openssl libffi"
+style=custom
+do_build() {
+    ./configure --prefix=/usr --enable-shared --without-ensurepip \
+        --disable-test-modules --with-system-expat=no
+    make
+}
+do_install() { make DESTDIR="$DEST" install; ln -sf python3 "$DEST/usr/bin/python"; }

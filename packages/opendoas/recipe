@@ -1,0 +1,21 @@
+# opendoas - run commands as root (members of wheel). The only setuid program.
+name=opendoas
+version=6.8.2
+source="https://github.com/Duncaen/OpenDoas/releases/download/v$version/opendoas-$version.tar.xz"
+sha256="4e98828056d6266bd8f2c93e6ecf12a63a71dbfd70a5ea99ccd4ab6d0745adf0"
+style=custom
+do_build() {
+    CFLAGS="$CFLAGS -std=gnu17" ./configure --prefix=/usr --without-pam --with-timestamp
+    make
+}
+do_install() {
+    make DESTDIR="$DEST" install
+    mkdir -p "$DEST/etc"
+    printf '# members of wheel may run commands as root\npermit persist :wheel\n' > "$DEST/etc/doas.conf"
+}
+post_install() {
+    grep -q '^wheel:' /etc/group || echo 'wheel:x:10:' >> /etc/group
+    chown root:root /usr/bin/doas /etc/doas.conf
+    chmod 4755 /usr/bin/doas
+    chmod 0400 /etc/doas.conf
+}

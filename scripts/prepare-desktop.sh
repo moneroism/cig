@@ -3,7 +3,7 @@
 # Copyright (C) 2026 moneroism
 # prepare-desktop.sh - run on the HOST as your normal user (image mounted,
 # not inside the chroot). Round B of the graphics phase: fonts, foot,
-# fuzzel, dwl. Tries all downloads, reports every problem at the end.
+# dwl. Tries all downloads, reports every problem at the end.
 
 set -euo pipefail
 
@@ -84,16 +84,15 @@ JBMONO_VER=$(latest https://github.com/JetBrains/JetBrainsMono/tags 'releases/ta
 TLLIST_VER=$(cb_latest dnkl/tllist)
 FCFT_VER=$(cb_latest dnkl/fcft)
 FOOT_VER=$(cb_latest dnkl/foot)
-FUZZEL_VER=$(cb_latest dnkl/fuzzel)
 
-for v in GPERF_VER FREETYPE_VER FONTCONFIG_VER JBMONO_VER TLLIST_VER FCFT_VER FOOT_VER FUZZEL_VER; do
+for v in GPERF_VER FREETYPE_VER FONTCONFIG_VER JBMONO_VER TLLIST_VER FCFT_VER FOOT_VER; do
     [ -n "${!v}" ] || fail "could not detect $v"
 done
 [ ${#FAILS[@]} -eq 0 ] || die "version detection failed: ${FAILS[*]}"
 
 cat <<EOF
    gperf $GPERF_VER, freetype $FREETYPE_VER, fontconfig $FONTCONFIG_VER, JetBrains Mono $JBMONO_VER
-   tllist $TLLIST_VER, fcft $FCFT_VER, foot $FOOT_VER, fuzzel $FUZZEL_VER, dwl $DWL_VER
+   tllist $TLLIST_VER, fcft $FCFT_VER, foot $FOOT_VER, dwl $DWL_VER
 EOF
 
 # ---------- downloads ----------
@@ -108,7 +107,6 @@ get "https://github.com/JetBrains/JetBrainsMono/releases/download/v$JBMONO_VER/J
 get "https://codeberg.org/dnkl/tllist/archive/$TLLIST_VER.tar.gz" "" "tllist-$TLLIST_VER.tar.gz"
 get "https://codeberg.org/dnkl/fcft/archive/$FCFT_VER.tar.gz" "" "fcft-$FCFT_VER.tar.gz"
 get "https://codeberg.org/dnkl/foot/archive/$FOOT_VER.tar.gz" "" "foot-$FOOT_VER.tar.gz"
-get "https://codeberg.org/dnkl/fuzzel/archive/$FUZZEL_VER.tar.gz" "" "fuzzel-$FUZZEL_VER.tar.gz"
 
 info "dwl $DWL_VER (checked against a pinned checksum)"
 if fetch "https://codeberg.org/dwl/dwl/releases/download/v$DWL_VER/dwl-v$DWL_VER.tar.gz"; then
@@ -129,7 +127,7 @@ info "copying into $LFS/sources (sudo)"
 FILES=(
   "gperf-$GPERF_VER.tar.gz" "freetype-$FREETYPE_VER.tar.xz" "fontconfig-$FONTCONFIG_VER.tar.xz"
   "JetBrainsMono-$JBMONO_VER.zip" "tllist-$TLLIST_VER.tar.gz" "fcft-$FCFT_VER.tar.gz"
-  "foot-$FOOT_VER.tar.gz" "fuzzel-$FUZZEL_VER.tar.gz" "dwl-v$DWL_VER.tar.gz"
+  "foot-$FOOT_VER.tar.gz" "dwl-v$DWL_VER.tar.gz"
 )
 for f in "${FILES[@]}"; do
     sudo install -m 644 "$f" "$LFS/sources/$f"
@@ -139,7 +137,7 @@ sudo install -m 644 SIGNERS.txt "$LFS/sources/SIGNERS-desktop.txt"
 HERE="$(cd "$(dirname "$0")" && pwd)"
 [ -f "$HERE/build-desktop.sh" ] && sudo install -m 755 "$HERE/build-desktop.sh" "$LFS/sources/"
 
-VARS="GPERF FREETYPE FONTCONFIG JBMONO TLLIST FCFT FOOT FUZZEL DWL"
+VARS="GPERF FREETYPE FONTCONFIG JBMONO TLLIST FCFT FOOT DWL"
 for v in $VARS; do sudo sed -i "/^${v}_VER=/d" "$LFS/sources/VERSIONS"; done
 for v in $VARS; do n="${v}_VER"; echo "$n=${!n}"; done | sudo tee -a "$LFS/sources/VERSIONS" >/dev/null
 

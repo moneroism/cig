@@ -1,0 +1,38 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 moneroism
+#
+# cigbuild - build, package, install and remove cig packages.
+# Runs inside cig itself (chroot, installer, installed system).
+# Needs only bash, curl and BusyBox.
+#
+#   cigbuild build   <pkg>...   fetch + verify + build + package (deps first)
+#   cigbuild install <pkg>...   build if needed, then install
+#   cigbuild remove  <pkg>...   remove an installed package
+#   cigbuild fetch   <pkg>...   download + verify sources only
+#   cigbuild pin     <pkg>...   fill in missing sha256 values in a recipe
+#   cigbuild info    <pkg>      show what a recipe contains
+#   cigbuild list               installed packages
+
+set -euo pipefail
+
+CIG_REPO="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
+CIG_VAR="${CIG_VAR:-/var/cig}"
+. "$CIG_REPO/lib/common.sh"
+. "$CIG_REPO/lib/styles.sh"
+
+usage() { sed -n '8,16p' "$0" | sed 's/^# \{0,1\}//'; exit 1; }
+
+cmd=${1:-}; shift || true
+[ -n "$cmd" ] || usage
+
+case "$cmd" in
+    build)   [ $# -gt 0 ] || usage; for p in "$@"; do pkg_build "$p"; done ;;
+    install) [ $# -gt 0 ] || usage; for p in "$@"; do pkg_install "$p"; done ;;
+    remove)  [ $# -gt 0 ] || usage; for p in "$@"; do pkg_remove "$p"; done ;;
+    fetch)   [ $# -gt 0 ] || usage; for p in "$@"; do load_recipe "$p"; fetch_sources; done ;;
+    pin)     [ $# -gt 0 ] || usage; for p in "$@"; do pkg_pin "$p"; done ;;
+    info)    [ $# -eq 1 ] || usage; pkg_info "$1" ;;
+    list)    pkg_list ;;
+    *)       usage ;;
+esac

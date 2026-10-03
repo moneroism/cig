@@ -1,0 +1,13 @@
+# ca-certificates - Mozilla's trusted root certificates (via curl.se)
+# version = date this bundle snapshot was taken
+name=ca-certificates
+version=2026.10.02
+source="cacert.pem::https://curl.se/ca/cacert.pem"
+sha256="a41b5d356aea97a529fe27e0f7316d2f9d946d75927476cf9cf1b90637d00505"
+style=custom
+do_build() { :; }
+do_install() {
+    install -D -m 644 cacert.pem "$DEST/etc/ssl/cert.pem"
+    mkdir -p "$DEST/etc/ssl/certs"
+    ln -sf ../cert.pem "$DEST/etc/ssl/certs/ca-certificates.crt"
+}

@@ -1,0 +1,12 @@
+# curl - downloads. HTTP(S) and FILE only.
+name=curl
+version=8.22.0
+source="https://curl.se/download/curl-$version.tar.xz"
+sha256="f7ef3ae8a22e521f289803fe93543eb64c329b58aa73a9e224dfd915a2a5f4f7"
+depends="openssl zlib ca-certificates"
+style=gnu
+configure_args="--with-openssl --with-ca-bundle=/etc/ssl/cert.pem
+    --without-libpsl --without-libidn2 --without-brotli --without-zstd
+    --disable-ldap --disable-ldaps --disable-rtsp --disable-dict --disable-telnet
+    --disable-tftp --disable-pop3 --disable-imap --disable-smtp --disable-gopher
+    --disable-mqtt --disable-smb --disable-manual"

@@ -1,0 +1,12 @@
+# perl - needed to build OpenSSL (and by some build scripts)
+name=perl
+version=5.44.0
+source="https://www.cpan.org/src/5.0/perl-$version.tar.xz"
+sha256="505cf43912e9480495c344c70260452e32aa2a73c546a026b3f100053b23ce91"
+style=custom
+do_build() {
+    sh Configure -des -Dprefix=/usr -Dvendorprefix=/usr \
+        -Duseshrplib -Dusethreads -Dman1dir=none -Dman3dir=none
+    make
+}
+do_install() { make DESTDIR="$DEST" install; }

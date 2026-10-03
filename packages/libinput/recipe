@@ -1,0 +1,8 @@
+name=libinput
+version=1.32.0
+source="https://gitlab.freedesktop.org/libinput/libinput/-/archive/$version/libinput-$version.tar.gz"
+sha256="7dd6c1ca964c86eb6810ccd6639cda634e68bdca43bf3afec39e94e942fac8d4"
+depends="mtdev libevdev libudev-zero"
+makedepends="meson pkgconf"
+style=meson
+meson_args="-Dlibwacom=false -Ddebug-gui=false -Dtests=false -Ddocumentation=false"

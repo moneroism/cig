@@ -1,6 +1,5 @@
 #!/bin/bash
 # SPDX-License-Identifier: GPL-3.0-or-later
-# Copyright (C) 2026 moneroism
 # enter-chroot.sh - enter the new system (run with sudo)
 #
 # First run: hands /mnt/lfs over to root and creates the minimal files a
@@ -11,6 +10,7 @@
 set -euo pipefail
 
 LFS=/mnt/lfs
+REPO="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"   # the cig repository
 
 die() { echo "!! $*" >&2; exit 1; }
 
@@ -45,8 +45,8 @@ fi
 
 # ---- mount virtual filesystems ----
 cleanup() {
-    for m in dev/shm dev/pts dev proc sys run; do
-        mountpoint -q "$LFS/$m" && umount "$LFS/$m" || true
+    for m in etc/resolv.conf cig dev/shm dev/pts dev proc sys run; do
+        grep -q " $LFS/$m " /proc/mounts && umount "$LFS/$m" || true
     done
 }
 trap cleanup EXIT
@@ -61,11 +61,23 @@ if [ ! -L "$LFS/dev/shm" ]; then
     mountpoint -q "$LFS/dev/shm" || mount -t tmpfs -o nosuid,nodev tmpfs "$LFS/dev/shm"
 fi
 
+# the repository (cigbuild + recipes) appears as /cig inside the system
+if [ -x "$REPO/cigbuild" ]; then
+    mkdir -p "$LFS/cig"
+    mountpoint -q "$LFS/cig" || mount --bind "$REPO" "$LFS/cig"
+    ln -sfn /cig/cigbuild "$LFS/usr/bin/cigbuild"
+fi
+
+# downloads inside the chroot use the host's DNS (the image's own
+# resolv.conf points at QEMU's DNS, which only exists inside the VM)
+touch "$LFS/etc/resolv.conf"
+grep -q " $LFS/etc/resolv.conf " /proc/mounts || mount --bind /etc/resolv.conf "$LFS/etc/resolv.conf"
+
 # ---- enter ----
 echo "==> entering the new system. Type 'exit' to leave."
 chroot "$LFS" /usr/bin/env -i \
     HOME=/root TERM="${TERM:-xterm}" \
     PS1='(distro) \u:\w\$ ' \
-    PATH=/usr/bin:/usr/sbin \
+    PATH=/usr/bin:/usr/sbin:/cig \
     MAKEFLAGS="-j$(nproc)" \
     /bin/bash --login

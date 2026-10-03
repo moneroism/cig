@@ -4,8 +4,8 @@
 # build-desktop.sh - phase 6 (round B), run INSIDE the chroot:
 #     bash /sources/build-desktop.sh
 #
-# gperf, freetype, fontconfig, JetBrains Mono, tllist, fcft, foot, fuzzel,
-# dwl 0.8 (monochrome, 3px grey borders), and the session:
+# gperf, freetype, fontconfig, JetBrains Mono, tllist, fcft, foot,
+# dwl 0.8 (upstream config), and the session:
 # seatd service, /run/user/<uid> at boot, and the "startdwl" command.
 
 set -euo pipefail
@@ -138,7 +138,7 @@ s_jbmono() {
     fc-cache -f
 }
 
-# ---------------- text rendering, terminal, launcher ----------------
+# ---------------- text rendering, terminal ----------------
 
 s_tllist() { unpack "tllist-$TLLIST_VER.tar.gz"; meson_pkg; cleanup; }
 
@@ -156,59 +156,15 @@ s_foot() {
         -Dterminfo=disabled -Ddefault-terminfo=xterm-256color
     cleanup
     install -d /etc/xdg/foot
-    cat > /etc/xdg/foot/foot.ini <<'EOF'
-font=JetBrains Mono:size=11
-pad=6x6
-
-[colors]
-background=000000
-foreground=d0d0d0
-EOF
-}
-
-s_fuzzel() {
-    unpack "fuzzel-$FUZZEL_VER.tar.gz"
-    # man pages need scdoc; we ship no man pages. If this version has no
-    # "docs" option, drop the doc/ subdirectory from the build instead.
-    if ! grep -qE "option\(['\"]docs['\"]" meson_options.txt meson.options 2>/dev/null; then
-        sed -i "/subdir('doc')/d" meson.build
-    fi
-    meson_pkg -Ddocs=disabled -Denable-cairo=disabled -Dpng-backend=none -Dsvg-backend=none
-    cleanup
-    install -d /etc/xdg/fuzzel
-    cat > /etc/xdg/fuzzel/fuzzel.ini <<'EOF'
-[main]
-font=JetBrains Mono:size=11
-terminal=foot
-
-[colors]
-background=000000ee
-text=d0d0d0ff
-match=ffffffff
-selection=444444ff
-selection-text=ffffffff
-border=888888ff
-
-[border]
-width=3
-radius=2
-EOF
+    printf 'login-shell=yes
+' > /etc/xdg/foot/foot.ini   # functional only, no theme
 }
 
 # ---------------- dwl ----------------
 
 s_dwl() {
     unpack "dwl-v$DWL_VER.tar.gz"
-    cp config.def.h config.h
-    # monochrome: 3px grey borders, light grey focus, black background
-    sed -i \
-        -e 's/^\(static const unsigned int borderpx *= *\)[0-9]*;/\13;/' \
-        -e 's/^\(static const float rootcolor\[\] *= *COLOR(\)0x[0-9a-fA-F]*/\10x000000ff/' \
-        -e 's/^\(static const float bordercolor\[\] *= *COLOR(\)0x[0-9a-fA-F]*/\10x444444ff/' \
-        -e 's/^\(static const float focuscolor\[\] *= *COLOR(\)0x[0-9a-fA-F]*/\10xbbbbbbff/' \
-        -e 's/^\(static const float urgentcolor\[\] *= *COLOR(\)0x[0-9a-fA-F]*/\10xffffffff/' \
-        -e 's/"wmenu-run"/"fuzzel"/' \
-        config.h
+    cp config.def.h config.h               # upstream defaults, unmodified
     cp config.h "$SRC/dwl-config.h"        # keep a copy for the repo
     make PREFIX=/usr LDFLAGS="$HARDEN_LDFLAGS"
     rm -rf "$S"; make PREFIX=/usr DESTDIR="$S" install
@@ -264,7 +220,6 @@ EOF
 s_check() {
     dwl -v 2>&1 | head -n1 || true     # dwl -v exits with status 1 by design
     foot --version | head -n1
-    fuzzel --version | head -n1
     fc-list | grep -ci 'jetbrains mono' | sed 's/^/JetBrains Mono font files: /'
 }
 
@@ -275,7 +230,6 @@ run_step 83-jbmono      s_jbmono
 run_step 84-tllist      s_tllist
 run_step 85-fcft        s_fcft
 run_step 86-foot        s_foot
-run_step 87-fuzzel      s_fuzzel
 run_step 88-dwl         s_dwl
 run_step 89-session     s_session
 run_step 90-check       s_check

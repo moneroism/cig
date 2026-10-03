@@ -1,0 +1,8 @@
+# bison - parser generator (build tool)
+name=bison
+version=3.8.2
+source="https://ftp.gnu.org/gnu/bison/bison-$version.tar.xz"
+sha256="9bba0214ccf7f1079c5d59210045227bcf619519840ebfa80cd3849cff5a5bf2"
+style=gnu
+configure_args="--disable-nls"
+make_args="MAKEINFO=true"

@@ -1,0 +1,7 @@
+# libudev-zero - libudev replacement without a daemon
+name=libudev-zero
+version=1.0.3
+source="libudev-zero-$version.tar.gz::https://github.com/illiliti/libudev-zero/archive/refs/tags/$version.tar.gz"
+sha256="0bd89b657d62d019598e6c7ed726ff8fed80e8ba092a83b484d66afb80b77da5"
+style=make
+make_args="CC=cc"

@@ -1,0 +1,7 @@
+name=pixman
+version=0.46.4
+source="https://www.x.org/releases/individual/lib/pixman-$version.tar.xz"
+sha256="a098c33924754ad43f981b740f6d576c70f9ed1006e12221b1845431ebce1239"
+makedepends="meson pkgconf"
+style=meson
+meson_args="-Dgtk=disabled -Dlibpng=disabled -Dtests=disabled -Ddemos=disabled"

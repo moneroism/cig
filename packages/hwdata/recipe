@@ -1,0 +1,8 @@
+# hwdata - hardware ID tables (data only)
+name=hwdata
+version=0.412
+source="hwdata-$version.tar.gz::https://github.com/vcrhonek/hwdata/archive/refs/tags/v$version.tar.gz"
+sha256="f0c64cd7e31d70a5fb3a52e53ab50a61e74c0421a6381eaa45114eec3bde5fe7"
+style=custom
+do_build()   { ./configure --prefix=/usr --disable-blacklist; }
+do_install() { make DESTDIR="$DEST" install; }

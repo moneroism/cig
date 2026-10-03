@@ -1,0 +1,7 @@
+name=libevdev
+version=1.13.7
+source="https://www.freedesktop.org/software/libevdev/libevdev-$version.tar.xz"
+sha256="0caf824971108f15bb2ad356433bae198d7d3bf1e82d43f63626e069e060bfa6"
+makedepends="meson python"
+style=meson
+meson_args="-Dtests=disabled -Ddocumentation=disabled"

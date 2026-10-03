@@ -1,0 +1,14 @@
+# JetBrains Mono - default monospace font (SIL Open Font License)
+name=font-jetbrains-mono
+version=2.304
+source="https://github.com/JetBrains/JetBrainsMono/releases/download/v$version/JetBrainsMono-$version.zip"
+sha256="6f6376c6ed2960ea8a963cd7387ec9d76e3f629125bc33d1fdcd7eb7012f7bbf"
+depends="fontconfig"
+style=custom
+do_build() { :; }
+do_install() {
+    mkdir -p "$DEST/usr/share/fonts/jetbrains-mono"
+    find "$SRCDIR" -path '*ttf*' -name '*.ttf' ! -path '*variable*' \
+        -exec install -m 644 {} "$DEST/usr/share/fonts/jetbrains-mono/" \;
+}
+post_install() { fc-cache -f; }

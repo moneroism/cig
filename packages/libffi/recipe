@@ -1,0 +1,6 @@
+name=libffi
+version=3.8.0
+source="https://github.com/libffi/libffi/releases/download/v$version/libffi-$version.tar.gz"
+sha256="7da3e2d9a171eb0a038f592ecad3ff2bb2550f3496d87b3b29ad0cf4430c0db4"
+style=gnu
+configure_args="--with-gcc-arch=x86-64"
