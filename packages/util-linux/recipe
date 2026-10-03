@@ -21,3 +21,10 @@ do_build() {
 }
 do_install() { make DESTDIR="$DEST" install; }
 group="base"
+
+# --enable-fdisks also forces cfdisk, which needs ncurses (not in cig), and
+# configure has no switch for that. Turn the hard error into "skip cfdisk".
+pre_build() {
+    sed -i -E 's/as_fn_error [^"]*"cfdisk selected[^"]*"[^;]*$/build_cfdisk=no/' configure
+    if grep -q 'cfdisk selected, but required' configure; then echo "cfdisk patch did not apply"; exit 1; fi
+}
