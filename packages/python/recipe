@@ -5,6 +5,8 @@ source="https://www.python.org/ftp/python/$version/Python-$version.tar.xz"
 sha256="f4b1bfb3c79b5bb11b8d228a12504163b4c0dab4d679828d8f5f26b6cb6ab35d"
 depends="zlib openssl libffi"
 style=custom
+# python finds its library by resolving its own path: install it as a real copy
+copy_files="usr/bin/python3.[0-9]*"
 do_build() {
     ./configure --prefix=/usr --enable-shared --without-ensurepip \
         --disable-test-modules --with-system-expat=no

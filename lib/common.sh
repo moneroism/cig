@@ -6,7 +6,7 @@
 #   sources/   downloaded, verified source archives
 #   build/     per-package build trees (temporary)
 #   pkgs/      finished packages: <name>-<version>-<rel>.tar.gz
-#   db/<name>/ installed package: PKGINFO, FILES, INSTALL
+#   (installed packages are managed by smoke: /usr/pkg/INVENTORY)
 #   logs/      build logs
 
 die()  { echo "!! $*" >&2; exit 1; }
@@ -36,7 +36,7 @@ load_recipe() {
     [ -f "$f" ] || die "no recipe: packages/$1/recipe"
     # reset everything a recipe may set
     name= version= rel=1 source= signature= sha256= depends= makedepends= style=
-    configure_args= meson_args= make_args= wrksrc= keep_static= nostrip= config_files=
+    configure_args= meson_args= make_args= wrksrc= keep_static= nostrip= config_files= link_dirs= copy_files=
     unset -f pre_build do_build do_install post_install 2>/dev/null || true
     PKGDIR="$CIG_REPO/packages/$1"
     # shellcheck disable=SC1090
@@ -140,6 +140,9 @@ make_package() {
         echo "name=$name"; echo "version=$version"; echo "rel=$rel"
         echo "depends=\"$depends\""
         echo "gpus=\"$(cig_gpus)\""
+        echo "config_files=\"$(echo $config_files)\""
+        echo "link_dirs=\"$(echo $link_dirs)\""
+        echo "copy_files=\"$(echo $copy_files)\""
         echo "built=$(date -u +%Y-%m-%dT%H:%MZ)"
     } > "$DEST/.PKGINFO"
     ( cd "$DEST" && find . \( -type f -o -type l \) ! -name '.PKGINFO' ! -name '.FILES' ! -name '.INSTALL' \
@@ -152,13 +155,10 @@ make_package() {
     sha256sum "$PKGFILE" | sed "s#$CIG_VAR/pkgs/##" > "$PKGFILE.sha256"
 }
 
-# ---------------- database ----------------
+# ---------------- installed packages (smoke) ----------------
 
-is_installed() {
-    case "$BOOTSTRAP_PROVIDES" in *" $1 "*) return 0 ;; esac
-    [ -f "$CIG_VAR/db/$1/PKGINFO" ]
-}
-installed_version() { ( . "$CIG_VAR/db/$1/PKGINFO" && echo "$version-$rel" ); }
+SMOKE="$CIG_REPO/smoke"
+is_installed() { "$SMOKE" installed "$1"; }
 
 # ---------------- commands ----------------
 
@@ -170,8 +170,11 @@ pkg_build() {
     BUILDING="$BUILDING$p "
     load_recipe "$p"
     # dependencies must be installed before we can build
-    for d in $depends $makedepends; do
-        is_installed "$d" || pkg_install "$d"
+    for d in $depends; do
+        is_installed "$d" || "$SMOKE" install --as dependency "$d"
+    done
+    for d in $makedepends; do
+        is_installed "$d" || "$SMOKE" install --as build "$d"
     done
     load_recipe "$p"
     if [ -f "$PKGFILE" ]; then info "$name $version-$rel: package exists"; BUILDING=${BUILDING/ $p / }; return; fi
@@ -201,120 +204,17 @@ pkg_build() {
     BUILDING=${BUILDING/ $p / }
 }
 
-# install_files <dir>: put every file of an unpacked package in place.
-# Each file is written next to its target and then renamed over it, so even
-# files in use right now (libc, the shell, busybox) are replaced atomically.
-install_files() {
-    local src=$1 f d dst
-    ( cd "$src" && find . -mindepth 1 -type d | sed 's#^\./##' ) | while read -r d; do
-        [ -e "/$d" ] || mkdir -p "/$d"
-    done
-    while read -r f; do
-        dst="/$f"
-        if [ -d "$dst" ] && [ ! -L "$dst" ]; then
-            warn "$name: /$f is a directory on this system, not replaced"; continue
-        fi
-        rm -f "$dst.cig-new"
-        if [ -L "$src/$f" ]; then
-            ln -s "$(readlink "$src/$f")" "$dst.cig-new"
-        else
-            cp -p "$src/$f" "$dst.cig-new"
-        fi
-        mv -f "$dst.cig-new" "$dst"
-    done < "$src/.FILES"
-}
-
-pkg_install() {
-    local p=$1 d tmp f t owner old
-    load_recipe "$p"
-    if [ -z "${CIG_FORCE:-}" ] && is_installed "$p" && [ -f "$CIG_VAR/db/$p/PKGINFO" ] \
-        && [ "$(installed_version "$p")" = "$version-$rel" ]; then
-        info "$p $version-$rel: already installed"; return
-    fi
-    for d in $depends; do is_installed "$d" || pkg_install "$d"; done
-    load_recipe "$p"                    # deps above reloaded other recipes
-    [ -f "$PKGFILE" ] || pkg_build "$p"
-    load_recipe "$p"
-
-    info "$name $version-$rel: installing"
-    tmp="$CIG_VAR/build/.install-$name"
-    rm -rf "$tmp"; mkdir -p "$tmp"
-    tar -C "$tmp" -xzf "$PKGFILE"
-
-    # refuse to overwrite files owned by another package
-    while read -r f; do
-        for owner in "$CIG_VAR"/db/*/FILES; do
-            [ -f "$owner" ] || continue
-            [ "$owner" = "$CIG_VAR/db/$name/FILES" ] && continue
-            grep -qxF "$f" "$owner" && die "$name: /$f already belongs to $(basename "$(dirname "$owner")")"
-        done
-    done < "$tmp/.FILES"
-
-    # config files the user changed are kept; the new version goes next to them
-    for f in $config_files; do
-        [ -f "$tmp/$f" ] || continue
-        if [ -f "/$f" ] && ! cmp -s "$tmp/$f" "/$f"; then
-            mv "$tmp/$f" "$tmp/$f.new"
-            warn "$name: /$f was changed locally, kept it. New version: /$f.new"
-        fi
-    done
-
-    # never write through a BusyBox link
-    while read -r f; do
-        t="/$f"
-        if [ -L "$t" ]; then case "$(readlink "$t")" in *busybox) rm -f "$t" ;; esac; fi
-    done < "$tmp/.FILES"
-
-    old=""
-    [ -f "$CIG_VAR/db/$name/FILES" ] && old="$CIG_VAR/db/$name/FILES.old" \
-        && cp "$CIG_VAR/db/$name/FILES" "$old"
-
-    install_files "$tmp"
-
-    mkdir -p "$CIG_VAR/db/$name"
-    cp "$tmp/.PKGINFO" "$CIG_VAR/db/$name/PKGINFO"
-    cp "$tmp/.FILES"   "$CIG_VAR/db/$name/FILES"
-    rm -f "$CIG_VAR/db/$name/INSTALL"
-    [ -f "$tmp/.INSTALL" ] && cp "$tmp/.INSTALL" "$CIG_VAR/db/$name/INSTALL"
-
-    # upgrade: remove files the new version no longer has
-    if [ -n "$old" ]; then
-        grep -vxF -f "$CIG_VAR/db/$name/FILES" "$old" | while read -r f; do rm -f "/$f"; done || true
-        rm -f "$old"
-    fi
-    rm -rf "$tmp"
-
-    if [ -f "$CIG_VAR/db/$name/INSTALL" ]; then
-        bash -c ". '$CIG_VAR/db/$name/INSTALL'; post_install" || warn "$name: post_install failed"
-    fi
-    info "$name $version-$rel: installed"
-}
-
-# rebuild from source and reinstall in place (files the new build no longer
-# contains are removed, like an upgrade)
-pkg_rebuild() {
+pkg_rebuild() {   # build again from source, smoke switches to the new build
     load_recipe "$1"
     rm -f "$PKGFILE" "$PKGFILE.sha256"
-    CIG_FORCE=1 pkg_install "$1"
+    pkg_build "$1"
+    "$SMOKE" install --as keep "$1"
 }
 
-pkg_remove() {
-    local p=$1 other f
-    [ -f "$CIG_VAR/db/$p/PKGINFO" ] || die "$p is not installed"
-    for other in "$CIG_VAR"/db/*/PKGINFO; do
-        [ "$other" = "$CIG_VAR/db/$p/PKGINFO" ] && continue
-        ( . "$other"; case " $depends " in *" $p "*) exit 0;; *) exit 1;; esac ) \
-            && die "$p is needed by $(basename "$(dirname "$other")")"
-    done
-    info "$p: removing"
-    while read -r f; do rm -f "/$f"; done < "$CIG_VAR/db/$p/FILES"
-    # remove directories that became empty (deepest first), never top-level ones
-    sed 's#/[^/]*$##' "$CIG_VAR/db/$p/FILES" | sort -ru | while read -r f; do
-        case "$f" in usr|usr/*/|etc|var|"") continue ;; esac
-        rmdir -p "/$f" 2>/dev/null || true
-    done
-    rm -rf "$CIG_VAR/db/$p"
-    info "$p: removed"
+pkg_meta() {      # fields smoke needs, for packages built before they were recorded
+    load_recipe "$1"
+    printf 'config_files="%s"\nlink_dirs="%s"\ncopy_files="%s"\n' \
+        "$(echo $config_files)" "$(echo $link_dirs)" "$(echo $copy_files)"
 }
 
 # verify_sig <file> <sigfile>: GPG check (keys fetched from keyservers as needed)
@@ -356,7 +256,7 @@ pkg_pin() {
         f=$(src_name "$e")
         if [ -n "${sums[$i]:-}" ]; then new="$new ${sums[$i]}"; i=$((i+1)); continue; fi
         # 1. a checksum recorded when the bootstrap verified this file's signature
-        known=$(awk -v f="$f" '$2 == f || $2 == "./" f { print $1; exit }' /sources/SHA256SUMS 2>/dev/null || true)
+        known=$(grep -h "  $f\$" /sources/SHA256SUMS 2>/dev/null | head -n1 | cut -d' ' -f1 || true)
         if [ -n "$known" ]; then
             have=$known; info "$p: $f -> verified by the bootstrap record"
         else
@@ -398,13 +298,7 @@ pkg_info() {
     echo "depends:  ${depends:--}"
     echo "builds with: ${makedepends:--}"
     echo "source:   $source"
-    if [ -f "$CIG_VAR/db/$1/PKGINFO" ]; then echo "installed: $(installed_version "$1")"; else echo "installed: no"; fi
+    if is_installed "$1"; then echo "installed: yes (smoke why $1)"; else echo "installed: no"; fi
 }
 
-pkg_list() {
-    local d
-    for d in "$CIG_VAR"/db/*/PKGINFO; do
-        [ -f "$d" ] || continue
-        ( . "$d"; printf '%-24s %s-%s\n' "$name" "$version" "$rel" )
-    done
-}
+pkg_list() { "$SMOKE" list; }

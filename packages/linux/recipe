@@ -25,6 +25,7 @@ wrksrc="linux-$_kver"
 makedepends="elfutils openssl perl bison flex gmp mpfr mpc"
 style=custom
 nostrip=1          # stripping would destroy the module signatures
+link_dirs="usr/lib/modules/*"   # depmod does not follow file links: link the whole folder
 
 _cmdline() {
     echo "root=${CIG_ROOT:-PARTLABEL=cig-root} rootfstype=ext4 rootwait ro init=/usr/bin/sinit" \

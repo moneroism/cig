@@ -66,6 +66,7 @@ if [ -x "$REPO/cigbuild" ]; then
     mkdir -p "$LFS/cig"
     mountpoint -q "$LFS/cig" || mount --bind "$REPO" "$LFS/cig"
     ln -sfn /cig/cigbuild "$LFS/usr/bin/cigbuild"
+    ln -sfn /cig/smoke "$LFS/usr/bin/smoke"
 fi
 
 # the EFI partition (partition 1 of the same disk) at /boot, for kernel installs
