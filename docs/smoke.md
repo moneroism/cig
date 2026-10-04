@@ -21,8 +21,11 @@ Status markers: **(done)** works today, **(planned)** designed, not built yet.
 ## Commands
 
 ```
-smoke add <name|url>...       add and install                          (planned: name/url resolution)
-smoke add -c <name|url>...    same, compile on this device without asking
+smoke add <name|url>...       add and install                          (done for cig's recipes;
+                                                                       names/links planned)
+smoke add -c <name|url>...    compile on this device without asking    (done)
+smoke add -p <name|url>...    use a prebuilt package without asking    (done)
+smoke add -y ...              no questions (scripts, the installer)    (done)
 smoke remove <pkg>...         remove, then dependencies nothing needs   (done)
 smoke update [<pkg>...]       check upstream for new releases, update   (planned)
 smoke list                    packages, reason, who needs them          (done)

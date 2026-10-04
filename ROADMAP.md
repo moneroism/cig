@@ -16,6 +16,8 @@ hardware waits until cig has booted on real hardware.
 | Upstream defaults | No theming; users configure their own system |
 | Auditable | One readable inventory says what is installed and why; the system can be checked against it |
 | For others, not one machine | Installer, install media and documentation are part of the project |
+| Minimal installed system | Everything beyond the base is the user's choice, at install time or later. The installer and install media may be large; the installed system may not |
+| Small footprint | An installed system with dwl uses **100 MB of RAM or less** after boot |
 
 ## Versions
 
@@ -130,13 +132,23 @@ Work:
 - smoke: `add` (replaces `install`) with the compile/install questions, `-c`, the
   build-tools prompt, the unsigned warning, and name-file lookup (local file first)
 - unbound recipe; DNS choice in the installer
-- day-one usability (so cig can be used for a full day on the PC):
-  sound (ALSA), clipboard (wl-clipboard), screenshots (grim), and a web browser
-  (decision pending: which one, and its cost in build time and code size)
+- day-one usability (so cig can be used for a full day on the PC), all optional:
+  sound (ALSA), clipboard (wl-clipboard), screenshots (grim). No browser yet (see Phase 6)
 - install on the development PC's SATA SSD; verify boot, WiFi, display, input, poweroff
 
 **Exit criteria:** cig installed from the ISO on the PC and usable for a full day;
+an installed system with dwl uses ≤ 100 MB RAM after boot (measured with `free -m`);
 the bugs found that day are the input for 0.3.x.
+
+### 0.3.x – GPU acceleration (after the first bare-metal install)
+
+Mesa **without LLVM**: RADV (Vulkan, ACO shader compiler) for AMD, Zink for OpenGL on
+top of Vulkan; wlroots renders through Vulkan. GPU drivers follow the detected hardware
+(`lib/hardware.sh`). New recipes: Vulkan headers and loader, glslang, CMake, Python
+mako/PyYAML (build-only). Tested on the PC's RX570 (the VM has no AMD GPU).
+Optional in the installer; the RAM target must still hold.
+
+
 
 ### Phase 4 – Optional components (0.4.0)
 
@@ -169,7 +181,8 @@ Also in this phase:
 
 ### Phase 6 – Later
 
-- GPU acceleration (Mesa) – needs a decision on LLVM
+- web browser as an optional component (Firefox-class; needs Rust, LLVM/clang, Node.js
+  to build, glibc compatibility would allow upstream binaries instead)
 - hardened_malloc
 - sandboxing and privilege separation
 - smoke: `update`, name-file recipes, generated recipe drafts, builds as an unprivileged

@@ -85,7 +85,7 @@ needs gpg, so it is done on the host.
 
 ```
 cigbuild build   <pkg>...   fetch + verify + build a package (dependencies via smoke)
-cigbuild install <pkg>...   same as: smoke install
+cigbuild install <pkg>...   same as: smoke add -c -y
 cigbuild rebuild <pkg>...   build again from source; smoke switches to the new build
 cigbuild pin     <pkg>...   verify upstream signature, pin the SHA256
 cigbuild info    <pkg>      show a recipe
@@ -150,7 +150,8 @@ Installs, removes and audits packages.
 ```
 
 ```
-smoke install <pkg>...         install (builds with cigbuild if needed)
+smoke add [-c|-p] [-y] <pkg>.. add and install: asks "compile on this device?" (-c yes,
+                               -p use a prebuilt package) and "install?" (-y no questions)
 smoke remove  <pkg>...         remove, then dependencies nothing needs anymore
 smoke autoremove               remove orphaned dependencies
 smoke list                     packages, reason, who needs them
@@ -222,7 +223,7 @@ toolchain and a minimal system; from there `cigbuild` builds everything.
 | 3 | `scripts/enter-chroot.sh` | host (sudo), mounts the repo at `/cig`, links `cigbuild` and `smoke` |
 | 4 | `scripts/prepare-base.sh` → `build-base.sh` | host → chroot |
 | 5 | `cigbuild pin ...` | host (gpg) |
-| 6 | `smoke install <packages>` | chroot |
+| 6 | `smoke add -c <packages>` | chroot |
 | 7 | `scripts/run-vm.sh` | host: boot the image in QEMU (UEFI) |
 
 The bootstrap scripts will be replaced by the install media and installer.

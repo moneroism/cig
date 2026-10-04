@@ -450,7 +450,7 @@ EOF
     export SMOKE_ROOT="$T"
     for p in $pkgs; do
         echo "    $p"
-        run "$SMOKE" install "$p"
+        if [ "$BUILD_MODE" = compile ]; then run "$SMOKE" add -c -y "$p"; else run "$SMOKE" add -p -y "$p"; fi
     done
     unset SMOKE_ROOT
 

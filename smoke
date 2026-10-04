@@ -9,7 +9,7 @@
 # (editable); the package folder keeps the pristine version.
 # /usr/pkg/INVENTORY lists every installed package and WHY it is there.
 #
-#   smoke install <pkg>...         install (builds with cigbuild if needed)
+#   smoke add [-c|-p] [-y] <pkg>.. add and install (-c compile here, -p prebuilt, -y no questions)
 #   smoke remove  <pkg>...         remove, then remove dependencies nothing needs
 #   smoke autoremove               remove orphaned dependencies
 #   smoke list                     installed packages, reason, who needs them
@@ -28,7 +28,8 @@ ROOT="${SMOKE_ROOT:-}"                  # empty = this system; a directory for t
 PKGROOT="$ROOT/usr/pkg"
 INV="$PKGROOT/INVENTORY"
 CIG_VAR="${CIG_VAR:-/var/cig}"
-CIGBUILD="${CIGBUILD:-$(dirname "$(readlink -f "$0")")/cigbuild}"
+CIG_REPO="${CIG_REPO:-$(dirname "$(readlink -f "$0")")}"     # recipes live here
+CIGBUILD="${CIGBUILD:-$CIG_REPO/cigbuild}"
 export CIG_VAR
 
 die()  { echo "!! smoke: $*" >&2; exit 1; }
@@ -362,6 +363,71 @@ mark_pkg() {
     info "$2: marked $1"
 }
 
+# ---------------- add ----------------
+
+ask_yn() {   # ask_yn <question> <default y|n>; non-interactive -> default
+    local q=$1 d=$2 r
+    if [ ! -t 0 ]; then [ "$d" = y ]; return; fi
+    read -r -p "$q [$( [ "$d" = y ] && echo Y/n || echo y/N )] " r
+    r=${r:-$d}
+    case "$r" in y|Y|yes) return 0 ;; *) return 1 ;; esac
+}
+
+# fields of a recipe smoke needs to show before installing
+recipe_field() { sed -n "s/^$2=\"\{0,1\}\([^\"]*\)\"\{0,1\}\$/\1/p" "$CIG_REPO/packages/$1/recipe" | head -n1; }
+
+add_pkg() {   # add_pkg <name> <compile: yes|no|ask> <assume-yes: 1|"">
+    local name=$1 compile=$2 yes=$3 f version sig src
+    [ -f "$CIG_REPO/packages/$name/recipe" ] || die "unknown package: $name (name lookup and links come later; see docs/smoke.md)"
+
+    if inv_has "$name" && [ "$compile" != yes ]; then
+        f=$("$CIGBUILD" pkgfile "$name")
+        if [ -f "$f" ] && [ "$(sha256sum "$f" | cut -d' ' -f1)" = "$(inv_field "$name" 5)" ]; then
+            [ "$(inv_field "$name" 3)" = explicit ] || mark_pkg explicit "$name"
+            info "$name is already added"; return 0
+        fi
+    fi
+
+    # 1. compile on this device?
+    if [ "$compile" = ask ]; then
+        if [ -n "$yes" ]; then compile=yes
+        elif ask_yn "Compile $name on this device?" y; then compile=yes
+        else compile=no; fi
+    fi
+    f=$("$CIGBUILD" pkgfile "$name")
+    if [ "$compile" = no ] && [ ! -f "$f" ]; then
+        die "$name: no prebuilt package on this system; add it with -c to compile"
+    fi
+    # compiling for this system needs build tools; offer them once
+    if [ "$compile" = yes ] && [ -z "$ROOT" ] && ! command -v cc >/dev/null 2>&1; then
+        echo "Build tools (compiler, make, ...) are not installed; they are needed to compile."
+        if [ -n "$yes" ] || ask_yn "Install build tools now?" n; then
+            install_pkg build-tools explicit
+        else
+            die "$name: not compiled (no build tools)"
+        fi
+    fi
+
+    # 2. what is about to be installed
+    version=$("$CIGBUILD" info "$name" | sed -n 's/^version: *//p')
+    src=$("$CIGBUILD" info "$name" | sed -n 's/^source: *//p' | awk '{ print $1 }')
+    sig=$(recipe_field "$name" signature)
+    echo "  $name $version"
+    [ -n "$src" ] && echo "  source: ${src#*::}"
+    if [ -z "$sig" ] || [ "$sig" = "-" ]; then
+        echo "  warning: $name has no upstream signature recorded (source checked against its pinned SHA256 only)"
+    else
+        echo "  signed upstream: ${sig%% *}"
+    fi
+    echo "  build: $([ "$compile" = yes ] && echo "compile on this device" || echo "prebuilt package")"
+
+    # 3. install?
+    if [ -z "$yes" ] && ! ask_yn "Install $name?" n; then echo "  skipped"; return 0; fi
+
+    if [ "$compile" = yes ]; then rm -f "$f" "$f.sha256"; fi
+    install_pkg "$name" explicit
+}
+
 # ---------------- hooks ----------------
 
 run_hook() {   # run_hook <name>: run the package's post_install (inside $ROOT if set)
@@ -529,9 +595,22 @@ adopt() {
 
 cmd=${1:-}; shift || true
 case "$cmd" in
-    install)    [ $# -gt 0 ] || usage
+    add)        compile=ask yes=""
+                while [ $# -gt 0 ]; do
+                    case "$1" in
+                        -c|--compile)  compile=yes; shift ;;
+                        -p|--prebuilt) compile=no; shift ;;
+                        -y|--yes)     yes=1; shift ;;
+                        -*)           usage ;;
+                        *)            break ;;
+                    esac
+                done
+                [ $# -gt 0 ] || usage
+                for p in "$@"; do add_pkg "$p" "$compile" "$yes"; done ;;
+    install)    # internal: used by cigbuild for dependencies (--as <reason>)
                 reason=explicit
                 case "${1:-}" in --as) reason=$2; shift 2 ;; esac
+                [ $# -gt 0 ] || usage
                 for p in "$@"; do install_pkg "$p" "$reason"; done ;;
     remove)     [ $# -gt 0 ] || usage; for p in "$@"; do remove_pkg "$p"; done; autoremove ;;
     autoremove) autoremove ;;
