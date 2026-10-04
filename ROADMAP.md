@@ -32,8 +32,8 @@ into `/usr/lib/os-release` of every installed system.
 |---|---|
 | 0.1.0 | Phase 0 + 1: boots in QEMU, fully managed by smoke |
 | 0.2.0 | Phase 2: the installer installs a bootable system ← current |
-| 0.3.0 | Phase 3: first bare-metal boot |
-| 0.4.0 | Phase 4: optional components, install media |
+| 0.3.0 | Phase 3: install media (ISO) and first bare-metal install |
+| 0.4.0 | Phase 4: optional components |
 | 0.5.0 | Phase 5: security layers |
 | 1.0.0 | stable on real hardware |
 
@@ -99,27 +99,42 @@ Testing: in QEMU, the running VM installs onto a second, empty disk.
 
 **Exit criteria:** an install onto an empty VM disk boots on its own.
 
-### Phase 3 – First bare-metal boot ⏭ next (0.3.0)
+### Phase 3 – Install media (ISO) and first bare-metal install ⏭ next (0.3.0)
 
-- install onto the SATA SSD of the development PC, run from the cig chroot on the
-  host (no install media needed yet)
-- verify on real hardware: boot, WiFi, display, input, poweroff
-- fix whatever real hardware reveals
+Decisions (after Phase 2):
+- **Installer default: compile everything on the machine.** Kernel: compiled for this
+  machine (default) or a **generic kernel** as an option, with a warning (all drivers,
+  shared prebuilt module key).
+- **Compiling happens on the target disk** (`/var/cig` of the new system), not in the
+  live system's RAM; sources and packages stay on the installed system.
+- **Build tools are off by default** on installed systems. `smoke install -c/--compile`
+  compiles and, if build tools are missing, asks whether to install them. Without `-c`,
+  smoke uses prebuilt packages already on the system (a package repository comes with
+  the app catalog).
+- **Route to bare metal: an ISO written to a USB stick.**
 
-**Exit criteria:** cig boots on the PC and is usable for a session.
+Work:
+- xorriso recipe; hybrid ISO bootable from USB and optical media via UEFI
+- live mode in `rc.init`: read-only ISO root, `/etc` `/var` `/home` `/tmp` in RAM
+- media kernel: broad drivers, ISO9660 built in, root by its own partition name
+  (never confused with an installed `cig-root`)
+- media contents: base system, build tools, cigbuild/smoke/installer, all sources
+  (offline compiling), prebuilt generic kernel
+- `scripts/build-iso.sh` → `cig-<version>.iso`
+- installer: compile-by-default, generic-kernel option with warning, builds on the target
+- smoke: `-c/--compile` with the build-tools prompt
+- install on the development PC's SATA SSD; verify boot, WiFi, display, input, poweroff
 
-Only after this phase are hardware-specific decisions made.
+**Exit criteria:** cig installed from the ISO on the PC, boots and is usable for a session.
 
-### Phase 4 – Optional components and install media (0.4.0)
+### Phase 4 – Optional components (0.4.0)
 
 - components as recipes, offered in the installer:
   ALSA (default on), PipeWire (optional), Bluetooth = BlueZ + D-Bus (optional),
   wmenu (default on, uncheckable)
-- install media: bootable USB image with a broad kernel, cigbuild, smoke, all recipes,
-  all sources, all firmware and the installer
 - UEFI boot entries (efibootmgr) instead of only the fallback path
 
-**Exit criteria:** cig installs from USB on a machine other than the development PC.
+**Exit criteria:** every component installs and works on the PC.
 
 ### Phase 5 – Security layers (0.5.0)
 
@@ -146,7 +161,7 @@ Also in this phase:
 - GPU acceleration (Mesa) – needs a decision on LLVM
 - hardened_malloc
 - sandboxing and privilege separation
-- app catalog for smoke (git + text inventory, optional on-device compile)
+- app catalog for smoke (git + text inventory, signed package repository, optional on-device compile)
 - `sudo` compatibility command that calls doas
 - user power helper (poweroff/reboot without doas)
 - Python removed from finished systems (build tool only)
