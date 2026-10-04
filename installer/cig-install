@@ -457,12 +457,7 @@ EOF
     step "Running package setup inside the new system"
     mount --bind /dev "$T/dev"; mount -t devpts devpts "$T/dev/pts" 2>/dev/null || true
     mount -t proc proc "$T/proc"; mount -t sysfs sysfs "$T/sys"; mount -t tmpfs tmpfs "$T/run"
-    # busybox first: its hook creates the command links the other hooks use
-    for n in busybox $(grep -v '^#' "$T/usr/pkg/INVENTORY" | awk '$1 != "busybox" { print $1 }'); do
-        id=$(awk -v n="$n" '$1 == n { print $6 }' "$T/usr/pkg/INVENTORY")
-        [ -f "$T/usr/pkg/$n/$id/.meta/INSTALL" ] || continue
-        run chroot "$T" /bin/bash -c ". /usr/pkg/$n/$id/.meta/INSTALL; post_install" || echo "    ! $n setup failed (see log)"
-    done
+    run env SMOKE_ROOT="$T" "$SMOKE" hooks --all || echo "    ! some package setup failed (see $LOG)"
 
     step "Users"
     run chroot "$T" adduser -D -s /bin/bash -h "/home/$USERNAME" "$USERNAME"

@@ -38,7 +38,7 @@ load_recipe() {
     [ -f "$f" ] || die "no recipe: packages/$1/recipe"
     # reset everything a recipe may set
     name= version= rel=1 source= signature= sha256= depends= makedepends= style=
-    configure_args= meson_args= make_args= wrksrc= keep_static= nostrip= config_files= link_dirs= copy_files=
+    configure_args= meson_args= make_args= wrksrc= keep_static= nostrip= config_files= link_dirs= copy_files= noextract=
     unset -f pre_build do_build do_install post_install 2>/dev/null || true
     PKGDIR="$CIG_REPO/packages/$1"
     # shellcheck disable=SC1090
@@ -90,6 +90,8 @@ unpack_sources() {
     rm -rf "$WORK"; mkdir -p "$WORK/src" "$DEST"
     for e in $source; do
         f="$CIG_VAR/sources/$(src_name "$e")"
+        # noextract=1: the recipe unpacks what it needs itself (e.g. linux-firmware)
+        [ -n "$noextract" ] && continue
         case "$f" in
             *.tar*|*.tgz) tar -C "$WORK/src" -xf "$f" ;;
             *.zip)        unzip -q -d "$WORK/src" "$f" ;;
@@ -259,7 +261,7 @@ pkg_pin() {
         f=$(src_name "$e")
         if [ -n "${sums[$i]:-}" ]; then new="$new ${sums[$i]}"; i=$((i+1)); continue; fi
         # 1. a checksum recorded when the bootstrap verified this file's signature
-        known=$(grep -h "  $f\$" /sources/SHA256SUMS 2>/dev/null | head -n1 | cut -d' ' -f1 || true)
+        known=$(awk -v f="$f" '$2 == f || $2 == "./" f { print $1; exit }' /sources/SHA256SUMS 2>/dev/null || true)
         if [ -n "$known" ]; then
             have=$known; info "$p: $f -> verified by the bootstrap record"
         else

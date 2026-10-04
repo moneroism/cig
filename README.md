@@ -5,11 +5,11 @@ of GrapheneOS but for the PC: as little code as possible, every source
 verified, nothing running that isn't needed, and nothing hardcoded to one
 machine.
 
-> **Status:** work in progress. Boots in QEMU (UEFI) with its own
-> linux-hardened kernel, signed modules and lockdown; networking, verified TLS
-> and a Wayland desktop (dwl + foot) work. Everything is built from recipes with
-> `cigbuild` and managed by `smoke`; `smoke audit` is clean. Next: the installer,
-> then the first bare-metal boot. Not for daily use. See [`ROADMAP.md`](ROADMAP.md).
+> **Status:** 0.2.0 (beta). The installer installs a bootable system: tested in
+> QEMU (UEFI), the installed disk boots on its own with its own linux-hardened
+> kernel, signed modules and lockdown, and runs a Wayland desktop (dwl + foot).
+> Everything is built from recipes with `cigbuild` and managed by `smoke`.
+> Next: the first bare-metal install. Not for daily use. See [`ROADMAP.md`](ROADMAP.md).
 
 ## Principles
 
@@ -70,7 +70,9 @@ cigbuild            build tool: recipe -> verified source -> package
 smoke               package manager: install, remove, inventory, audit
 lib/                shared code (recipes, build styles, hardware detection)
 packages/<name>/    one recipe per package (+ files/ for extra files)
+installer/          cig-install, the shell TUI installer
 scripts/            bootstrap and VM helpers (see below)
+VERSION             the cig release (X.0.0 stable, 0.X.0 beta, x.y.Z fixes)
 kernel/             earlier kernel configs (reference)
 ROADMAP.md          goals and phases
 ```
@@ -110,6 +112,7 @@ style=make                   # gnu | meson | make | custom
 
 Optional: `rel`, `configure_args`, `meson_args`, `make_args`, `wrksrc`,
 `keep_static` (keep `*.a`, e.g. gcc's libgcc.a, musl's stubs), `nostrip`,
+`noextract` (the recipe unpacks its sources itself, e.g. linux-firmware),
 `config_files`, `link_dirs` (link a whole directory, e.g. kernel modules),
 `copy_files` (install as a real copy, e.g. python), and the functions
 `pre_build`, `do_build`, `do_install`, `post_install`. Sources may be written as
@@ -155,6 +158,7 @@ smoke why     <pkg>            why a package is installed
 smoke files   <pkg>            files of a package
 smoke mark    <reason> <pkg>   explicit | dependency | build
 smoke audit [--quick]          check the system against the inventory
+smoke hooks   <pkg>... | --all run a package's setup again
 ```
 
 Install reasons: **explicit** (asked for), **dependency** (needed by another
@@ -171,6 +175,40 @@ replaced by real files, changed configuration, orphaned dependencies, and a
 hand-edited inventory (smoke then refuses to write until it is resolved).
 `--quick` skips the package checksums. Paths in `/etc/smoke/audit.ignore` are
 skipped.
+
+## Installing
+
+`cig-install` (run as root on a running cig system) asks for:
+
+| Screen | |
+|---|---|
+| Disk | target disk (the running system's disk is not offered); optional separate `/home` |
+| Identity | hostname, user (in `wheel`, `audio`, `video`, `input`), root locked or with password |
+| Components | from the recipes' `group=` / `default=`; base packages always |
+| Hardware | detected GPU and network, firmware per driver (toggle), optional WiFi network |
+| Security | optional layers (placeholders for now) |
+| Build | packages compiled here or prebuilt; kernel compiled for this machine or reused |
+
+Nothing is written before the summary and typing the disk name. The installer
+partitions (GPT: ESP, `cig-root`, `cig-home`), formats, writes fstab by UUID,
+installs the packages with smoke, compiles the kernel for the detected hardware
+(root found by PARTUUID, its own module signing key), runs the package setup,
+creates the users, and enables networking. Log: `/var/log/cig-install.log`.
+
+The installed system boots through the UEFI fallback path for now
+(`EFI/BOOT/BOOTX64.EFI`); boot entries come later.
+
+### Testing in QEMU
+
+```
+qemu-img create -f raw ~/cig-target.img 40G
+CIG_TARGET=~/cig-target.img scripts/run-vm.sh   # dev image + empty second disk
+# in the VM, as root:  cig-install
+CIG_IMG=~/cig-target.img scripts/run-vm.sh      # boot the installed disk alone
+```
+
+Boot an installed target disk alone, never together with the dev image: both
+contain a partition named `cig-root`. Recreate the target image for each test.
 
 ## Building
 
@@ -212,7 +250,7 @@ See [`ROADMAP.md`](ROADMAP.md). In short:
 
 - [x] Phase 0 – Foundation: toolchain, userland, init, desktop, cigbuild, kernel, firmware
 - [x] Phase 1 – smoke: symlink farm, inventory with install reasons, autoremove, audit
-- [ ] Phase 2 – Installer (shell TUI), tested in QEMU
+- [x] Phase 2 – Installer (shell TUI), tested in QEMU (0.2.0)
 - [ ] Phase 3 – First bare-metal boot
 - [ ] Phase 4 – Optional components (ALSA, PipeWire, Bluetooth, wmenu), install media
 - [ ] Phase 5 – Security layers (allowlisting), read-only root, own kernel base config

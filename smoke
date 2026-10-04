@@ -16,6 +16,7 @@
 #   smoke why     <pkg>            why a package is installed
 #   smoke files   <pkg>            files of a package
 #   smoke mark    <reason> <pkg>   set reason: explicit | dependency | build
+#   smoke hooks   <pkg>... | --all run a package's setup again (busybox first)
 #   smoke audit [--quick]          check the system against the inventory
 #                                  (--quick skips the package checksums)
 #   smoke adopt                    move packages installed by old cigbuild under smoke
@@ -34,7 +35,7 @@ die()  { echo "!! smoke: $*" >&2; exit 1; }
 info() { echo "==> $*"; }
 warn() { echo "   ! $*" >&2; }
 
-usage() { sed -n '10,20p' "$0" | sed 's/^# \{0,1\}//'; exit 1; }
+usage() { sed -n '10,21p' "$0" | sed 's/^# \{0,1\}//'; exit 1; }
 
 # ---------------- inventory ----------------
 # One line per package:
@@ -361,6 +362,31 @@ mark_pkg() {
     info "$2: marked $1"
 }
 
+# ---------------- hooks ----------------
+
+run_hook() {   # run_hook <name>: run the package's post_install (inside $ROOT if set)
+    local n=$1 id
+    inv_has "$n" || die "$n is not installed"
+    id=$(inv_field "$n" 6)
+    [ -f "$PKGROOT/$n/$id/.meta/INSTALL" ] || return 0
+    info "$n: setup"
+    if [ -n "$ROOT" ]; then
+        chroot "$ROOT" /bin/bash -c ". /usr/pkg/$n/$id/.meta/INSTALL; post_install"
+    else
+        bash -c ". /usr/pkg/$n/$id/.meta/INSTALL; post_install"
+    fi
+}
+
+hooks() {
+    local n failed=0
+    if [ "${1:-}" = --all ]; then
+        # busybox first: its hook creates the command links the others use
+        set -- $( { inv_has busybox && echo busybox; inv_names | grep -vx busybox; } || true )
+    fi
+    for n in "$@"; do run_hook "$n" || { warn "$n: setup failed"; failed=1; }; done
+    return $failed
+}
+
 # ---------------- audit ----------------
 
 # follow a link inside $ROOT (max 8 hops); prints the final target path without $ROOT
@@ -499,7 +525,7 @@ adopt() {
 
 # ---------------- main ----------------
 
-[ "$(id -u)" -eq 0 ] || [ -n "$ROOT" ] || case "${1:-}" in list|why|files|audit|"") ;; *) die "run as root" ;; esac
+[ "$(id -u)" -eq 0 ] || [ -n "$ROOT" ] || case "${1:-}" in list|why|files|audit|installed|"") ;; *) die "run as root" ;; esac
 
 cmd=${1:-}; shift || true
 case "$cmd" in
@@ -515,6 +541,7 @@ case "$cmd" in
     mark)       [ $# -eq 2 ] || usage; mark_pkg "$1" "$2" ;;
     audit)      case "${1:-}" in --quick) audit quick ;; "") audit ;; *) usage ;; esac ;;
     adopt)      adopt ;;
+    hooks)      [ $# -gt 0 ] || usage; hooks "$@" ;;
     installed)  [ $# -eq 1 ] || usage; inv_has "$1" ;;      # for cigbuild
     *)          usage ;;
 esac

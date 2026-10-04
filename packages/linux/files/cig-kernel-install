@@ -19,7 +19,10 @@ if ! mountpoint -q /boot; then
     fi
 fi
 mkdir -p /boot/EFI/cig
-[ -f /boot/EFI/cig/vmlinuz.efi ] && cp /boot/EFI/cig/vmlinuz.efi /boot/EFI/cig/vmlinuz-old.efi
+# the previous kernel becomes the fallback - unless it is the very same kernel
+if [ -f /boot/EFI/cig/vmlinuz.efi ] && ! cmp -s "$M/$kver/vmlinuz" /boot/EFI/cig/vmlinuz.efi; then
+    cp /boot/EFI/cig/vmlinuz.efi /boot/EFI/cig/vmlinuz-old.efi
+fi
 cp "$M/$kver/vmlinuz" /boot/EFI/cig/vmlinuz.efi
 if [ -f /etc/cig/efi-fallback ]; then
     mkdir -p /boot/EFI/BOOT

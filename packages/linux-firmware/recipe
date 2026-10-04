@@ -1,22 +1,23 @@
 # linux-firmware - device firmware. Never CPU microcode.
 #
-# The whole collection is downloaded, but only what this machine needs is installed:
+# Only what this machine needs is unpacked and installed:
 #   CIG_FIRMWARE=all             everything (install media)
-#   /etc/cig/firmware.list       explicit list, one path per line (written by the installer)
-#   otherwise                    detect: firmware requested by the drivers in use right now
+#   CIG_FIRMWARE_LIST=<file>     explicit list, one path per line (the installer)
+#   /etc/cig/firmware.list       explicit list on an installed system
+#   otherwise                    detect: firmware requested by the drivers in use now
 # What got installed is listed in /usr/share/cig/firmware.list
 name=linux-firmware
 version=20260916
 source="https://cdn.kernel.org/pub/linux/kernel/firmware/linux-firmware-$version.tar.xz"
 signature="https://cdn.kernel.org/pub/linux/kernel/firmware/linux-firmware-$version.tar.sign"
 sha256="f80dcb757a623deda62200c08e0e1a88c76fb6b54964f31b35fa74da1c90ccc5"
+rel=2
 style=custom
 nostrip=1
+noextract=1          # the archive is large; unpack only the selected files
 
-do_build() {
-    sh copy-firmware.sh --ignore-duplicates "$WORK/all" 2>/dev/null || sh copy-firmware.sh "$WORK/all"
-    rm -rf "$WORK/all/intel-ucode" "$WORK/all/amd-ucode"
-}
+_tarball() { echo "$CIG_VAR/sources/linux-firmware-$version.tar.xz"; }
+_top="linux-firmware-$version"
 
 _detect() {
     # firmware= entries of the cig kernel's modules for every driver loaded now
@@ -25,29 +26,69 @@ _detect() {
     [ -n "$kdir" ] || return 0
     lsmod | awk 'NR > 1 { print $1 }' | while read -r m; do
         f=$(find "$kdir" \( -name "$m.ko" -o -name "$(echo "$m" | tr _ -).ko" \) | head -n1)
-        [ -n "$f" ] && strings "$f" | sed -n 's/^firmware=//p'
+        [ -n "$f" ] && { strings "$f" 2>/dev/null || true; } | sed -n 's/^firmware=//p'
     done | sort -u
 }
 
-do_install() {
-    local list="$WORK/wanted" f
-    if [ "${CIG_FIRMWARE:-}" = all ]; then
-        ( cd "$WORK/all" && find . \( -type f -o -type l \) | sed 's#^\./##' ) > "$list"
-    elif [ -n "${CIG_FIRMWARE_LIST:-}" ]; then
-        { grep -v "^#" "$CIG_FIRMWARE_LIST" || true; } | sed "/^$/d" > "$list"
+_wanted() {
+    if [ -n "${CIG_FIRMWARE_LIST:-}" ]; then
+        { grep -v '^#' "$CIG_FIRMWARE_LIST" || true; }
     elif [ -f /etc/cig/firmware.list ]; then
-        grep -v '^#' /etc/cig/firmware.list | sed '/^$/d' > "$list"
+        { grep -v '^#' /etc/cig/firmware.list || true; }
     else
-        _detect > "$list"
+        _detect
+    fi | sed '/^$/d' | { grep -v -E '^(intel-ucode|amd-ucode)/' || true; } | sort -u
+}
+
+do_build() {
+    mkdir -p "$WORK/out"
+    if [ "${CIG_FIRMWARE:-}" = all ]; then
+        tar -C "$WORK" -xf "$(_tarball)"
+        ( cd "$WORK/$_top" && { sh copy-firmware.sh --ignore-duplicates "$WORK/out" 2>/dev/null \
+                                || sh copy-firmware.sh "$WORK/out"; } )
+        rm -rf "$WORK/out/intel-ucode" "$WORK/out/amd-ucode"
+        return
     fi
-    mkdir -p "$DEST/usr/lib/firmware" "$DEST/usr/share/cig"
-    : > "$DEST/usr/share/cig/firmware.list"
+
+    _wanted > "$WORK/wanted"
+    if [ ! -s "$WORK/wanted" ]; then echo "no firmware selected"; return; fi
+    echo "firmware requested: $(wc -l < "$WORK/wanted") file(s)"
+
+    # pass 1: the requested names plus WHENCE (which defines links between names)
+    tar -C "$WORK" -xf "$(_tarball)" "$_top/WHENCE" \
+        $(sed "s#^#$_top/#" "$WORK/wanted") 2>/dev/null || true
+    # names that are links in WHENCE ("Link: a -> b", b relative to a's folder)
+    : > "$WORK/links"
     while read -r f; do
-        case "$f" in intel-ucode/*|amd-ucode/*) continue ;; esac
-        [ -e "$WORK/all/$f" ] || continue
-        install -D -m 644 "$WORK/all/$f" "$DEST/usr/lib/firmware/$f"   # follows links
-        echo "$f" >> "$DEST/usr/share/cig/firmware.list"
-    done < "$list"
+        [ -e "$WORK/$_top/$f" ] && continue
+        t=$(sed -n "s#^Link: $f -> ##p" "$WORK/$_top/WHENCE" | head -n1)
+        [ -n "$t" ] || continue
+        case "$f" in */*) t="${f%/*}/$t" ;; esac
+        echo "$f $t" >> "$WORK/links"
+    done < "$WORK/wanted"
+    # pass 2: the link targets, if any
+    if [ -s "$WORK/links" ]; then
+        tar -C "$WORK" -xf "$(_tarball)" $(awk -v p="$_top/" '{ print p $2 }' "$WORK/links") 2>/dev/null || true
+    fi
+
+    while read -r f; do
+        if [ -f "$WORK/$_top/$f" ]; then
+            install -D -m 644 "$WORK/$_top/$f" "$WORK/out/$f"
+        else
+            t=$(awk -v f="$f" '$1 == f { print $2 }' "$WORK/links")
+            if [ -n "$t" ] && [ -f "$WORK/$_top/$t" ]; then
+                install -D -m 644 "$WORK/$_top/$t" "$WORK/out/$f"
+            else
+                echo "not in linux-firmware $version: $f"
+            fi
+        fi
+    done < "$WORK/wanted"
+}
+
+do_install() {
+    mkdir -p "$DEST/usr/lib/firmware" "$DEST/usr/share/cig"
+    cp -R "$WORK/out/." "$DEST/usr/lib/firmware/"
+    ( cd "$DEST/usr/lib/firmware" && find . -type f | sed 's#^\./##' | sort ) > "$DEST/usr/share/cig/firmware.list"
     echo "firmware files installed: $(wc -l < "$DEST/usr/share/cig/firmware.list")"
 }
 group="base"
