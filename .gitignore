@@ -5,12 +5,56 @@
 # downloads and staging
 /stage
 
-# disk images and VM state
+# disk images, VM state, build output
 *.img
+*.iso
+*.qcow2
 *.fd
+*.tar.gz
+*.tar.xz
+*.tar.zst
+*.log
 
-# never commit keys
+# keys and secrets - never commit
 *.pem
 *.key
+*.x509
+*.p12
+*.pfx
+*.gpg
+*.kbx
 signing_key*
-*.tar.gz
+x509.genkey
+secring*
+private-keys-v1.d/
+.gnupg/
+.env
+.env.*
+*.secret
+id_rsa*
+id_ed25519*
+wpa_supplicant-*.conf
+
+# AI assistant files (local working notes, not part of the distribution)
+CLAUDE*.md
+CLAUDE.local.md
+HANDOFF.md
+.claude/
+.mcp.json
+AGENTS.md
+GEMINI.md
+.gemini/
+.codex/
+.cursor/
+.cursorrules
+.aider*
+.github/copilot-instructions.md
+
+# editor and OS junk
+*~
+*.swp
+*.swo
+.*.swp
+.DS_Store
+.vscode/
+.idea/
