@@ -212,7 +212,9 @@ detect_hardware() {
     while read -r m; do
         f=$(find "$kdir/" \( -name "$m.ko" -o -name "$(echo "$m" | tr _ -).ko" \) 2>/dev/null | head -n1)
         [ -n "$f" ] || continue
-        fw=$(strings "$f" | sed -n 's/^firmware=//p' | grep -v -E '^(intel-ucode|amd-ucode)/' | sort -u | tr '\n' ' ')
+        # most drivers request no firmware: grep then finds nothing, which is fine
+        fw=$( { strings "$f" 2>/dev/null || true; } | sed -n 's/^firmware=//p' \
+              | { grep -v -E '^(intel-ucode|amd-ucode)/' || true; } | sort -u | tr '\n' ' ')
         [ -n "$fw" ] || continue
         DRV_NAMES+=("$m"); DRV_FILES+=("$fw"); DRV_ON+=(on)
     done < <(awk 'NR > 1 { print $1 }' "$WORK/lsmod")
@@ -499,6 +501,8 @@ EOF
 }
 
 # ---------------- main ----------------
+# never stop silently: report where it happened
+trap 'echo; echo "!! cig-install stopped unexpectedly at line $LINENO (please report this line)"' ERR
 preflight
 load_components
 detect_hardware
