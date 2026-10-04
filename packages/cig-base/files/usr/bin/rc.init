@@ -19,6 +19,7 @@ ln -sfn /proc/self/fd/2 /dev/stderr
 
 mount -o remount,rw /
 mount -a
+swapon -a 2>/dev/null
 
 [ -s /etc/hostname ] && hostname -F /etc/hostname
 hwclock -s -u 2>/dev/null

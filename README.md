@@ -183,15 +183,18 @@ skipped.
 
 | Screen | |
 |---|---|
-| Disk | target disk (the running system's disk is not offered); optional separate `/home` |
+| Disk | target disk (the running system's disk is not offered); **auto** (erase, default layout: ESP 512M, system, optional swap and `/home`) or **custom** (partition editor: keep, delete, add, format, mount points) |
 | Identity | hostname, user (in `wheel`, `audio`, `video`, `input`), root locked or with password |
 | Components | from the recipes' `group=` / `default=`; base packages always |
 | Hardware | detected GPU and network, firmware per driver (toggle), optional WiFi network |
 | Security | optional layers (placeholders for now) |
 | Build | packages compiled here or prebuilt; kernel compiled for this machine or reused |
 
-Nothing is written before the summary and typing the disk name. The installer
-partitions (GPT: ESP, `cig-root`, `cig-home`), formats, writes fstab by UUID,
+Nothing is written before the summary and typing the disk name; the summary
+lists every partition that is deleted or formatted. The installer writes the
+partition table in one step (GPT: ESP, `cig-root`, optional `cig-swap` and
+`cig-home`; kept partitions keep their place and IDs, so an existing `/home` or
+another system's ESP can stay), formats, writes fstab by UUID,
 installs the packages with smoke, compiles the kernel for the detected hardware
 (root found by PARTUUID, its own module signing key), runs the package setup,
 creates the users, and enables networking. Log: `/var/log/cig-install.log`.
