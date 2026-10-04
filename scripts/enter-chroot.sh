@@ -6,6 +6,9 @@
 # system needs (/etc/passwd, /etc/group, /tmp, ...).
 # Every run: mounts /dev, /proc, /sys, /run inside /mnt/lfs, opens a shell
 # inside the new system, and unmounts everything again when you exit.
+#
+#   enter-chroot.sh                 interactive shell
+#   enter-chroot.sh -c "<command>"  run one command inside, then leave
 
 set -euo pipefail
 
@@ -13,6 +16,13 @@ LFS=/mnt/lfs
 REPO="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"   # the cig repository
 
 die() { echo "!! $*" >&2; exit 1; }
+
+CMD=()
+case "${1:-}" in
+    -c) [ $# -eq 2 ] || die "usage: enter-chroot.sh [-c \"<command>\"]"; CMD=(-c "$2") ;;
+    "") ;;
+    *)  die "usage: enter-chroot.sh [-c \"<command>\"]" ;;
+esac
 
 [ "$(id -u)" -eq 0 ] || die "run with sudo"
 mountpoint -q "$LFS" || die "$LFS is not mounted"
@@ -82,10 +92,10 @@ touch "$LFS/etc/resolv.conf"
 grep -q " $LFS/etc/resolv.conf " /proc/mounts || mount --bind /etc/resolv.conf "$LFS/etc/resolv.conf"
 
 # ---- enter ----
-echo "==> entering the new system. Type 'exit' to leave."
+[ ${#CMD[@]} -gt 0 ] || echo "==> entering the new system. Type 'exit' to leave."
 chroot "$LFS" /usr/bin/env -i \
     HOME=/root TERM="${TERM:-xterm}" \
     PS1='(distro) \u:\w\$ ' \
     PATH=/usr/bin:/usr/sbin:/cig \
     MAKEFLAGS="-j$(nproc)" \
-    /bin/bash --login
+    /bin/bash --login "${CMD[@]}"
