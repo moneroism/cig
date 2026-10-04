@@ -175,11 +175,14 @@ pkg_build() {
     BUILDING="$BUILDING$p "
     load_recipe "$p"
     # dependencies must be installed before we can build
+    # Building happens on THIS machine, so everything needed to build must be
+    # installed here - even when installing into another root (SMOKE_ROOT, the
+    # installer). The target only receives runtime dependencies (smoke does that).
     for d in $depends; do
-        is_installed "$d" || "$SMOKE" install --as dependency "$d"
+        SMOKE_ROOT= "$SMOKE" installed "$d" || SMOKE_ROOT= "$SMOKE" install --as dependency "$d"
     done
     for d in $makedepends; do
-        is_installed "$d" || "$SMOKE" install --as build "$d"
+        SMOKE_ROOT= "$SMOKE" installed "$d" || SMOKE_ROOT= "$SMOKE" install --as build "$d"
     done
     load_recipe "$p"
     if [ -f "$PKGFILE" ]; then info "$name $version-$rel: package exists"; BUILDING=${BUILDING/ $p / }; return; fi

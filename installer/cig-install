@@ -23,7 +23,7 @@ export CIG_VAR="${CIG_VAR:-/var/cig}"
 # ---------------- choices (filled by the screens) ----------------
 DISK="" ROOT_SIZE="40" SEP_HOME=yes
 HOSTNAME_="cig" USERNAME="" USERPASS="" ROOTMODE=lock ROOTPASS=""
-BUILD_MODE=prebuilt KERNEL_MODE=compile
+BUILD_MODE=compile KERNEL_MODE=compile
 WIFI_SSID="" WIFI_PSK=""
 declare -a PKG_NAMES=() PKG_GROUP=() PKG_ON=() PKG_DESC=()
 declare -a DRV_NAMES=() DRV_FILES=() DRV_ON=()
@@ -272,16 +272,25 @@ screen_security() {
 screen_build() {
     title "6/6  Build"
     echo "Packages:"
-    echo "  1) compile everything on this machine from verified source (hours)"
-    echo "  2) use the prebuilt, verified packages from the install media (fast)"
+    echo "  1) compile everything on this machine from verified source (default; hours)"
+    echo "  2) use the prebuilt packages from the install media (fast)"
     ask "Choice" "$([ "$BUILD_MODE" = compile ] && echo 1 || echo 2)"
-    if [ "$REPLY" = 1 ]; then BUILD_MODE=compile; else BUILD_MODE=prebuilt; fi
+    if [ "$REPLY" = 2 ]; then BUILD_MODE=prebuilt; else BUILD_MODE=compile; fi
     echo
     echo "Kernel:"
-    echo "  1) compile for this machine, with its own module signing key (recommended, 20-60 min)"
-    echo "  2) reuse the kernel package on the install media (key not unique)"
+    echo "  1) compile for this machine (default, 20-60 min): only the drivers this machine"
+    echo "     uses, and a module signing key that exists nowhere else and is deleted after"
+    echo "  2) generic kernel from the install media"
     ask "Choice" "$([ "$KERNEL_MODE" = compile ] && echo 1 || echo 2)"
-    if [ "$REPLY" = 2 ]; then KERNEL_MODE=reuse; else KERNEL_MODE=compile; fi
+    if [ "$REPLY" = 2 ]; then
+        echo
+        echo "  WARNING: the generic kernel contains drivers for all common hardware (much"
+        echo "  larger attack surface), and its modules were signed with a key that was used"
+        echo "  for every copy of the install media, not one unique to this machine."
+        if yesno "  Use the generic kernel anyway?" n; then KERNEL_MODE=generic; else KERNEL_MODE=compile; fi
+    else
+        KERNEL_MODE=compile
+    fi
 }
 
 # ---------------- summary ----------------
@@ -429,11 +438,19 @@ EOF
     done
     sort -u -o "$fwlist" "$fwlist"
 
+    # Everything is built on the target disk, in the new system's own /var/cig:
+    # the sources (and packages) stay there for later "smoke add -c".
+    local MEDIA_VAR="$CIG_VAR"
+    export CIG_VAR="$T/var/cig"
+    mkdir -p "$CIG_VAR"/{sources,pkgs,build,logs}
+    step "Copying sources to the new system"
+    cp -a "$MEDIA_VAR/sources/." "$CIG_VAR/sources/"
     step "Preparing packages ($BUILD_MODE)"
-    if [ "$BUILD_MODE" = compile ]; then
-        for p in $(ls "$CIG_VAR/pkgs/" 2>/dev/null | grep '\.tar\.gz$' || true); do
-            rm -f "$CIG_VAR/pkgs/$p" "$CIG_VAR/pkgs/$p.sha256"
-        done
+    if [ "$BUILD_MODE" = prebuilt ]; then
+        cp -a "$MEDIA_VAR/pkgs/." "$CIG_VAR/pkgs/"
+    fi
+    if [ "$KERNEL_MODE" = generic ]; then
+        cp -a "$(CIG_VAR="$MEDIA_VAR" "$CIGBUILD" pkgfile linux)" "$CIG_VAR/pkgs/"
     fi
     # kernel and firmware are always made for this machine's selection
     if [ "$KERNEL_MODE" = compile ]; then
@@ -450,9 +467,19 @@ EOF
     export SMOKE_ROOT="$T"
     for p in $pkgs; do
         echo "    $p"
-        if [ "$BUILD_MODE" = compile ]; then run "$SMOKE" add -c -y "$p"; else run "$SMOKE" add -p -y "$p"; fi
+        case "$p:$BUILD_MODE:$KERNEL_MODE" in
+            linux:*:*|linux-firmware:*:*) run "$SMOKE" add -p -y "$p" ;;   # built above for this machine
+            *:compile:*)                  run "$SMOKE" add -c -y "$p" ;;
+            *)                            run "$SMOKE" add -p -y "$p" ;;
+        esac
     done
     unset SMOKE_ROOT
+
+    # prebuilt build tools stay available (not installed): the first "smoke add -c"
+    # on the new system can then offer them without compiling a compiler first
+    step "Keeping prebuilt build tools available"
+    cp -an "$MEDIA_VAR/pkgs/." "$CIG_VAR/pkgs/" 2>/dev/null || true
+    rm -rf "$CIG_VAR/build"/*
 
     step "Running package setup inside the new system"
     mount --bind /dev "$T/dev"; mount -t devpts devpts "$T/dev/pts" 2>/dev/null || true
