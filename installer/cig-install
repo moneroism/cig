@@ -69,6 +69,9 @@ preflight() {
     done
     [ -x "$CIGBUILD" ] && [ -x "$SMOKE" ] || die "cigbuild/smoke not found next to the installer"
     mkdir -p "$WORK"
+    # long builds: keep the console from blanking while the installer runs
+    echo 0 > /sys/module/kernel/parameters/consoleblank 2>/dev/null || true
+    printf '\033[9;0]' 2>/dev/null || true
 }
 
 # ---------------- screen 1: disk ----------------

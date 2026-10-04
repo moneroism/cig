@@ -172,6 +172,8 @@ install_pkg() {   # install_pkg <name> <reason>
         [ "$reason" = explicit ] || reason=$old
     fi
 
+    local prevD=""
+    if inv_has "$name"; then prevD="$PKGROOT/$name/$(inv_field "$name" 6)"; fi
     id="$pi_version-${sha:0:8}"
     D="$PKGROOT/$name/$id"
     mypath="/usr/pkg/$name/$id"
@@ -241,11 +243,17 @@ install_pkg() {   # install_pkg <name> <reason>
         case "$p" in usr/*) continue ;; esac
         dst="$ROOT/$p"
         mkdir -p "$(dirname "$dst")"
+        # a config file is only protected if the USER changed it: compare with what
+        # the previous build of this package installed (its pristine copy)
         if [ -f "$dst" ] && [ ! -L "$dst" ] && matches_any "$p" $pi_config \
             && ! cmp -s "$tmp/$p" "$dst"; then
-            cp -p "$tmp/$p" "$dst.new"
-            warn "$name: /$p was changed locally, kept it. New version: /$p.new"
-            continue
+            if [ -n "$prevD" ] && [ -f "$prevD/.meta/root/$p" ] && cmp -s "$prevD/.meta/root/$p" "$dst"; then
+                :   # unchanged since the last install: update it
+            else
+                cp -p "$tmp/$p" "$dst.new"
+                warn "$name: /$p was changed locally, kept it. New version: /$p.new"
+                continue
+            fi
         fi
         if [ -L "$tmp/$p" ]; then
             swap_in "$dst" ln -s "$(readlink "$tmp/$p")"
