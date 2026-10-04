@@ -107,10 +107,15 @@ Decisions (after Phase 2):
   shared prebuilt module key).
 - **Compiling happens on the target disk** (`/var/cig` of the new system), not in the
   live system's RAM; sources and packages stay on the installed system.
-- **Build tools are off by default** on installed systems. `smoke install -c/--compile`
-  compiles and, if build tools are missing, asks whether to install them. Without `-c`,
-  smoke uses prebuilt packages already on the system (a package repository comes with
-  the app catalog).
+- **Build tools are off by default** on installed systems; the first compile asks for them.
+- **smoke = Obtainium for Linux** (design: [`docs/smoke.md`](docs/smoke.md)): no central
+  repository; `smoke add <name|url>` adds *and* installs (there is no `smoke install`),
+  asks "compile on device?" (`-c` = yes) and "install package?"; a signed name file maps
+  words to official links and key fingerprints; unsigned upstreams install with a warning.
+- **cig updates** come from the cig repository (GitHub, later Codeberg), compiled and
+  verified on the device; tags signed by the project key.
+- **DNS** is an installer choice: unbound + DoT by default (provider list editable),
+  a local recursive resolver (no third parties), or plain DHCP DNS.
 - **Route to bare metal: an ISO written to a USB stick.**
 
 Work:
@@ -122,16 +127,22 @@ Work:
   (offline compiling), prebuilt generic kernel
 - `scripts/build-iso.sh` → `cig-<version>.iso`
 - installer: compile-by-default, generic-kernel option with warning, builds on the target
-- smoke: `-c/--compile` with the build-tools prompt
+- smoke: `add` (replaces `install`) with the compile/install questions, `-c`, the
+  build-tools prompt, the unsigned warning, and name-file lookup (local file first)
+- unbound recipe; DNS choice in the installer
+- day-one usability (so cig can be used for a full day on the PC):
+  sound (ALSA), clipboard (wl-clipboard), screenshots (grim), and a web browser
+  (decision pending: which one, and its cost in build time and code size)
 - install on the development PC's SATA SSD; verify boot, WiFi, display, input, poweroff
 
-**Exit criteria:** cig installed from the ISO on the PC, boots and is usable for a session.
+**Exit criteria:** cig installed from the ISO on the PC and usable for a full day;
+the bugs found that day are the input for 0.3.x.
 
 ### Phase 4 – Optional components (0.4.0)
 
 - components as recipes, offered in the installer:
-  ALSA (default on), PipeWire (optional), Bluetooth = BlueZ + D-Bus (optional),
-  wmenu (default on, uncheckable)
+  PipeWire (optional), Bluetooth = BlueZ + D-Bus (optional),
+  wmenu (default on, uncheckable); ALSA moves to Phase 3
 - UEFI boot entries (efibootmgr) instead of only the fallback path
 
 **Exit criteria:** every component installs and works on the PC.
@@ -161,7 +172,9 @@ Also in this phase:
 - GPU acceleration (Mesa) – needs a decision on LLVM
 - hardened_malloc
 - sandboxing and privilege separation
-- app catalog for smoke (git + text inventory, signed package repository, optional on-device compile)
+- smoke: `update`, name-file recipes, generated recipe drafts, builds as an unprivileged
+  user, recipe diffs on update, on-device signature checks (gpgv, later minisign/signify),
+  optional glibc compatibility for prebuilt upstream binaries
 - `sudo` compatibility command that calls doas
 - user power helper (poweroff/reboot without doas)
 - Python removed from finished systems (build tool only)
