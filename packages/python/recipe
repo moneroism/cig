@@ -13,3 +13,4 @@ do_build() {
     make
 }
 do_install() { make DESTDIR="$DEST" install; ln -sf python3 "$DEST/usr/bin/python"; }
+copy_files="$copy_files usr/bin/python3"
