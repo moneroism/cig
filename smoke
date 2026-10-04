@@ -117,6 +117,9 @@ swap_in() {   # swap_in <dst> <command...>: build dst.smoke-new, rename over dst
     "$@" "$dst.smoke-new"
     if [ -d "$dst" ] && [ ! -L "$dst" ]; then
         mv "$dst" "$dst.smoke-old"; mv "$dst.smoke-new" "$dst"; rm -rf "$dst.smoke-old"
+    elif [ -L "$dst" ] && [ -d "$dst" ]; then
+        # a link to a folder: mv would move the new link INTO that folder
+        rm -f "$dst"; mv -f "$dst.smoke-new" "$dst"
     else
         mv -f "$dst.smoke-new" "$dst"
     fi
