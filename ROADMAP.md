@@ -85,7 +85,7 @@ from recipe data (group, default), not from a fixed list.
 
 | Screen | Content |
 |---|---|
-| Disk | choose disk, confirmation before erasing; GPT: ESP, `cig-root`, `cig-home` |
+| Disk | choose disk; auto layout or partition editor; confirmation before writing; GPT: ESP, `cig-root`, optional `cig-swap`, `cig-home` |
 | Identity | hostname, user, passwords; user in `wheel`, `audio`, `video`, `input` |
 | Components | desktop, launcher, sound, Bluetooth … (from recipes) |
 | Hardware | detected devices and the firmware they need; adjustable |
@@ -156,6 +156,25 @@ Optional in the installer; the RAM target must still hold.
   PipeWire (optional), Bluetooth = BlueZ + D-Bus (optional),
   wmenu (default on, uncheckable); ALSA moves to Phase 3
 - UEFI boot entries (efibootmgr) instead of only the fallback path
+- **libre-meter** in the installer, right before the final summary: how libre the
+  installed system will be, and which software changes would make it more libre
+  - assesses every part cig installs: packages (recipe `license=`), kernel and
+    kernel config, and each firmware file (license from linux-firmware's `WHENCE`);
+    states openly what lies outside cig (UEFI firmware, Intel ME / AMD PSP, device
+    firmware already on the hardware, microcode inside the UEFI firmware)
+  - suggests software changes first: a free alternative for a non-free package,
+    free firmware where it exists for the device (e.g. open `ath9k_htc` firmware,
+    a free driver instead of one that needs a blob), dropping firmware no device
+    uses, a kernel config without blob-loading for a subsystem that doesn't need it;
+    each with its cost (lost function, performance). Hardware changes come last,
+    as information only
+  - two scores: **libre overall** (share of free parts in what will be installed) and
+    **libre vs. possible** (overall score compared with the best score this hardware
+    can reach with free software), so a machine that cannot run without blobs is not
+    judged against an ideal it cannot meet
+  - nothing changes without the user choosing it; suggestions link to the screen
+    (components, hardware) where they can be applied
+  - needs `license=` in every recipe and a list of free alternatives per non-free item
 
 **Exit criteria:** every component installs and works on the PC.
 
