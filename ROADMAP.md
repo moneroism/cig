@@ -30,8 +30,8 @@ into `/usr/lib/os-release` of every installed system.
 
 | Version | Reached when |
 |---|---|
-| 0.1.0 | Phase 0 + 1: boots in QEMU, fully managed by smoke ← current |
-| 0.2.0 | Phase 2: the installer installs a bootable system |
+| 0.1.0 | Phase 0 + 1: boots in QEMU, fully managed by smoke |
+| 0.2.0 | Phase 2: the installer installs a bootable system ← current |
 | 0.3.0 | Phase 3: first bare-metal boot |
 | 0.4.0 | Phase 4: optional components, install media |
 | 0.5.0 | Phase 5: security layers |
@@ -76,7 +76,7 @@ LFS and Musl-LFS; cig does not follow either book.
 
 **Exit criteria:** the running system is fully managed by smoke and `smoke audit` is clean.
 
-### Phase 2 – Installer (shell TUI) ⏭ next (0.2.0)
+### Phase 2 – Installer (shell TUI) ✅ done (0.2.0)
 
 Numbered menus and `[x]` checkboxes, no extra dependencies. Menus are built
 from recipe data (group, default), not from a fixed list.
@@ -99,7 +99,7 @@ Testing: in QEMU, the running VM installs onto a second, empty disk.
 
 **Exit criteria:** an install onto an empty VM disk boots on its own.
 
-### Phase 3 – First bare-metal boot (0.3.0)
+### Phase 3 – First bare-metal boot ⏭ next (0.3.0)
 
 - install onto the SATA SSD of the development PC, run from the cig chroot on the
   host (no install media needed yet)
