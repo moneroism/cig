@@ -68,7 +68,9 @@ machine.
 
 ```
 cigbuild            build tool: recipe -> verified source -> package
-smoke               package manager: install, remove, inventory, audit
+smoke               package manager (shell reference version, being replaced by src/smoke)
+src/smoke/          smoke in C: what cig-tools installs; test/compare.sh checks it
+                    against the shell version on scratch roots
 lib/                shared code (recipes, build styles, hardware detection)
 packages/<name>/    one recipe per package (+ files/ for extra files)
 installer/          cig-install, the shell TUI installer
