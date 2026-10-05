@@ -150,7 +150,7 @@ Work, first block (before the ISO):
 
 Work:
 - xorriso recipe; hybrid ISO bootable from USB and optical media via UEFI
-- live mode in `rc.init`: read-only ISO root, `/etc` `/var` `/home` `/tmp` in RAM
+- ~~live mode in `rc.init`: read-only root, `/etc` `/var` `/home` `/root` `/mnt` in RAM~~ (done)
 - `cig-live` (media only, no `group=`): logins `root` / `ciglinux` (for the installer) and
   `cig` / `ciglinux` (doas), created at boot; a login banner (`/etc/issue`) from
   `packages/cig-live/files/issue.in` (the cigarette logo beside the login hints; plain ASCII,
@@ -160,7 +160,10 @@ Work:
   (never confused with an installed `cig-root`)
 - media contents: base system, build tools, cigbuild/smoke/installer, all sources
   (offline compiling), prebuilt generic kernel
-- `scripts/build-iso.sh` → `cig-<version>.iso`
+- ~~`scripts/build-media.sh` → `cig-<version>.img`~~ (done 2026-10-05: a bootable USB image,
+  ESP + `cig-media`; installed from it in QEMU, the target boots). Still to come: the real
+  all-drivers generic kernel for the media (an overnight build), and a hybrid ISO9660 for
+  CD/DVD (needs an initramfs)
 - ~~installer: compile-by-default, generic-kernel option with warning, builds on the target~~ (done)
 - ~~installer: auto partitioning with optional swap, partition editor~~ (done)
 - ~~smoke: `add` (replaces `install`) with the compile/install questions, `-c`, the
