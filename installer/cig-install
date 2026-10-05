@@ -24,7 +24,7 @@ export CIG_VAR="${CIG_VAR:-/var/cig}"
 DISK="" ROOT_SIZE="40" SEP_HOME=yes SWAP_SIZE=0
 HOSTNAME_="cig" USERNAME="" USERPASS="" ROOTMODE=lock ROOTPASS=""
 BUILD_MODE=compile KERNEL_MODE=compile
-WIFI_SSID="" WIFI_PSK=""
+WIFI_SSID="" WIFI_PSK="" STEP=""
 declare -a PKG_NAMES=() PKG_GROUP=() PKG_ON=() PKG_DESC=()
 declare -a DRV_NAMES=() DRV_FILES=() DRV_ON=()
 BASE_PKGS=""
@@ -70,7 +70,6 @@ preflight() {
     [ -x "$CIGBUILD" ] && [ -x "$SMOKE" ] || die "cigbuild/smoke not found next to the installer"
     mkdir -p "$WORK"
     # long builds: keep the console from blanking while the installer runs
-    echo 0 > /sys/module/kernel/parameters/consoleblank 2>/dev/null || true
     printf '\033[9;0]' 2>/dev/null || true
 }
 
@@ -712,7 +711,7 @@ confirm_text() {   # what will be lost, before typing the disk name
 
 # ---------------- install ----------------
 run()  { echo "+ $*" >> "$LOG"; "$@" >> "$LOG" 2>&1; }
-step() { echo "==> $*"; echo "==> $*" >> "$LOG"; }
+step() { STEP=$*; echo "==> $*"; echo "==> $*" >> "$LOG"; }
 
 fs_uuid() { blkid "$1" | sed -n 's/.* UUID="\([^"]*\)".*/\1/p'; }
 
@@ -736,11 +735,18 @@ cleanup_mounts() {
     done
 }
 
-on_error() {
+on_error() {   # the last thing on screen must be the failure, never something that reads like success
+    trap - ERR
     echo
-    echo "!! installation failed. Last lines of $LOG:"
+    echo "Last lines of $LOG:"
     tail -n 20 "$LOG" 2>/dev/null || true
+    if [ -d "$T/var/log" ]; then cp "$LOG" "$T/var/log/" && chmod 600 "$T/var/log/${LOG##*/}" || true; fi
     cleanup_mounts
+    echo
+    hr
+    echo "!! INSTALLATION FAILED at: ${STEP:-start}"
+    echo "!! /dev/$DISK is NOT bootable. Full log: $LOG"
+    hr
 }
 
 do_install() {
