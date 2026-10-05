@@ -140,6 +140,133 @@ static char *cigbuild_pkgfile(const char *pkg, const char *cig_var)
 	return f;
 }
 
+/* ---------------- UEFI boot entry ---------------- */
+
+/* Many laptops only boot internal disks through an NVRAM boot entry, not through the
+ * fallback EFI/BOOT/BOOTX64.EFI: write one, as efibootmgr would. Not fatal: the fallback
+ * stays. Load option: attributes, file path list length, description (UCS-2), then the
+ * device path HD(partition, GPT GUID)/File(\EFI\cig\vmlinuz.efi)/End. */
+#define EFI_GLOBAL "8be4df61-93ca-11d2-aa0d-00e098032b8c"
+#define EFIVARS "/sys/firmware/efi/efivars"
+
+static void put16(unsigned char **p, unsigned v) { *(*p)++ = v & 0xff; *(*p)++ = (v >> 8) & 0xff; }
+static void put32(unsigned char **p, unsigned long v) { for (int i = 0; i < 4; i++) *(*p)++ = (v >> (8 * i)) & 0xff; }
+static void put64(unsigned char **p, unsigned long long v) { for (int i = 0; i < 8; i++) *(*p)++ = (v >> (8 * i)) & 0xff; }
+static void put_ucs2(unsigned char **p, const char *s) { do put16(p, (unsigned char)*s); while (*s++); }
+
+/* "EE32C236-4DA2-..." -> the 16 bytes as stored (first three fields little-endian) */
+static bool guid_bytes(const char *g, unsigned char out[16])
+{
+	static const int order[16] = { 3, 2, 1, 0, 5, 4, 7, 6, 8, 9, 10, 11, 12, 13, 14, 15 };
+	unsigned char raw[16];
+	int n = 0;
+	for (const char *c = g; *c && n < 16; c++) {
+		if (*c == '-')
+			continue;
+		unsigned v;
+		if (sscanf(c, "%2x", &v) != 1)
+			return false;
+		raw[n++] = (unsigned char)v;
+		c++;
+	}
+	if (n != 16)
+		return false;
+	for (int i = 0; i < 16; i++)
+		out[i] = raw[order[i]];
+	return true;
+}
+
+static bool write_var(const char *name, const unsigned char *data, size_t len)
+{
+	char *path = xasprintf(EFIVARS "/%s-" EFI_GLOBAL, name);
+	FILE *f = fopen(path, "wb");
+	bool ok = f && fwrite(data, 1, len, f) == len;   /* efivarfs wants one write */
+	if (f && fclose(f) != 0)
+		ok = false;
+	free(path);
+	return ok;
+}
+
+static void efi_boot_entry(struct state *s, const struct part *esp)
+{
+	unsigned char guid[16], buf[512], *p = buf, *fpl, order[256];
+	char *d = xasprintf("/dev/%s", s->disk), *n = xasprintf("%d", esp->num), *uuid, name[16];
+	char *argv[] = { "sfdisk", "--part-uuid", d, n, NULL };
+	int num = -1;
+
+	if (!file_exists(EFIVARS "/BootOrder-" EFI_GLOBAL) && !file_exists(EFIVARS)) {
+		logf_("    ! no EFI variables: no boot entry (the fallback path is used)\n");
+		return;
+	}
+	if (!file_exists(EFIVARS "/BootOrder-" EFI_GLOBAL)) {
+		char *m[] = { "mount", "-t", "efivarfs", "efivarfs", EFIVARS, NULL };
+		run(m);
+	}
+	uuid = capture(argv);
+	free(d);
+	free(n);
+	if (!uuid || !guid_bytes(uuid, guid)) {
+		logf_("    ! cannot read the ESP's partition GUID: no boot entry\n");
+		free(uuid);
+		return;
+	}
+	free(uuid);
+	for (int i = 0; i < 0x1000 && num < 0; i++) {   /* a free Boot#### */
+		char *v = xasprintf(EFIVARS "/Boot%04X-" EFI_GLOBAL, i);
+		if (!file_exists(v))
+			num = i;
+		free(v);
+	}
+	if (num < 0)
+		return;
+
+	put32(&p, 7);                       /* efivarfs: NV | BS | RT */
+	put32(&p, 1);                       /* LOAD_OPTION_ACTIVE */
+	unsigned char *lenpos = p;
+	put16(&p, 0);                       /* FilePathListLength, filled in below */
+	put_ucs2(&p, "cig");
+	fpl = p;
+	*p++ = 4; *p++ = 1; put16(&p, 42);  /* hard drive media device path */
+	put32(&p, (unsigned long)esp->num);
+	put64(&p, esp->pstart);
+	put64(&p, esp->psize);
+	memcpy(p, guid, 16);
+	p += 16;
+	*p++ = 2;                           /* GPT */
+	*p++ = 2;                           /* signature is a GUID */
+	const char *file = "\\EFI\\cig\\vmlinuz.efi";
+	*p++ = 4; *p++ = 4; put16(&p, (unsigned)(4 + 2 * (strlen(file) + 1)));
+	put_ucs2(&p, file);
+	*p++ = 0x7f; *p++ = 0xff; put16(&p, 4);   /* end of the device path */
+	unsigned fl = (unsigned)(p - fpl);
+	lenpos[0] = fl & 0xff;
+	lenpos[1] = (fl >> 8) & 0xff;
+
+	snprintf(name, sizeof(name), "Boot%04X", num);
+	if (!write_var(name, buf, (size_t)(p - buf))) {
+		logf_("    ! the firmware did not accept a boot entry (the fallback path is used)\n");
+		return;
+	}
+	/* first in BootOrder (attributes, then 16-bit entry numbers) */
+	char *op = xasprintf(EFIVARS "/BootOrder-" EFI_GLOBAL);
+	FILE *f = fopen(op, "rb");
+	size_t olen = f ? fread(order, 1, sizeof(order), f) : 0;
+	if (f)
+		fclose(f);
+	free(op);
+	unsigned char nb[260], *q = nb;
+	put32(&q, 7);
+	put16(&q, (unsigned)num);
+	for (size_t i = 4; i + 1 < olen && q - nb < (long)sizeof(nb) - 2; i += 2)
+		if ((order[i] | order[i + 1] << 8) != num) {
+			*q++ = order[i];
+			*q++ = order[i + 1];
+		}
+	if (!write_var("BootOrder", nb, (size_t)(q - nb)))
+		logf_("    ! could not put the boot entry first in BootOrder\n");
+	logf_("boot entry %s \"cig\" -> \\EFI\\cig\\vmlinuz.efi on partition %d\n", name, esp->num);
+}
+
 /* ---------------- the install ---------------- */
 
 void do_install(struct state *s)
@@ -379,6 +506,11 @@ void do_install(struct state *s)
 		if (run(argv) != 0)
 			logf_("    ! some package setup failed\n");
 	}
+
+	step("UEFI boot entry");
+	for (int i = 0; i < s->lay.n; i++)
+		if (!strcmp(s->lay.p[i].mount, "/boot"))
+			efi_boot_entry(s, &s->lay.p[i]);
 
 	/* the new system must contain exactly what its inventory says, nothing more */
 	step("Checking the new system (smoke audit)");
