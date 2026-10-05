@@ -1,0 +1,9 @@
+# tree - list directories as a tree
+name=tree
+version=2.3.2
+source="https://oldmanprogrammer.net/tar/tree/tree-$version.tgz"
+sha256="6b941dd6cbecfb4d3250700e4d08d8e0c251488981dd4868b90d744234300e21"
+style=custom
+group="tools"
+do_build()   { make CC=cc; }
+do_install() { make PREFIX="$DEST/usr" MANDIR="$DEST/usr/share/man" install; }

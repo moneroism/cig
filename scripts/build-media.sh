@@ -130,10 +130,14 @@ for f in "$DEV_VAR"/pkgs/*.tar.gz "$MEDIA_VAR"/pkgs/cig-*.tar.gz; do
     link "$f" "$STAGE/var/cig/pkgs/"
     [ -f "$f.sha256" ] && link "$f.sha256" "$STAGE/var/cig/pkgs/"
 done
-if [ -d "$DEV_VAR/generic/pkgs" ]; then
+# the generic install kernel (root=PARTLABEL=cig-root): the all-drivers one from the media
+# build if there is one, otherwise the dev system's test kernel
+for g in "$MEDIA_VAR/generic" "$DEV_VAR/generic"; do
+    [ -d "$g/pkgs" ] || continue
     mkdir -p "$STAGE"/var/cig/generic/{sources,build,db,logs}
-    link "$DEV_VAR/generic/pkgs" "$STAGE/var/cig/generic/"
-fi
+    link "$g/pkgs" "$STAGE/var/cig/generic/"
+    break
+done
 
 # ---- the image: GPT, ESP, cig-media (ext4 written straight from the staging folder) ----
 step "Image $OUT"

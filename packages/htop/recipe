@@ -1,0 +1,10 @@
+# htop - interactive process viewer
+name=htop
+version=3.5.3
+source="https://github.com/htop-dev/htop/releases/download/$version/htop-$version.tar.xz"
+sha256="a8b164386494cb85bb255a415a3f5f80afe7a0c4491da5d113b3a0f951087e65"
+depends="ncurses"
+makedepends="pkgconf"
+style=gnu
+group="tools"
+configure_args="--disable-sensors --disable-hwloc --disable-capabilities --disable-delayacct"
