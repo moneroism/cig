@@ -192,7 +192,8 @@ install_pkg() {   # install_pkg <name> <reason>
         mkdir -p "$D.part/.meta/root/$(dirname "$p")"
         cp -a "$tmp/$p" "$D.part/.meta/root/$p"
     done < <(grep -v '^usr/' "$tmp/.FILES" || true)
-    ( cd "$D.part" && find . -path ./.meta -prune -o \( -type f -print \) | sort | xargs -r sha256sum ) \
+    # -print0: file names may contain spaces (linux-firmware has some)
+    ( cd "$D.part" && find . -path ./.meta -prune -o \( -type f -print0 \) | sort -z | xargs -0 -r sha256sum ) \
         > "$D.part/.meta/SUMS"
     rm -rf "$D"; mv "$D.part" "$D"
 

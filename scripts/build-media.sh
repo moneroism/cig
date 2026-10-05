@@ -30,7 +30,9 @@ MEDIA_VAR=${CIG_MEDIA_VAR:-$REPO/media-build}
 STAGE=$MEDIA_VAR/stage            # the live system, before it becomes a filesystem
 ESP_MB=128
 CIGBUILD="$REPO/cigbuild"
-SMOKE="${SMOKE:-$REPO/smoke}"
+# the C smoke (cig-tools) with this repository's recipes; file names may contain spaces
+SMOKE="${SMOKE:-/usr/share/cig/smoke}"
+export CIG_REPO=$REPO CIGBUILD
 
 die()  { echo "!! build-media: $*" >&2; exit 1; }
 step() { echo "==> $*"; }
