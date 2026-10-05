@@ -306,7 +306,8 @@ void do_install(struct state *s)
 	 * install media only when a chosen package needs it (checked by smoke audit below). */
 	const char *media_var = getenv("CIG_VAR") ? getenv("CIG_VAR") : "/var/cig";
 	char *media_sources = xasprintf("%s/sources", media_var), *media_pkgs = xasprintf("%s/pkgs", media_var);
-	char *media_linux = cigbuild_pkgfile("linux", media_var);
+	char *media_generic = xasprintf("%s/generic", media_var);
+	char *media_linux = cigbuild_pkgfile("linux", media_generic);   /* the media's generic kernel */
 	setenv("CIG_VAR", TARGET "/var/cig", 1);
 	mkdirs(TARGET "/var/cig/sources");
 	mkdirs(TARGET "/var/cig/pkgs");

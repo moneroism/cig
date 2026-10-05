@@ -141,10 +141,14 @@ static void hardware_screen(struct state *s)
 	}
 }
 
-/* the root= built into the media's kernel: a generic kernel must find root by name */
+/* the root= built into the media's generic kernel (in <CIG_VAR>/generic, apart from the
+ * media system's own kernel): a generic kernel must find root by name */
 static bool generic_kernel_ok(struct state *s)
 {
-	char *argv[] = { s->cigbuild, "pkgfile", "linux", NULL }, *pkg = capture(argv), *root = NULL;
+	const char *mv = getenv("CIG_VAR") ? getenv("CIG_VAR") : "/var/cig";
+	char *var = xasprintf("CIG_VAR=%s/generic", mv);
+	char *argv[] = { "env", var, s->cigbuild, "pkgfile", "linux", NULL }, *pkg = capture(argv), *root = NULL;
+	free(var);
 	if (pkg && file_exists(pkg)) {
 		char *sh[] = { "sh", "-c",
 			"f=$(tar -tzf \"$0\" | grep '/vmlinuz$' | head -n1) && "
