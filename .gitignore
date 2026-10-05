@@ -62,3 +62,6 @@ GEMINI.md
 # smoke (C) build output
 /src/smoke/*.o
 /src/smoke/smoke
+
+# media build (scripts/build-media.sh): staging, media kernel, firmware
+/media-build

@@ -5,9 +5,9 @@
 # build-media.sh - the install media: a bootable USB image (cig-<version>.img).
 # Run inside cig as root (the dev chroot), after building the media kernel and firmware:
 #
-#   CIG_VAR=/var/cig/media CIG_SOURCE_MIRROR=/var/cig/sources CIG_ROOT=PARTLABEL=cig-media \
+#   CIG_VAR=/cig/media-build CIG_SOURCE_MIRROR=/var/cig/sources CIG_ROOT=PARTLABEL=cig-media \
 #       cigbuild build linux
-#   CIG_VAR=/var/cig/media CIG_SOURCE_MIRROR=/var/cig/sources CIG_FIRMWARE=all \
+#   CIG_VAR=/cig/media-build CIG_SOURCE_MIRROR=/var/cig/sources CIG_FIRMWARE=all \
 #       cigbuild build linux-firmware
 #   /cig/scripts/build-media.sh [output.img]      (default: the repository, cig-<version>.img)
 #
@@ -24,7 +24,9 @@ REPO="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
 VERSION=$(cat "$REPO/VERSION")
 OUT=${1:-$REPO/cig-$VERSION.img}
 DEV_VAR=/var/cig                  # the dev system: its packages and sources
-MEDIA_VAR=/var/cig/media          # media kernel, firmware and the media's own builds
+# media kernel, firmware, the media's own builds and the staging folder: several GB, so by
+# default in the repository (the host's disk in the dev chroot; git-ignored), not in the image
+MEDIA_VAR=${CIG_MEDIA_VAR:-$REPO/media-build}
 STAGE=$MEDIA_VAR/stage            # the live system, before it becomes a filesystem
 ESP_MB=128
 CIGBUILD="$REPO/cigbuild"
@@ -117,16 +119,18 @@ cleanup
 # the installer's mirror: every source and prebuilt package (hard links, no copies);
 # target kernels are always built per machine, and the generic one has its own place
 step "Installer mirror (sources, packages)"
+# hard links where the staging folder is on the same filesystem, copies otherwise
+link() { cp -al "$@" 2>/dev/null || cp -a "$@"; }
 mkdir -p "$STAGE/var/cig/sources" "$STAGE/var/cig/pkgs"
-cp -al "$DEV_VAR/sources/." "$STAGE/var/cig/sources/"
+link "$DEV_VAR/sources/." "$STAGE/var/cig/sources/"
 for f in "$DEV_VAR"/pkgs/*.tar.gz "$MEDIA_VAR"/pkgs/cig-*.tar.gz; do
     case "${f##*/}" in linux-[0-9]*|linux-firmware-*) continue ;; esac
-    ln -f "$f" "$STAGE/var/cig/pkgs/"
-    [ -f "$f.sha256" ] && ln -f "$f.sha256" "$STAGE/var/cig/pkgs/"
+    link "$f" "$STAGE/var/cig/pkgs/"
+    [ -f "$f.sha256" ] && link "$f.sha256" "$STAGE/var/cig/pkgs/"
 done
 if [ -d "$DEV_VAR/generic/pkgs" ]; then
     mkdir -p "$STAGE/var/cig/generic"
-    cp -al "$DEV_VAR/generic/pkgs" "$STAGE/var/cig/generic/"
+    link "$DEV_VAR/generic/pkgs" "$STAGE/var/cig/generic/"
 fi
 
 # ---- the image: GPT, ESP, cig-media (ext4 written straight from the staging folder) ----
