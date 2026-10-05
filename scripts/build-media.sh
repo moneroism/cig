@@ -85,7 +85,10 @@ touch "$STAGE/etc/cig/efi-fallback"     # the kernel also goes to EFI/BOOT/BOOTX
 
 # the media's own packages: cig-*, built for this version
 step "Building the media's cig packages"
+# always fresh: they are built from this repository, and their version does not change
+# with every edit (an existing package file would otherwise be reused)
 for p in cig-base cig-tools cig-installer cig-live; do
+    rm -f "$(CIG_VAR=$MEDIA_VAR "$CIGBUILD" pkgfile "$p")"
     CIG_VAR=$MEDIA_VAR CIG_SOURCE_MIRROR=$DEV_VAR/sources "$CIGBUILD" build "$p"
 done
 
