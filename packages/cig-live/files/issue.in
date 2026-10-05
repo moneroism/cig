@@ -1,0 +1,13 @@
+
+            .-.
+           /  /     cig {VERSION} - live system
+          /. /      minimal, hardened, built from source
+ )       //\/
+  (     /'\/        Log in:   root   password: ciglinux   (to install)
+ )     /  /                   cig    password: ciglinux   (doas)
+(     /  /
+ )   /  /           Install:  cig-install   (as root)
+  ( /. /            Nothing is saved: this system runs from RAM.
+   .`.'.
+   `'``
+
