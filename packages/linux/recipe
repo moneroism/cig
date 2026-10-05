@@ -12,6 +12,7 @@ name=linux
 _kver=6.18.54
 _hardened=hardened1
 version=$_kver.$_hardened
+rel=2
 _tag="v$_kver-$_hardened"
 _aports=8f13294206888f3dd44ed74a8eb3dd9934499e81
 source="https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-$_kver.tar.xz
@@ -28,7 +29,7 @@ nostrip=1          # stripping would destroy the module signatures
 link_dirs="usr/lib/modules/*"   # depmod does not follow file links: link the whole folder
 
 _cmdline() {
-    echo "root=${CIG_ROOT:-PARTLABEL=cig-root} rootfstype=ext4 rootwait ro init=/usr/bin/sinit" \
+    echo "root=${CIG_ROOT:-PARTLABEL=cig-root} rootfstype=ext4 rootwait=30 ro init=/usr/bin/sinit" \
          "loglevel=4 slab_nomerge init_on_alloc=1 init_on_free=1 page_alloc.shuffle=1" \
          "randomize_kstack_offset=on vsyscall=none debugfs=off ${CIG_KERNEL_CMDLINE_EXTRA:-}"
 }
