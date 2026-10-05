@@ -4,6 +4,7 @@
 name=libdrm
 version=2.4.134
 source="https://dri.freedesktop.org/libdrm/libdrm-$version.tar.xz"
+signature="https://dri.freedesktop.org/libdrm/libdrm-$version.tar.xz.sig"
 sha256="ac5e74d157830eb8bee44c6a6bf3ad49774ef0dd2a72bdad74a8f20308b52a95"
 makedepends="meson pkgconf"
 style=meson

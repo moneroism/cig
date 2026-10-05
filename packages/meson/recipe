@@ -2,6 +2,7 @@
 name=meson
 version=1.12.1
 source="https://github.com/mesonbuild/meson/releases/download/$version/meson-$version.tar.gz"
+signature="https://github.com/mesonbuild/meson/releases/download/$version/meson-$version.tar.gz.asc"
 sha256="ab0a6ca09f8ef70c564c8241fb5a23957886a0b53fb58412b5e07eaf07dba743"
 depends="python samurai"
 style=custom

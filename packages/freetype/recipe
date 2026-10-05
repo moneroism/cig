@@ -1,6 +1,7 @@
 name=freetype
 version=2.14.3
 source="https://download.savannah.gnu.org/releases/freetype/freetype-$version.tar.xz"
+signature="https://download.savannah.gnu.org/releases/freetype/freetype-$version.tar.xz.sig"
 sha256="36bc4f1cc413335368ee656c42afca65c5a3987e8768cc28cf11ba775e785a5f"
 depends="zlib"
 makedepends="meson pkgconf"

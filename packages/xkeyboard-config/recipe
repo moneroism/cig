@@ -2,6 +2,7 @@
 name=xkeyboard-config
 version=2.48
 source="https://www.x.org/releases/individual/data/xkeyboard-config/xkeyboard-config-$version.tar.xz"
+signature="https://www.x.org/releases/individual/data/xkeyboard-config/xkeyboard-config-$version.tar.xz.sig"
 sha256="b77041324f0109f77161ee43743fe04baa485866af8460d31e476ad3f7648fd5"
 makedepends="meson python"
 style=meson

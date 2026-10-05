@@ -140,6 +140,7 @@ make_package() {
     local tmp="$WORK/meta"
     # everything a package installs belongs to root, whoever built it
     chown -R root:root "$DEST"
+    chmod -R go-w "$DEST"     # nobody but root may change installed files
     rm -rf "$tmp"; mkdir -p "$tmp"
     {
         echo "name=$name"; echo "version=$version"; echo "rel=$rel"
@@ -296,6 +297,40 @@ pkg_pin() {
     else
         info "$p: all sources already pinned"
     fi
+}
+
+pkg_sig() {   # pkg_sig <pkg> <signature URL | ->...: check pinned sources against upstream signatures, then record them
+    local p=$1 e f i=0 n sig sigf r; shift
+    local -a sums sigs=("$@")
+    load_recipe "$p"
+    r=$(recipe_path "$p")
+    read -r -a sums <<< "$(echo $sha256)"
+    n=$(echo $source | wc -w)
+    [ ${#sigs[@]} -eq "$n" ] || die "$p: give one signature URL (or -) for each of its $n source(s)"
+    [ -z "$signature" ] || [ "$(grep -c '^signature=' "$r")" -eq 1 ] && ! grep -q '^signature="[^"]*$' "$r" \
+        || die "$p: the recipe's signature= spans several lines; edit it with pin instead"
+    for e in $source; do
+        f=$(src_name "$e"); sig=${sigs[$i]}
+        [ -n "${sums[$i]:-}" ] || die "$p: $f is not pinned yet (cigbuild pin $p)"
+        if [ "$sig" != - ]; then
+            [ -s "$CIG_VAR/sources/$f" ] || curl -fL --proto '=https' --tlsv1.2 \
+                -o "$CIG_VAR/sources/$f" "$(src_url "$e")" || die "download failed: $(src_url "$e")"
+            [ "$(sha256sum "$CIG_VAR/sources/$f" | cut -d' ' -f1)" = "${sums[$i]}" ] \
+                || die "$p: $f does not match its pinned sha256"
+            sigf="$CIG_VAR/sources/$(basename "$sig")"
+            curl -fsL --proto '=https' --tlsv1.2 -o "$sigf" "$sig" || die "signature download failed: $sig"
+            verify_sig "$CIG_VAR/sources/$f" "$sigf"
+            info "$p: $f -> GPG signature OK (key $SIGNER)"
+        fi
+        i=$((i + 1))
+    done
+    sig="$*"; sig=${sig//"$version"/'$version'}   # follows the recipe's version on updates
+    if grep -q '^signature=' "$r"; then
+        sed -i "s|^signature=.*|signature=\"$sig\"|" "$r"
+    else
+        sed -i "/^sha256=/i signature=\"$sig\"" "$r"
+    fi
+    info "$p: signature URLs recorded"
 }
 
 pkg_info() {
