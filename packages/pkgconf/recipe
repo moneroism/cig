@@ -1,8 +1,8 @@
 # pkgconf - pkg-config implementation
 name=pkgconf
-version=2.9.99
+version=3.0.7
 source="https://distfiles.ariadne.space/pkgconf/pkgconf-$version.tar.xz"
-sha256="0074c64e2dba9860b8d78b9bd25a8fd0108136591e8d12b40c30a8fe2fc12abb"
+sha256="c926ff491cbd9a331a589160811bd97ab1749b4d5198a519338f2cdfabe6940a"
 style=custom
 do_build()   { ./configure --prefix=/usr --disable-static; make; }
 do_install() { make DESTDIR="$DEST" install; ln -sf pkgconf "$DEST/usr/bin/pkg-config"; }
