@@ -307,7 +307,6 @@ void do_install(struct state *s)
 	const char *media_var = getenv("CIG_VAR") ? getenv("CIG_VAR") : "/var/cig";
 	char *media_sources = xasprintf("%s/sources", media_var), *media_pkgs = xasprintf("%s/pkgs", media_var);
 	char *media_generic = xasprintf("%s/generic", media_var);
-	char *media_linux = cigbuild_pkgfile("linux", media_generic);   /* the media's generic kernel */
 	setenv("CIG_VAR", TARGET "/var/cig", 1);
 	mkdirs(TARGET "/var/cig/sources");
 	mkdirs(TARGET "/var/cig/pkgs");
@@ -315,8 +314,11 @@ void do_install(struct state *s)
 	mkdirs(TARGET "/var/cig/logs");
 	setenv("CIG_SOURCE_MIRROR", media_sources, 1);
 	step("Preparing packages (%s)", s->compile_pkgs ? "compile" : "prebuilt");
-	if (s->generic_kernel)
+	if (s->generic_kernel) {   /* the media's generic kernel (only looked up when chosen) */
+		char *media_linux = cigbuild_pkgfile("linux", media_generic);
 		RUN("cp", "-a", media_linux, TARGET "/var/cig/pkgs/");
+		free(media_linux);
+	}
 	/* kernel and firmware are always made for this machine's selection */
 	if (!s->generic_kernel) {
 		char *f = cigbuild_pkgfile("linux", TARGET "/var/cig"), *root = xasprintf("PARTUUID=%s", PU_ROOT);

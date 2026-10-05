@@ -17,7 +17,27 @@ ln -sfn /proc/self/fd/0 /dev/stdin
 ln -sfn /proc/self/fd/1 /dev/stdout
 ln -sfn /proc/self/fd/2 /dev/stderr
 
-mount -o remount,rw /
+if [ -f /etc/cig/live ]; then
+    # live system (install media, cig-live): the medium stays read-only; what changes
+    # lives in RAM. /var/cig (sources and packages, the installer's mirror) stays on
+    # the medium and is never copied.
+    mkdir -p /run/live
+    mount -t tmpfs -o mode=0755 tmpfs /run/live
+    for d in etc var home root; do
+        mkdir -p "/run/live/$d"
+        for e in "/$d"/* "/$d"/.[!.]*; do
+            [ -e "$e" ] || [ -L "$e" ] || continue
+            [ "$e" = /var/cig ] && continue
+            cp -a "$e" "/run/live/$d/"
+        done
+        chmod "$(stat -c %a "/$d")" "/run/live/$d"
+    done
+    mkdir -p /run/live/var/cig
+    mount --bind /var/cig /run/live/var/cig
+    for d in etc var home root; do mount --rbind "/run/live/$d" "/$d"; done
+else
+    mount -o remount,rw /
+fi
 mount -a
 swapon -a 2>/dev/null
 

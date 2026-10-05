@@ -1,0 +1,22 @@
+# cig-live - the live system of the install media: the live marker (rc.init keeps the
+# medium read-only and works in RAM) and the login banner. Media only: no group=, so
+# installed systems never get it. The live logins are created by scripts/build-media.sh.
+name=cig-live
+version=$(cat "$CIG_REPO/VERSION")
+source=""
+sha256=""
+depends="cig-base cig-installer"
+style=custom
+nostrip=1
+do_build() { :; }
+do_install() {
+    mkdir -p "$DEST/etc/cig" "$DEST/usr/share/cig-live"
+    echo "the install media: see rc.init" > "$DEST/etc/cig/live"
+    # /etc/issue: backslashes are getty escapes, so the logo's own ones are doubled
+    sed -e 's/\\/\\\\/g' -e "s/{VERSION}/$version/g" "$PKGDIR/files/issue.in" \
+        > "$DEST/usr/share/cig-live/issue"
+    chmod 644 "$DEST/etc/cig/live" "$DEST/usr/share/cig-live/issue"
+}
+post_install() {
+    cp /usr/share/cig-live/issue /etc/issue
+}
