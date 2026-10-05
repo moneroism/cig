@@ -2,6 +2,7 @@
 name=foot
 version=1.28.0
 source="foot-$version.tar.gz::https://codeberg.org/dnkl/foot/archive/$version.tar.gz"
+signature="tag=https://codeberg.org/dnkl/foot.git#$version"
 sha256="4296be402b5684d049534598e69db92b918f92beac9dab76b585207045f0b037"
 depends="fcft wayland pixman libxkbcommon fontconfig font-jetbrains-mono"
 makedepends="tllist wayland-protocols meson python pkgconf"

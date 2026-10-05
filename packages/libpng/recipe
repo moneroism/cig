@@ -1,7 +1,13 @@
 # libpng - PNG images
+# AUTHENTICITY NOT ESTABLISHED (flagged, see docs/sources.md): the SourceForge release files carry
+# no signature; the official repository's tags are GPG-signed, but the current signing key
+# (1FED507E3236B4A6E53E922BB292C64843FF5BCF, Cosmin Truta) is published only on GitHub and not
+# certified by his older keyserver-published key (F57A55036A4D45837074FD92C9E384533403C2F8).
+# Taken from the official repository, trusted on first use, until the key can be checked.
 name=libpng
-version=1.6.50
-source="https://download.sourceforge.net/libpng/libpng-$version.tar.xz"
-sha256="4df396518620a7aa3651443e87d1b2862e4e88cad135a8b93423e01706232307"
+version=1.6.59
+source="libpng-$version.tar.gz::https://github.com/pnggroup/libpng/archive/refs/tags/v$version.tar.gz"
+signature="-"
+sha256="2540302a1844ad2b2b501977abecfa850f265f97b78f065a712ab4074a89f5b5"
 depends="zlib"
 style=gnu

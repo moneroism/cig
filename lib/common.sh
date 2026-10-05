@@ -239,32 +239,98 @@ pkg_meta() {      # fields smoke needs, for packages built before they were reco
 }
 
 # verify_sig <file> <sigfile>: GPG check (keys fetched from keyservers as needed)
-verify_sig() {
-    local f=$1 sig=$2 out key ks gh="$CIG_VAR/gnupg"
-    command -v gpg >/dev/null || die "gpg not found. Run 'cigbuild pin' on the host (e.g. CIG_VAR=~/.cache/cig ~/cig/cigbuild pin ...)"
-    mkdir -p "$gh"; chmod 700 "$gh"
-    _gpgv() {
-        case "$sig" in
-            *.sign)   # kernel.org: signature covers the uncompressed tarball
-                case "$f" in
-                    *.xz) xz -dc "$f" | gpg --homedir "$gh" --status-fd 1 --verify "$sig" - 2>/dev/null ;;
-                    *.gz) gzip -dc "$f" | gpg --homedir "$gh" --status-fd 1 --verify "$sig" - 2>/dev/null ;;
-                    *)    gpg --homedir "$gh" --status-fd 1 --verify "$sig" "$f" 2>/dev/null ;;
-                esac ;;
-            *) gpg --homedir "$gh" --status-fd 1 --verify "$sig" "$f" 2>/dev/null ;;
-        esac
-    }
-    out=$(_gpgv || true)
+# gpg_check <what> <command...>: run a GPG verification (any command that prints GPG status
+# lines on stdout); a missing key is fetched by its ID and the check repeated. Sets SIGNER
+# (the signing key's fingerprint); dies on a bad or unverifiable signature.
+gpg_check() {
+    local what=$1 out key ks; shift
+    out=$("$@" 2>&1 || true)
     if echo "$out" | grep -q NO_PUBKEY; then
-        key=$(echo "$out" | awk '/NO_PUBKEY/ {print $3; exit}')
+        key=$(echo "$out" | awk '/NO_PUBKEY/ {print $NF; exit}')
         for ks in hkps://keyserver.ubuntu.com hkps://keys.openpgp.org hkps://pgp.mit.edu; do
-            gpg --homedir "$gh" --keyserver "$ks" --recv-keys "$key" >/dev/null 2>&1 && break
+            gpg --homedir "$GH" --keyserver "$ks" --recv-keys "$key" >/dev/null 2>&1 && break
         done
-        out=$(_gpgv || true)
+        out=$("$@" 2>&1 || true)
     fi
-    echo "$out" | grep -q BADSIG && die "BAD SIGNATURE on $(basename "$f")"
+    echo "$out" | grep -q BADSIG && die "BAD SIGNATURE on $what"
     SIGNER=$(echo "$out" | awk '/VALIDSIG/ {print $3; exit}')
-    [ -n "$SIGNER" ] || die "could not verify the signature of $(basename "$f") (key not found?)"
+    [ -n "$SIGNER" ] || die "could not verify the signature of $what (key not found?)"
+}
+
+gpg_init() {
+    command -v gpg >/dev/null || die "gpg not found. Run 'cigbuild pin' on the host (e.g. CIG_VAR=~/.cache/cig ~/cig/cigbuild pin ...)"
+    GH="$CIG_VAR/gnupg"
+    mkdir -p "$GH"; chmod 700 "$GH"
+}
+
+verify_sig() {   # verify_sig <file> <detached signature>
+    local f=$1 sig=$2
+    gpg_init
+    case "$sig:$f" in
+        *.sign:*.xz)   # kernel.org: the signature covers the uncompressed tarball
+            gpg_check "$(basename "$f")" sh -c 'xz -dc "$0" | gpg --homedir "$1" --status-fd 1 --verify "$2" -' "$f" "$GH" "$sig" ;;
+        *.sign:*.gz)
+            gpg_check "$(basename "$f")" sh -c 'gzip -dc "$0" | gpg --homedir "$1" --status-fd 1 --verify "$2" -' "$f" "$GH" "$sig" ;;
+        *)
+            gpg_check "$(basename "$f")" gpg --homedir "$GH" --status-fd 1 --verify "$sig" "$f" ;;
+    esac
+}
+
+# verify_source <file> <signature entry>: how a source's authenticity is established at pin
+# time (devices then only check the pinned SHA256):
+#   <url>                 a detached upstream GPG signature of the file
+#   sums=<url>            a GPG-signed checksum file (inline-signed, or with a detached <url>.asc)
+#                         listing the file's SHA-256 or SHA-512
+#   tag=<git url>#<tag>   a GPG-signed git tag: the archive must hold exactly the tag's tree
+#                         (for archives a forge generates from a tag)
+# Sets SIGNER and HOW.
+verify_source() {
+    local f=$1 e=$2 url sumf plain want have tag t top
+    case "$e" in
+        sums=*)
+            url=${e#sums=}; sumf="$CIG_VAR/sources/$(basename "$url")"
+            curl -fsL --proto '=https' --tlsv1.2 -o "$sumf" "$url" || die "checksum file download failed: $url"
+            gpg_init
+            if curl -fsL --proto '=https' --tlsv1.2 -o "$sumf.asc" "$url.asc" 2>/dev/null; then
+                gpg_check "$(basename "$url")" gpg --homedir "$GH" --status-fd 1 --verify "$sumf.asc" "$sumf"
+                plain=$sumf
+            else
+                plain="$sumf.plain"; rm -f "$plain"
+                gpg_check "$(basename "$url")" gpg --homedir "$GH" --batch --yes --status-fd 1 --output "$plain" --decrypt "$sumf"
+            fi
+            want=$(awk -v n="$(basename "$f")" '$2 == n || $2 == "*" n { print $1; exit }' "$plain")
+            case ${#want} in
+                64)  have=$(sha256sum "$f" | cut -d' ' -f1) ;;
+                128) have=$(sha512sum "$f" | cut -d' ' -f1) ;;
+                *)   die "$(basename "$url") lists no checksum for $(basename "$f")" ;;
+            esac
+            [ "$want" = "$have" ] || die "CHECKSUM MISMATCH: $(basename "$f") does not match the signed $(basename "$url")"
+            HOW="signed checksum file" ;;
+        tag=*)
+            url=${e#tag=}; tag=${url##*#}; url=${url%#*}
+            command -v git >/dev/null || die "git not found (needed to check a signed tag)"
+            gpg_init
+            t=$(mktemp -d)
+            git -c advice.detachedHead=false clone -q --depth 1 --branch "$tag" "$url" "$t/repo" \
+                || { rm -rf "$t"; die "cannot clone $url at $tag"; }
+            gpg_check "tag $tag of $url" env GNUPGHOME="$GH" git -C "$t/repo" verify-tag --raw "$tag"
+            mkdir "$t/tag" "$t/arc"
+            git -C "$t/repo" archive --format=tar "$tag" | tar -x -C "$t/tag"
+            tar -xf "$f" -C "$t/arc"
+            top=$(find "$t/arc" -mindepth 1 -maxdepth 1)
+            [ "$(echo "$top" | wc -l)" -eq 1 ] && [ -d "$top" ] || top="$t/arc"
+            if ! diff -r "$t/tag" "$top" > "$t/diff" 2>&1; then
+                head -n 5 "$t/diff" >&2; rm -rf "$t"
+                die "$(basename "$f") does not hold exactly the signed tag $tag"
+            fi
+            rm -rf "$t"
+            HOW="signed git tag $tag" ;;
+        *)
+            sumf="$CIG_VAR/sources/$(basename "$e")"
+            curl -fsL --proto '=https' --tlsv1.2 -o "$sumf" "$e" || die "signature download failed: $e"
+            verify_sig "$f" "$sumf"
+            HOW="GPG signature" ;;
+    esac
 }
 
 pkg_pin() {
@@ -286,11 +352,9 @@ pkg_pin() {
             have=$(sha256sum "$CIG_VAR/sources/$f" | cut -d' ' -f1)
             sig=${sigs[$i]:--}
             if [ "$sig" != "-" ]; then
-                # 2. upstream GPG signature
-                sigf="$CIG_VAR/sources/$(basename "$sig")"
-                curl -fsL --proto '=https' --tlsv1.2 -o "$sigf" "$sig" || die "signature download failed: $sig"
-                verify_sig "$CIG_VAR/sources/$f" "$sigf"
-                info "$p: $f -> GPG signature OK (key $SIGNER)"
+                # 2. upstream: a GPG signature, a signed checksum file or a signed git tag
+                verify_source "$CIG_VAR/sources/$f" "$sig"
+                info "$p: $f -> $HOW OK (key $SIGNER)"
             else
                 # 3. nothing to verify against
                 warn "$p: $f -> no upstream signature; trusted on first use"
@@ -329,10 +393,8 @@ pkg_sig() {   # pkg_sig <pkg> <signature URL | ->...: check pinned sources again
                 -o "$CIG_VAR/sources/$f" "$(src_url "$e")" || die "download failed: $(src_url "$e")"
             [ "$(sha256sum "$CIG_VAR/sources/$f" | cut -d' ' -f1)" = "${sums[$i]}" ] \
                 || die "$p: $f does not match its pinned sha256"
-            sigf="$CIG_VAR/sources/$(basename "$sig")"
-            curl -fsL --proto '=https' --tlsv1.2 -o "$sigf" "$sig" || die "signature download failed: $sig"
-            verify_sig "$CIG_VAR/sources/$f" "$sigf"
-            info "$p: $f -> GPG signature OK (key $SIGNER)"
+            verify_source "$CIG_VAR/sources/$f" "$sig"
+            info "$p: $f -> $HOW OK (key $SIGNER)"
         fi
         i=$((i + 1))
     done

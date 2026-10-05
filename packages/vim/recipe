@@ -2,6 +2,7 @@
 name=vim
 version=9.2.1164
 source="vim-$version.tar.gz::https://github.com/vim/vim/archive/refs/tags/v$version.tar.gz"
+signature="tag=https://github.com/vim/vim.git#v$version"
 sha256="38d61152e0ab48f0f8b2ce387119310469c2bf50e486adcc648750f85ba5af7c"
 depends="ncurses"
 style=gnu
