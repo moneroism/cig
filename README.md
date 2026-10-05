@@ -73,6 +73,7 @@ packages/<name>/    one recipe per package (+ files/ for extra files)
 installer/          cig-install, the shell TUI installer
 scripts/            bootstrap and VM helpers (see below)
 VERSION             the cig release (X.0.0 stable, 0.X.0 beta, x.y.Z fixes)
+docs/               design documents (smoke)
 kernel/             earlier kernel configs (reference)
 ROADMAP.md          goals and phases
 ```
@@ -88,6 +89,7 @@ cigbuild build   <pkg>...   fetch + verify + build a package (dependencies via s
 cigbuild install <pkg>...   same as: smoke add -c -y
 cigbuild rebuild <pkg>...   build again from source; smoke switches to the new build
 cigbuild pin     <pkg>...   verify upstream signature, pin the SHA256
+cigbuild sig     <pkg> <url|->...  check pinned sources against upstream signatures, record the URLs
 cigbuild info    <pkg>      show a recipe
 cigbuild pkgfile <pkg>      path of the package file for the current recipe
 ```
@@ -244,7 +246,6 @@ Linux From Scratch and Musl-LFS; cig does not follow either book.
 | Python | 3.13.x | last series with GPG-signed releases; build tool only |
 | make, flex, gmp, mpfr, mpc | built as C17 | pre-C23 code; GCC 15+ defaults to C23 |
 | ninja | samurai | same job in C, ~4k lines |
-| pkgconf | 2.9.99 | pre-release; to be replaced by the newest stable release |
 | musl | provides `ldd` | autoconf's `config.guess` detects musl via `ldd --version` |
 | gcc, binutils | explicit `x86_64-pc-linux-musl` | never let the build guess the system type |
 
@@ -255,10 +256,11 @@ See [`ROADMAP.md`](ROADMAP.md). In short:
 - [x] Phase 0 – Foundation: toolchain, userland, init, desktop, cigbuild, kernel, firmware
 - [x] Phase 1 – smoke: symlink farm, inventory with install reasons, autoremove, audit
 - [x] Phase 2 – Installer (shell TUI), tested in QEMU (0.2.0)
-- [ ] Phase 3 – First bare-metal boot
-- [ ] Phase 4 – Optional components (ALSA, PipeWire, Bluetooth, wmenu), install media
+- [ ] Phase 3 – Install media (ISO), first bare-metal install, day-one usability (ALSA, clipboard, screenshots, DNS)
+- [ ] 0.3.x – GPU acceleration: Mesa without LLVM (RADV + Zink)
+- [ ] Phase 4 – Optional components (PipeWire, Bluetooth, wmenu), UEFI boot entries, libre-meter
 - [ ] Phase 5 – Security layers (allowlisting), read-only root, own kernel base config
-- [ ] Phase 6 – Mesa, hardened_malloc, sandboxing, app catalog
+- [ ] Phase 6 – Browser, hardened_malloc, sandboxing, smoke updates
 - [ ] Phase 7 – Code quality: sanitizers, strict flags, fuzzing
 
 ## License

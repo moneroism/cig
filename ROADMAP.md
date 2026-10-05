@@ -128,9 +128,10 @@ Work:
 - media contents: base system, build tools, cigbuild/smoke/installer, all sources
   (offline compiling), prebuilt generic kernel
 - `scripts/build-iso.sh` → `cig-<version>.iso`
-- installer: compile-by-default, generic-kernel option with warning, builds on the target
-- smoke: `add` (replaces `install`) with the compile/install questions, `-c`, the
-  build-tools prompt, the unsigned warning, and name-file lookup (local file first)
+- ~~installer: compile-by-default, generic-kernel option with warning, builds on the target~~ (done)
+- ~~installer: auto partitioning with optional swap, partition editor~~ (done)
+- ~~smoke: `add` (replaces `install`) with the compile/install questions, `-c`, the
+  build-tools prompt, the unsigned warning~~ (done); name-file lookup (local file first)
 - unbound recipe; DNS choice in the installer
 - day-one usability (so cig can be used for a full day on the PC), all optional:
   sound (ALSA), clipboard (wl-clipboard), screenshots (grim). No browser yet (see Phase 6)
@@ -228,10 +229,5 @@ After everything is running:
 
 ## Housekeeping (whenever convenient)
 
-- rename bootstrap leftovers: `/mnt/lfs` → `/mnt/cig`, `lfs.img` → `cig.img`,
-  `x86_64-lfs-linux-musl` → `x86_64-cig-linux-musl`
 - rewrite the bootstrap scripts as part of the install media build
-- pkgconf: replace the 2.9.99 pre-release with the newest stable release
-- `cig-kernel-install`: don't overwrite the fallback kernel with an identical one
-- package `cigbuild` and `smoke` themselves as recipes (instead of links to the repo)
-- git 3.0 will require Rust: decide between adding Rust and staying on git 2.x
+- git: stay on 2.x (`NO_RUST=1`) while it is maintained; Rust only once 2.x is no longer maintained
