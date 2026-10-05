@@ -1,0 +1,14 @@
+# libjpeg-turbo - JPEG images (no SIMD assembly: no nasm needed)
+name=libjpeg-turbo
+version=3.2.0
+source="https://github.com/libjpeg-turbo/libjpeg-turbo/releases/download/$version/libjpeg-turbo-$version.tar.gz"
+signature="https://github.com/libjpeg-turbo/libjpeg-turbo/releases/download/$version/libjpeg-turbo-$version.tar.gz.sig"
+sha256="6f30092cef9fb839779646608f4ee14ae3cbac989c47fa05e841b0841f09878e"
+makedepends="cmake make"
+style=custom
+do_build() {
+    cmake -B build -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_INSTALL_LIBDIR=lib -DCMAKE_BUILD_TYPE=Release \
+        -DENABLE_STATIC=OFF -DWITH_JAVA=OFF -DWITH_SIMD=OFF
+    make -C build
+}
+do_install() { make -C build DESTDIR="$DEST" install; rm -rf "$DEST/usr/share/doc"; }

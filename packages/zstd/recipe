@@ -1,0 +1,10 @@
+# zstd - Zstandard compression (library and tool)
+name=zstd
+version=1.5.7
+source="https://github.com/facebook/zstd/releases/download/v$version/zstd-$version.tar.gz"
+signature="https://github.com/facebook/zstd/releases/download/v$version/zstd-$version.tar.gz.sig"
+sha256="eb33e51f49a15e023950cd7825ca74a4a2b43db8354825ac24fc1b7ee09e6fa3"
+depends="zlib xz"
+style=custom
+do_build()   { make PREFIX=/usr; }
+do_install() { make PREFIX=/usr DESTDIR="$DEST" install; }

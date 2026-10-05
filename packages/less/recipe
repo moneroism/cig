@@ -1,0 +1,9 @@
+# less - pager
+name=less
+version=710
+source="https://www.greenwoodsoftware.com/less/less-$version.tar.gz"
+signature="https://www.greenwoodsoftware.com/less/less-$version.sig"
+sha256="d1008fb78dcae1323ddab664bcb352a61f022b1b131bd8018548e021d975ec7a"
+depends="ncurses"
+style=gnu
+group="tools"

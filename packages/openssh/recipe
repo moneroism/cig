@@ -1,0 +1,11 @@
+# openssh - secure shell client (ssh, scp, sftp); the server is built but not enabled
+name=openssh
+version=10.5p1
+source="https://cdn.openbsd.org/pub/OpenBSD/OpenSSH/portable/openssh-$version.tar.gz"
+signature="https://cdn.openbsd.org/pub/OpenBSD/OpenSSH/portable/openssh-$version.tar.gz.asc"
+sha256="d44d28a839ea9daf969cc69150fde59910b2b39361dad81a3bd6cbd19218db11"
+depends="openssl zlib"
+style=gnu
+group="network"
+configure_args="--sysconfdir=/etc/ssh --with-privsep-path=/var/empty --with-pid-dir=/run --without-pam"
+config_files="etc/ssh/ssh_config etc/ssh/sshd_config"

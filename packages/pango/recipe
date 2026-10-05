@@ -1,0 +1,11 @@
+# pango - text layout (for sway, wmenu, swaybar)
+name=pango
+version=1.58.2
+source="https://download.gnome.org/sources/pango/${version%.*}/pango-$version.tar.xz"
+sha256="342385b6ca3b7c73455d7c80a13b7dbe4489e00bc3bd4c5bd6ed4dce421e374a"
+depends="glib harfbuzz fribidi cairo fontconfig freetype"
+makedepends="meson pkgconf python"
+style=meson
+meson_args="-Dintrospection=disabled -Dbuild-testsuite=false -Dbuild-examples=false -Dgtk_doc=false
+    -Ddocumentation=false -Dman-pages=false -Dxft=disabled -Dfontconfig=enabled -Dcairo=enabled
+    -Dlibthai=disabled -Dsysprof=disabled"

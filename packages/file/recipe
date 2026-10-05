@@ -1,0 +1,10 @@
+# file - tell file types
+name=file
+version=5.48
+source="https://astron.com/pub/file/file-$version.tar.gz"
+signature="https://astron.com/pub/file/file-$version.tar.gz.asc"
+sha256="ed14656883b23a364b4057c05595d93252da9bc473d30106519519d0da141283"
+depends="zlib"
+style=gnu
+group="tools"
+configure_args="--disable-libseccomp --disable-bzlib"

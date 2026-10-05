@@ -1,0 +1,14 @@
+# json-c - JSON library (for sway)
+name=json-c
+version=0.19
+_tag=json-c-0.19-20260627
+source="json-c-$version.tar.gz::https://github.com/json-c/json-c/archive/refs/tags/$_tag.tar.gz"
+sha256="f17a6d7d265cf840dfd8f0f46a606d98c6b5b26dc7cfe27275d1546a213086c8"
+makedepends="cmake make"
+style=custom
+do_build() {
+    cmake -B build -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_INSTALL_LIBDIR=lib -DCMAKE_BUILD_TYPE=Release \
+        -DBUILD_STATIC_LIBS=OFF -DBUILD_TESTING=OFF -DDISABLE_WERROR=ON
+    make -C build
+}
+do_install() { make -C build DESTDIR="$DEST" install; }

@@ -1,0 +1,10 @@
+# harfbuzz - text shaping (for pango)
+name=harfbuzz
+version=14.6.0
+source="harfbuzz-$version.tar.gz::https://github.com/harfbuzz/harfbuzz/archive/refs/tags/$version.tar.gz"
+sha256="eca8581e5ad8e21dbda31556c0363f764b1a754c9c1bb33ca7cd56ca1c07ddc9"
+depends="freetype glib"
+makedepends="meson pkgconf"
+style=meson
+meson_args="-Dtests=disabled -Ddocs=disabled -Dintrospection=disabled -Dfreetype=enabled -Dglib=enabled
+    -Dgobject=disabled -Dcairo=disabled -Dicu=disabled -Dutilities=disabled -Dbenchmark=disabled"

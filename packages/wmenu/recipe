@@ -1,0 +1,10 @@
+# wmenu - dmenu-like launcher for Wayland
+name=wmenu
+version=0.2.0
+source="wmenu-$version.tar.gz::https://codeberg.org/adnano/wmenu/archive/$version.tar.gz"
+sha256="b1b593a80310085a90bd349d458ffbcfacf875d74468ae4428bdf5692a671ef9"
+depends="pango cairo wayland libxkbcommon"
+makedepends="meson pkgconf wayland-protocols"
+style=meson
+group="desktop"
+meson_args="-Dman-pages=disabled"

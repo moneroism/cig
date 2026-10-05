@@ -1,0 +1,8 @@
+# pcre2 - Perl-compatible regular expressions (no JIT: no executable memory at run time)
+name=pcre2
+version=10.49
+source="https://github.com/PCRE2Project/pcre2/releases/download/pcre2-$version/pcre2-$version.tar.bz2"
+signature="https://github.com/PCRE2Project/pcre2/releases/download/pcre2-$version/pcre2-$version.tar.bz2.sig"
+sha256="53c156e1ba416a20da8e65395daa132da0d80e76910424caca3fcdae7831d384"
+style=gnu
+configure_args="--disable-jit"

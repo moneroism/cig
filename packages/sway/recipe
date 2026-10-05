@@ -1,0 +1,12 @@
+# sway - tiling Wayland compositor, i3-compatible (no tray: it needs D-Bus)
+name=sway
+version=1.11
+source="https://github.com/swaywm/sway/releases/download/$version/sway-$version.tar.gz"
+signature="https://github.com/swaywm/sway/releases/download/$version/sway-$version.tar.gz.sig"
+sha256="0e37a55b7c3379230e97e1ad982542b75016a0c7d6676198604e557f9b373dae"
+depends="wlroots json-c pcre2 pango cairo libinput libevdev wayland libxkbcommon seatd"
+makedepends="meson pkgconf wayland-protocols"
+style=meson
+group="desktop"
+meson_args="-Dman-pages=disabled -Dtray=disabled -Dgdk-pixbuf=disabled -Ddefault-wallpaper=false
+    -Dfish-completions=false -Dzsh-completions=false -Dbash-completions=false"
