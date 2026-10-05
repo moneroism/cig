@@ -151,6 +151,11 @@ Work, first block (before the ISO):
 Work:
 - xorriso recipe; hybrid ISO bootable from USB and optical media via UEFI
 - live mode in `rc.init`: read-only ISO root, `/etc` `/var` `/home` `/tmp` in RAM
+- `cig-live` (media only, no `group=`): logins `root` / `cig-linux` (for the installer) and
+  `cig-linux` / `cig-linux` (doas), created at boot; a login banner (`/etc/issue`) with the
+  logo and the install hints, from `packages/cig-live/files/logo.txt` and `text.txt`
+  (plain ASCII, <= 80 columns, `{VERSION}` filled in at build time). Nothing on the live
+  system listens on the network, so the known passwords only matter at the keyboard
 - media kernel: broad drivers, ISO9660 built in, root by its own partition name
   (never confused with an installed `cig-root`)
 - media contents: base system, build tools, cigbuild/smoke/installer, all sources
