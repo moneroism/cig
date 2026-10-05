@@ -186,6 +186,13 @@ Optional in the installer; the RAM target must still hold.
 
 ### Phase 4 – Optional components (0.4.0)
 
+- **package catalog** in the installer (a Packages screen: categories such as desktop,
+  window managers, terminals, editors, development, network, sound; each package with its
+  description, size and whether its upstream signs releases) and the same catalog in smoke
+  on installed systems. Categories come from the recipes. **Wayland only** (decided
+  2026-10-05): sway, labwc, wayfire and friends instead of X11 window managers; X11 may come
+  later as an optional recipe. First wave of easy recipes: sway, labwc, nano, vim, htop
+
 - components as recipes, offered in the installer:
   PipeWire (optional), Bluetooth = BlueZ + D-Bus (optional),
   wmenu (default on, uncheckable); ALSA moves to Phase 3
