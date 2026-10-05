@@ -35,6 +35,7 @@ struct state {
 	char ssid[64], psk[128];
 
 	bool compile_pkgs;        /* compile everything (default) or prebuilt */
+	char warnings[1024];      /* optional steps that did not work (shown at the end) */
 	bool generic_kernel;      /* only if the media kernel finds root by name */
 };
 

@@ -571,9 +571,9 @@ void do_install(struct state *s)
 			char *net = capture_input(argv, in);
 			memset(in, 0, strlen(in));
 			free(in);
-			if (!net)
-				fail("wpa_passphrase failed");
-			FILE *f = fopen(TARGET "/etc/wpa_supplicant/wpa_supplicant.conf", "a");
+			/* optional: a WiFi network that can't be set up is a warning, never a failed
+			 * install (everything that boots the system is done by now) */
+			FILE *f = net ? fopen(TARGET "/etc/wpa_supplicant/wpa_supplicant.conf", "a") : NULL;
 			for (char *l = net, *e; f && l && *l; l = e ? e + 1 : NULL) {
 				e = strchr(l, '\n');
 				if (e)
@@ -581,10 +581,16 @@ void do_install(struct state *s)
 				if (!strstr(l, "#psk="))   /* not the passphrase in clear text */
 					fprintf(f, "%s\n", l);
 			}
-			if (!f || fclose(f) != 0)
-				fail("cannot write the WiFi network");
-			memset(net, 0, strlen(net));
-			free(net);
+			if (!net || !f || fclose(f) != 0) {
+				logf_("    ! the WiFi network could not be set up\n");
+				snprintf(s->warnings + strlen(s->warnings), sizeof(s->warnings) - strlen(s->warnings),
+				         "The WiFi network \"%s\" could not be set up. After the first boot, as root:\n"
+				         "  wpa_passphrase \"<network>\" >> /etc/wpa_supplicant/wpa_supplicant.conf\n", s->ssid);
+			}
+			if (net) {
+				memset(net, 0, strlen(net));
+				free(net);
+			}
 		}
 	}
 

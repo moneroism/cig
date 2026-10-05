@@ -134,8 +134,20 @@ static void hardware_screen(struct state *s)
 		char ssid[64];
 		snprintf(ssid, sizeof(ssid), "%s", s->ssid);
 		if (ui_input("Hardware: WiFi", "Network name (SSID):", ssid, sizeof(ssid), false) && *ssid &&
-		    password("Hardware: WiFi", ssid, s->psk, sizeof(s->psk)))
-			snprintf(s->ssid, sizeof(s->ssid), "%s", ssid);
+		    password("Hardware: WiFi", ssid, s->psk, sizeof(s->psk))) {
+			/* WPA2/WPA3-Personal: 8 to 63 printable ASCII characters (as wpa_passphrase wants) */
+			size_t n = strlen(s->psk);
+			bool ok = n >= 8 && n <= 63 && strlen(ssid) <= 32;
+			for (size_t i = 0; i < n && ok; i++)
+				ok = s->psk[i] >= 32 && s->psk[i] < 127;
+			if (ok) {
+				snprintf(s->ssid, sizeof(s->ssid), "%s", ssid);
+			} else {
+				memset(s->psk, 0, sizeof(s->psk));
+				ui_msg("Hardware: WiFi", "A WiFi password has 8 to 63 characters (letters, digits, symbols), "
+				                         "and a network name at most 32. The network was not set.");
+			}
+		}
 	} else if (!file_exists("/sys/class/net/wlan0")) {
 		ui_msg("Hardware", s->ndrv ? "No WiFi device found." : "No driver of this machine requests firmware.\nNo WiFi device found.");
 	}
@@ -392,8 +404,9 @@ int main(void)
 			}
 			do_install(&s);
 			{
-				char *m = xasprintf("cig %s is installed on /dev/%s.\n\nPower off, remove the install media, "
-				                    "and boot from that disk.", s.version, s.disk);
+				char *m = xasprintf("cig %s is installed on /dev/%s.\n\n%s%sPower off, remove the install "
+				                    "media, and boot from that disk.", s.version, s.disk, s.warnings,
+				                    *s.warnings ? "\n" : "");
 				ui_msg("Installed", m);
 				free(m);
 			}
