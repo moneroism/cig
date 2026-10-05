@@ -1,0 +1,15 @@
+# python-packaging - version handling (needed to build Mesa) (Python module, a build tool: installed as plain files, no pip)
+name=python-packaging
+version=26.3
+source="https://files.pythonhosted.org/packages/7d/fa/3944b40b07da9ce895c0e6303a5ab7d53da063554f534556b134a54d6093/packaging-$version.tar.gz"
+sha256="94edc256424af38762eb31306eed28beb9f0efc50a8837492c9d6fd6004aed79"
+depends="python"
+style=custom
+do_build() { :; }
+do_install() {
+    local site
+    site=$(python3 -c 'import sysconfig; print(sysconfig.get_paths()["purelib"])')
+    mkdir -p "$DEST$site"
+    cp -a src/packaging "$DEST$site/"
+    find "$DEST$site" \( -name '*.c' -o -name '*.pyi' -o -name __pycache__ \) -prune -exec rm -rf {} +
+}

@@ -1,0 +1,15 @@
+# python-pyyaml - YAML parser (needed to build Mesa; pure Python, no libyaml) (Python module, a build tool: installed as plain files, no pip)
+name=python-pyyaml
+version=6.0.3
+source="https://files.pythonhosted.org/packages/05/8e/961c0007c59b8dd7729d542c61a4d537767a59645b82a0b521206e1e25c2/pyyaml-$version.tar.gz"
+sha256="d76623373421df22fb4cf8817020cbb7ef15c725b9d5e45f17e189bfc384190f"
+depends="python"
+style=custom
+do_build() { :; }
+do_install() {
+    local site
+    site=$(python3 -c 'import sysconfig; print(sysconfig.get_paths()["purelib"])')
+    mkdir -p "$DEST$site"
+    cp -a lib/yaml "$DEST$site/"
+    find "$DEST$site" \( -name '*.c' -o -name '*.pyi' -o -name __pycache__ \) -prune -exec rm -rf {} +
+}

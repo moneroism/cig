@@ -1,0 +1,15 @@
+# python-markupsafe - text escaping for Mako (pure Python fallback) (Python module, a build tool: installed as plain files, no pip)
+name=python-markupsafe
+version=3.0.4
+source="https://files.pythonhosted.org/packages/38/9b/e422a865e1d5d57d0e509b4e0bf1c1a70a7f6382c29a5aa428df994c8bc8/markupsafe-$version.tar.gz"
+sha256="2e9ad7dd851bf45fab9f75cbff4cb493fee9979e8d8c7c9c3ee119022518edd6"
+depends="python"
+style=custom
+do_build() { :; }
+do_install() {
+    local site
+    site=$(python3 -c 'import sysconfig; print(sysconfig.get_paths()["purelib"])')
+    mkdir -p "$DEST$site"
+    cp -a src/markupsafe "$DEST$site/"
+    find "$DEST$site" \( -name '*.c' -o -name '*.pyi' -o -name __pycache__ \) -prune -exec rm -rf {} +
+}
