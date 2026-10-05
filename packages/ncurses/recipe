@@ -1,0 +1,12 @@
+# ncurses - terminal UI library, for the installer (cig-installer) on the install media only.
+# No group=: installed systems only get it if the user asks for it.
+name=ncurses
+version=6.6
+source="https://ftp.gnu.org/gnu/ncurses/ncurses-$version.tar.gz"
+signature="https://ftp.gnu.org/gnu/ncurses/ncurses-$version.tar.gz.sig"
+sha256="355b4cbbed880b0381a04c46617b7656e362585d52e9cf84a67e2009b749ff11"
+style=gnu
+# wide characters, shared libraries only; no C++/Ada bindings, tests, manuals or debug libs
+configure_args="--with-shared --without-normal --without-debug --without-cxx-binding --without-ada
+    --without-tests --without-manpages --enable-widec --enable-pc-files
+    --with-pkg-config-libdir=/usr/lib/pkgconfig --with-default-terminfo-dir=/usr/share/terminfo"
