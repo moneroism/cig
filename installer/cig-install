@@ -11,7 +11,10 @@
 set -euo pipefail
 umask 022
 
-CIG_SHARE="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"   # cigbuild, smoke, packages
+# cigbuild, smoke, packages: next to the installer in the repository, otherwise the
+# shared /usr/share/cig (cig-installer and cig-tools are separate package folders)
+CIG_SHARE="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
+[ -x "$CIG_SHARE/cigbuild" ] || CIG_SHARE=/usr/share/cig
 VERSION=$(cat "$CIG_SHARE/VERSION" 2>/dev/null || echo unknown)
 CIGBUILD="$CIG_SHARE/cigbuild"
 SMOKE="$CIG_SHARE/smoke"
