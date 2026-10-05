@@ -1,7 +1,7 @@
 #!/bin/bash
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 moneroism
-# install-boot.sh - make /mnt/lfs bootable. Run on VOID as your normal user
+# install-boot.sh - make /mnt/cig bootable. Run on VOID as your normal user
 # (asks for sudo where needed). Exit the chroot before running this.
 #
 #  1. asks for the distro name (saved for next time)
@@ -12,7 +12,7 @@
 
 set -euo pipefail
 
-LFS=/mnt/lfs
+SYS=/mnt/cig
 KSRC="$HOME/cig/linux-hardened"
 FWSRC="$HOME/cig/linux-firmware"
 NAMEFILE="$HOME/cig/distro-name"
@@ -21,9 +21,9 @@ die()  { echo; echo "!! $*" >&2; exit 1; }
 info() { echo "==> $*"; }
 
 [ "$(id -u)" -ne 0 ] || die "run as your normal user, not root"
-mountpoint -q "$LFS" || die "$LFS is not mounted"
-mountpoint -q "$LFS/proc" && die "exit the chroot first"
-[ -x "$LFS/usr/bin/sinit" ] || die "base system not finished (no sinit)"
+mountpoint -q "$SYS" || die "$SYS is not mounted"
+mountpoint -q "$SYS/proc" && die "exit the chroot first"
+[ -x "$SYS/usr/bin/sinit" ] || die "base system not finished (no sinit)"
 [ -f "$KSRC/.config" ] || die "kernel tree not found at $KSRC"
 [ -d "$FWSRC" ] || die "linux-firmware not found at $FWSRC"
 
@@ -39,12 +39,12 @@ fi
 info "distro: $DISTRO_NAME ($DISTRO_ID)"
 
 # ---------- 2. devices ----------
-ROOTDEV=$(findmnt -no SOURCE "$LFS")
+ROOTDEV=$(findmnt -no SOURCE "$SYS")
 ESPDEV="${ROOTDEV%2}1"
 PARTUUID=$(sudo blkid -s PARTUUID -o value "$ROOTDEV")
 [ -n "$PARTUUID" ] || die "could not read PARTUUID of $ROOTDEV"
 info "root: $ROOTDEV  PARTUUID=$PARTUUID   ESP: $ESPDEV"
-mountpoint -q "$LFS/boot" || sudo mount "$ESPDEV" "$LFS/boot"
+mountpoint -q "$SYS/boot" || sudo mount "$ESPDEV" "$SYS/boot"
 
 # ---------- 3. kernel ----------
 CMDLINE="root=PARTUUID=$PARTUUID rootfstype=ext4 rootwait ro init=/usr/bin/sinit"
@@ -67,16 +67,16 @@ info "kernel $KVER built"
 
 # ---------- 4. install kernel + modules ----------
 info "installing modules (signed, stripped)"
-sudo rm -rf "$LFS/usr/lib/modules/$KVER"
-sudo make -s modules_install INSTALL_MOD_PATH="$LFS" INSTALL_MOD_STRIP=1
+sudo rm -rf "$SYS/usr/lib/modules/$KVER"
+sudo make -s modules_install INSTALL_MOD_PATH="$SYS" INSTALL_MOD_STRIP=1
 
 info "installing kernel to the ESP"
-sudo mkdir -p "$LFS/boot/EFI/BOOT" "$LFS/boot/EFI/$DISTRO_ID"
-if [ -f "$LFS/boot/EFI/$DISTRO_ID/vmlinuz.efi" ]; then
-    sudo cp "$LFS/boot/EFI/$DISTRO_ID/vmlinuz.efi" "$LFS/boot/EFI/$DISTRO_ID/vmlinuz-old.efi"
+sudo mkdir -p "$SYS/boot/EFI/BOOT" "$SYS/boot/EFI/$DISTRO_ID"
+if [ -f "$SYS/boot/EFI/$DISTRO_ID/vmlinuz.efi" ]; then
+    sudo cp "$SYS/boot/EFI/$DISTRO_ID/vmlinuz.efi" "$SYS/boot/EFI/$DISTRO_ID/vmlinuz-old.efi"
 fi
-sudo cp arch/x86/boot/bzImage "$LFS/boot/EFI/$DISTRO_ID/vmlinuz.efi"
-sudo cp arch/x86/boot/bzImage "$LFS/boot/EFI/BOOT/BOOTX64.EFI"   # UEFI fallback path
+sudo cp arch/x86/boot/bzImage "$SYS/boot/EFI/$DISTRO_ID/vmlinuz.efi"
+sudo cp arch/x86/boot/bzImage "$SYS/boot/EFI/BOOT/BOOTX64.EFI"   # UEFI fallback path
 
 # no private key left behind = nobody can sign a module for this kernel
 rm -f certs/signing_key.pem
@@ -84,7 +84,7 @@ info "module signing key deleted"
 
 # ---------- 5. firmware ----------
 info "installing firmware"
-FWDST="$LFS/usr/lib/firmware"
+FWDST="$SYS/usr/lib/firmware"
 sudo mkdir -p "$FWDST/amdgpu"
 fw=$(find "$FWSRC" -name 'iwlwifi-7265D-29.ucode' | head -n1)
 [ -n "$fw" ] || die "iwlwifi-7265D-29.ucode not found in $FWSRC"
@@ -99,17 +99,17 @@ done
 info "firmware: 1 WiFi + $n GPU files, checksums in /usr/lib/firmware/SHA256SUMS"
 
 # ---------- 6. identity ----------
-sudo tee "$LFS/etc/os-release" >/dev/null <<EOF
+sudo tee "$SYS/etc/os-release" >/dev/null <<EOF
 NAME="$DISTRO_NAME"
 ID=$DISTRO_ID
 PRETTY_NAME="$DISTRO_NAME"
 BUILD_ID=rolling
 EOF
-printf '%s \\r (\\l)\n\n' "$DISTRO_NAME" | sudo tee "$LFS/etc/issue" >/dev/null
-echo "$DISTRO_ID" | sudo tee "$LFS/etc/hostname" >/dev/null
+printf '%s \\r (\\l)\n\n' "$DISTRO_NAME" | sudo tee "$SYS/etc/issue" >/dev/null
+echo "$DISTRO_ID" | sudo tee "$SYS/etc/hostname" >/dev/null
 
 sync
 echo
 info "Bootable. Next:"
-info "  sudo umount -R $LFS        (never boot the VM while the image is mounted)"
+info "  sudo umount -R $SYS        (never boot the VM while the image is mounted)"
 info "  ~/cig/scripts/run-vm.sh"

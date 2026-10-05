@@ -6,18 +6,18 @@
 
 set -euo pipefail
 
-# CIG_IMG:    disk to boot (default ~/lfs.img)
+# CIG_IMG:    disk to boot (default ~/cig.img)
 # CIG_TARGET: optional second, empty disk, e.g. to test the installer
-IMG="${CIG_IMG:-$HOME/lfs.img}"
+IMG="${CIG_IMG:-$HOME/cig.img}"
 TARGET="${CIG_TARGET:-}"
-LFS=/mnt/lfs
+SYS=/mnt/cig
 VARS="$HOME/cig/ovmf-vars.fd"
 
 die() { echo "!! $*" >&2; exit 1; }
 
 [ -f "$IMG" ] || die "$IMG not found"
 [ -z "$TARGET" ] || [ -f "$TARGET" ] || die "$TARGET not found (create it: qemu-img create -f raw $TARGET 40G)"
-mountpoint -q "$LFS" && die "image is still mounted at $LFS. Run: sudo umount -R $LFS"
+mountpoint -q "$SYS" && die "image is still mounted at $SYS. Run: sudo umount -R $SYS"
 
 CODE=$(find /usr/share -name 'OVMF_CODE*.fd' 2>/dev/null | grep -v -i secboot | head -n1 || true)
 VTPL=$(find /usr/share -name 'OVMF_VARS*.fd' 2>/dev/null | head -n1 || true)
@@ -50,7 +50,7 @@ exec qemu-system-x86_64 \
     -machine q35 "${ACCEL[@]}" -smp 4 -m 4G "${DISP[@]}" \
     "${FW[@]}" \
     -drive "file=$IMG,format=raw,if=none,id=disk" \
-    -device ahci,id=ahci -device ide-hd,drive=disk,bus=ahci.0 \
+    -device ahci,id=ahci -device ide-hd,drive=disk,bus=ahci.0,bootindex=0 \
     "${EXTRA[@]}" \
     -device virtio-vga \
     -device qemu-xhci -device usb-tablet \

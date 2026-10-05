@@ -5,17 +5,17 @@
 #
 # Builds: binutils (pass 1) -> kernel headers -> gcc (pass 1, C only)
 #         -> musl -> gcc (pass 2, C + C++)
-# Everything goes into /mnt/lfs. Nothing on Void is modified.
+# Everything goes into /mnt/cig. Nothing on Void is modified.
 #
 # Run as your NORMAL user (not root, not sudo). It asks for sudo once,
-# only to create the directory layout in /mnt/lfs.
+# only to create the directory layout in /mnt/cig.
 # Safe to re-run: finished steps are skipped, a failed step restarts.
 
 set -euo pipefail
 
 # ---------------- settings ----------------
-LFS=/mnt/lfs
-LFS_TGT=x86_64-lfs-linux-musl
+SYS=/mnt/cig
+TGT=x86_64-cig-linux-musl
 KSRC="$HOME/cig/linux-hardened"
 GCC_VER=16.2.0
 MUSL_VER=1.2.6
@@ -23,18 +23,18 @@ BINUTILS_VER=""        # empty = newest release on ftp.gnu.org (pinned after fir
 # ------------------------------------------
 
 # Restart with a clean environment so nothing from Void leaks into the build
-if [ -z "${LFS_CLEAN_ENV:-}" ]; then
-    exec env -i LFS_CLEAN_ENV=1 HOME="$HOME" USER="$(id -un)" TERM="${TERM:-xterm}" \
+if [ -z "${CIG_CLEAN_ENV:-}" ]; then
+    exec env -i CIG_CLEAN_ENV=1 HOME="$HOME" USER="$(id -un)" TERM="${TERM:-xterm}" \
         PATH=/usr/bin:/bin /bin/bash "$0" "$@"
 fi
 
 umask 022
 export LC_ALL=POSIX
-export PATH="$LFS/tools/bin:/usr/bin:/bin"
+export PATH="$SYS/tools/bin:/usr/bin:/bin"
 export MAKEFLAGS="-j$(nproc)"
-export LFS LFS_TGT
+export SYS TGT
 
-SRC="$LFS/sources"
+SRC="$SYS/sources"
 LOGS="$SRC/logs"
 STAMPS="$SRC/.stamps"
 
@@ -63,7 +63,7 @@ run_step() {
 
 preflight() {
     [ "$(id -u)" -ne 0 ] || die "run this as your normal user, not root"
-    mountpoint -q "$LFS" || die "$LFS is not mounted. Attach the image (losetup) and mount it first."
+    mountpoint -q "$SYS" || die "$SYS is not mounted. Attach the image (losetup) and mount it first."
     [ -f "$KSRC/Makefile" ] || die "kernel source not found at $KSRC"
     local c missing=""
     for c in gcc g++ make bison gawk m4 makeinfo patch perl python3 tar xz \
@@ -75,14 +75,14 @@ preflight() {
 
 setup_layout() {
     if [ -d "$SRC" ] && [ -O "$SRC" ]; then return; fi
-    info "creating directory layout in $LFS (sudo password needed once)"
-    sudo mkdir -p "$LFS"/{etc,var,usr/{bin,lib,sbin},tools,sources}
+    info "creating directory layout in $SYS (sudo password needed once)"
+    sudo mkdir -p "$SYS"/{etc,var,usr/{bin,lib,sbin},tools,sources}
     local i
     for i in bin lib sbin; do
-        [ -e "$LFS/$i" ] || sudo ln -s "usr/$i" "$LFS/$i"
+        [ -e "$SYS/$i" ] || sudo ln -s "usr/$i" "$SYS/$i"
     done
     sudo chown "$(id -u):$(id -g)" \
-        "$LFS"/{usr,usr/bin,usr/lib,usr/sbin,var,etc,tools,sources}
+        "$SYS"/{usr,usr/bin,usr/lib,usr/sbin,var,etc,tools,sources}
 }
 
 fetch() {   # fetch <url>  ->  $SRC/<file name>
@@ -146,7 +146,7 @@ s_binutils1() {
     cd "$SRC"; rm -rf "binutils-$BINUTILS_VER"
     tar xf "binutils-$BINUTILS_VER.tar.xz"
     cd "binutils-$BINUTILS_VER"; mkdir build; cd build
-    ../configure --prefix="$LFS/tools" --with-sysroot="$LFS" --target="$LFS_TGT" \
+    ../configure --prefix="$SYS/tools" --with-sysroot="$SYS" --target="$TGT" \
         --disable-nls --enable-gprofng=no --disable-werror \
         --enable-new-dtags --enable-default-hash-style=gnu
     make
@@ -156,7 +156,7 @@ s_binutils1() {
 
 s_kernel_headers() {
     # Uses your own linux-hardened tree; does not touch its .config
-    make -C "$KSRC" headers_install ARCH=x86_64 INSTALL_HDR_PATH="$LFS/usr"
+    make -C "$KSRC" headers_install ARCH=x86_64 INSTALL_HDR_PATH="$SYS/usr"
 }
 
 s_gcc_prep() {
@@ -169,7 +169,7 @@ s_gcc_prep() {
 
 s_gcc1() {
     cd "$SRC/gcc-$GCC_VER"; rm -rf build1; mkdir build1; cd build1
-    ../configure --target="$LFS_TGT" --prefix="$LFS/tools" --with-sysroot="$LFS" \
+    ../configure --target="$TGT" --prefix="$SYS/tools" --with-sysroot="$SYS" \
         --with-newlib --without-headers \
         --enable-default-pie --enable-default-ssp \
         --disable-nls --disable-shared --disable-multilib --disable-threads \
@@ -180,23 +180,23 @@ s_gcc1() {
     make install
     cd ..
     cat gcc/limitx.h gcc/glimits.h gcc/limity.h \
-        > "$(dirname "$("$LFS_TGT-gcc" -print-libgcc-file-name)")/include/limits.h"
+        > "$(dirname "$("$TGT-gcc" -print-libgcc-file-name)")/include/limits.h"
 }
 
 s_musl() {
     cd "$SRC"; rm -rf "musl-$MUSL_VER"
     tar xf "musl-$MUSL_VER.tar.gz"
     cd "musl-$MUSL_VER"
-    ./configure CROSS_COMPILE="$LFS_TGT-" --prefix=/usr --target="$LFS_TGT"
+    ./configure CROSS_COMPILE="$TGT-" --prefix=/usr --target="$TGT"
     make
-    make DESTDIR="$LFS" install
+    make DESTDIR="$SYS" install
     cd "$SRC"; rm -rf "musl-$MUSL_VER"
 }
 
 s_test_c() {
     cd "$SRC"
     echo 'int main(void) { return 0; }' > t.c
-    "$LFS_TGT-gcc" t.c -o t
+    "$TGT-gcc" t.c -o t
     readelf -l t | grep 'interpreter'
     readelf -l t | grep -q '/lib/ld-musl-x86_64.so.1' || { echo "wrong dynamic linker"; exit 1; }
     rm -f t t.c
@@ -204,7 +204,7 @@ s_test_c() {
 
 s_gcc2() {
     cd "$SRC/gcc-$GCC_VER"; rm -rf build2; mkdir build2; cd build2
-    ../configure --target="$LFS_TGT" --prefix="$LFS/tools" --with-sysroot="$LFS" \
+    ../configure --target="$TGT" --prefix="$SYS/tools" --with-sysroot="$SYS" \
         --enable-languages=c,c++ \
         --enable-default-pie --enable-default-ssp \
         --enable-shared --enable-threads=posix --enable-tls --enable-__cxa_atexit \
@@ -220,7 +220,7 @@ s_test_cxx() {
 #include <iostream>
 int main() { std::cout << "ok\n"; }
 EOF
-    "$LFS_TGT-g++" t.cpp -o t
+    "$TGT-g++" t.cpp -o t
     readelf -l t | grep -q '/lib/ld-musl-x86_64.so.1' || { echo "wrong dynamic linker"; exit 1; }
     rm -f t t.cpp
 }
@@ -244,6 +244,6 @@ run_step 08-test-cxx        s_test_cxx
 
 echo
 info "Toolchain finished."
-info "Compiler: $LFS/tools/bin/$LFS_TGT-gcc (C) and -g++ (C++)"
+info "Compiler: $SYS/tools/bin/$TGT-gcc (C) and -g++ (C++)"
 info "Versions: $SRC/VERSIONS   Checksums: $SRC/SHA256SUMS"
 info "Hardening on by default: PIE + stack protector for everything it builds."

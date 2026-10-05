@@ -3,9 +3,9 @@
 # Copyright (C) 2026 moneroism
 # build-temp.sh - phase 2: temporary system for the hardened distro
 #
-# Cross-compiles into /mnt/lfs, using the toolchain from build-toolchain.sh:
+# Cross-compiles into /mnt/cig, using the toolchain from build-toolchain.sh:
 #   m4, make, gawk, BusyBox, bash, binutils (native), gcc (native)
-# Afterwards /mnt/lfs can be entered with enter-chroot.sh and the distro
+# Afterwards /mnt/cig can be entered with enter-chroot.sh and the distro
 # builds itself from then on.
 #
 # Run as your NORMAL user, after build-toolchain.sh has finished.
@@ -14,25 +14,25 @@
 set -euo pipefail
 
 # ---------------- settings ----------------
-LFS=/mnt/lfs
-LFS_TGT=x86_64-lfs-linux-musl
+SYS=/mnt/cig
+TGT=x86_64-cig-linux-musl
 BUSYBOX_VER=1.36.1     # newest release busybox.net marks stable
 GAWK_VER=5.3.2         # 5.4.x breaks GCC 16's option generator (opt-gather.awk)
 # m4, make, bash: newest GNU releases, detected once and pinned
 # ------------------------------------------
 
-if [ -z "${LFS_CLEAN_ENV:-}" ]; then
-    exec env -i LFS_CLEAN_ENV=1 HOME="$HOME" USER="$(id -un)" TERM="${TERM:-xterm}" \
+if [ -z "${CIG_CLEAN_ENV:-}" ]; then
+    exec env -i CIG_CLEAN_ENV=1 HOME="$HOME" USER="$(id -un)" TERM="${TERM:-xterm}" \
         PATH=/usr/bin:/bin /bin/bash "$0" "$@"
 fi
 
 umask 022
 export LC_ALL=POSIX
-export PATH="$LFS/tools/bin:/usr/bin:/bin"
+export PATH="$SYS/tools/bin:/usr/bin:/bin"
 export MAKEFLAGS="-j$(nproc)"
-export LFS LFS_TGT
+export SYS TGT
 
-SRC="$LFS/sources"
+SRC="$SYS/sources"
 LOGS="$SRC/logs"
 STAMPS="$SRC/.stamps"
 GNUPGHOME_TMP="$SRC/.gnupg"
@@ -61,11 +61,11 @@ run_step() {
 
 preflight() {
     [ "$(id -u)" -ne 0 ] || die "run this as your normal user, not root"
-    mountpoint -q "$LFS" || die "$LFS is not mounted"
+    mountpoint -q "$SYS" || die "$SYS is not mounted"
     [ -O "$SRC" ] || die "$SRC is not owned by you. Has the system already been handed to root (enter-chroot.sh)?"
     [ -f "$SRC/VERSIONS" ] || die "run build-toolchain.sh first"
     [ -f "$STAMPS/08-test-cxx" ] || die "the toolchain did not finish; run build-toolchain.sh again"
-    command -v "$LFS_TGT-gcc" >/dev/null || die "cross compiler not found in $LFS/tools/bin"
+    command -v "$TGT-gcc" >/dev/null || die "cross compiler not found in $SYS/tools/bin"
     local c missing=""
     for c in gcc make m4 wget gpg gpgv bzip2 xz tar sha256sum; do
         command -v "$c" >/dev/null || missing="$missing $c"
@@ -141,9 +141,9 @@ unpack() {   # unpack <tarball> <dir>  -> fresh source dir, cd into it
 
 s_m4() {
     unpack "m4-$M4_VER.tar.xz" "m4-$M4_VER"
-    ./configure --prefix=/usr --host="$LFS_TGT" --build="$BUILD"
+    ./configure --prefix=/usr --host="$TGT" --build="$BUILD"
     make
-    make DESTDIR="$LFS" install
+    make DESTDIR="$SYS" install
     cd "$SRC"; rm -rf "m4-$M4_VER"
 }
 
@@ -151,19 +151,19 @@ s_make() {
     unpack "make-$MAKE_VER.tar.gz" "make-$MAKE_VER"
     # make 4.4.1 has pre-C23 code (extern char *getenv ();). GCC 15+ defaults
     # to C23, where () means "no arguments", so build it as C17.
-    ./configure --prefix=/usr --host="$LFS_TGT" --build="$BUILD" --without-guile \
+    ./configure --prefix=/usr --host="$TGT" --build="$BUILD" --without-guile \
         CFLAGS="-O2 -std=gnu17"
     make
-    make DESTDIR="$LFS" install
+    make DESTDIR="$SYS" install
     cd "$SRC"; rm -rf "make-$MAKE_VER"
 }
 
 s_gawk() {
     unpack "gawk-$GAWK_VER.tar.xz" "gawk-$GAWK_VER"
     sed -i 's/extras//' Makefile.in
-    ./configure --prefix=/usr --host="$LFS_TGT" --build="$BUILD"
+    ./configure --prefix=/usr --host="$TGT" --build="$BUILD"
     make
-    make DESTDIR="$LFS" install
+    make DESTDIR="$SYS" install
     cd "$SRC"; rm -rf "gawk-$GAWK_VER"
 }
 
@@ -178,28 +178,28 @@ s_busybox() {
         -e 's/^CONFIG_SHA256_HWACCEL=y/# CONFIG_SHA256_HWACCEL is not set/' \
         -e 's/^CONFIG_LINUXRC=y/# CONFIG_LINUXRC is not set/' \
         .config
-    make CROSS_COMPILE="$LFS_TGT-"
-    make CROSS_COMPILE="$LFS_TGT-" CONFIG_PREFIX="$LFS" install
+    make CROSS_COMPILE="$TGT-"
+    make CROSS_COMPILE="$TGT-" CONFIG_PREFIX="$SYS" install
     cd "$SRC"; rm -rf "busybox-$BUSYBOX_VER"
 }
 
 s_bash() {
     unpack "bash-$BASH_VER.tar.gz" "bash-$BASH_VER"
-    ./configure --prefix=/usr --host="$LFS_TGT" --build="$BUILD" --without-bash-malloc
+    ./configure --prefix=/usr --host="$TGT" --build="$BUILD" --without-bash-malloc
     make
-    make DESTDIR="$LFS" install
-    ln -sf bash "$LFS/usr/bin/sh"     # bash as /bin/sh while building; revisit later
+    make DESTDIR="$SYS" install
+    ln -sf bash "$SYS/usr/bin/sh"     # bash as /bin/sh while building; revisit later
     cd "$SRC"; rm -rf "bash-$BASH_VER"
 }
 
 s_binutils2() {
     unpack "binutils-$BINUTILS_VER.tar.xz" "binutils-$BINUTILS_VER"
     mkdir build; cd build
-    ../configure --prefix=/usr --build="$BUILD" --host="$LFS_TGT" \
+    ../configure --prefix=/usr --build="$BUILD" --host="$TGT" \
         --disable-nls --disable-shared --enable-gprofng=no --disable-werror \
         --enable-64-bit-bfd --enable-new-dtags --enable-default-hash-style=gnu
     make
-    make DESTDIR="$LFS" install
+    make DESTDIR="$SYS" install
     cd "$SRC"; rm -rf "binutils-$BINUTILS_VER"
 }
 
@@ -209,17 +209,17 @@ s_gcc_native() {
     sed '/thread_header =/s/@.*@/gthr-posix.h/' \
         -i libgcc/Makefile.in libstdc++-v3/include/Makefile.in
     rm -rf build3; mkdir build3; cd build3
-    ../configure --build="$BUILD" --host="$LFS_TGT" --target="$LFS_TGT" \
-        LDFLAGS_FOR_TARGET="-L$PWD/$LFS_TGT/libgcc" \
-        --prefix=/usr --with-build-sysroot="$LFS" \
+    ../configure --build="$BUILD" --host="$TGT" --target="$TGT" \
+        LDFLAGS_FOR_TARGET="-L$PWD/$TGT/libgcc" \
+        --prefix=/usr --with-build-sysroot="$SYS" \
         --enable-default-pie --enable-default-ssp \
         --disable-nls --disable-multilib --disable-libatomic --disable-libgomp \
         --disable-libquadmath --disable-libsanitizer --disable-libssp --disable-libvtv \
         --disable-symvers --disable-libstdcxx-pch \
         --enable-languages=c,c++
     make
-    make DESTDIR="$LFS" install
-    ln -sf gcc "$LFS/usr/bin/cc"
+    make DESTDIR="$SYS" install
+    ln -sf gcc "$SYS/usr/bin/cc"
 }
 
 # ---------------- main ----------------

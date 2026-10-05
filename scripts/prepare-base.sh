@@ -4,11 +4,11 @@
 # prepare-base.sh - run on VOID (not in the chroot), as your normal user.
 #
 # The chroot has no network, so anything new is fetched here and copied in.
-# Fetches sinit (pinned tag), copies build-base.sh into /mnt/lfs/sources.
+# Fetches sinit (pinned tag), copies build-base.sh into /mnt/cig/sources.
 
 set -euo pipefail
 
-LFS=/mnt/lfs
+SYS=/mnt/cig
 SINIT_TAG=v1.1
 HERE="$(cd "$(dirname "$0")" && pwd)"
 STAGE="$HOME/cig/stage"
@@ -16,8 +16,8 @@ STAGE="$HOME/cig/stage"
 die() { echo "!! $*" >&2; exit 1; }
 
 [ "$(id -u)" -ne 0 ] || die "run as your normal user"
-mountpoint -q "$LFS" || die "$LFS is not mounted"
-[ -f "$LFS/etc/.handed-to-root" ] || die "enter the chroot once first (enter-chroot.sh)"
+mountpoint -q "$SYS" || die "$SYS is not mounted"
+[ -f "$SYS/etc/.handed-to-root" ] || die "enter the chroot once first (enter-chroot.sh)"
 [ -f "$HERE/build-base.sh" ] || die "build-base.sh must be next to this script"
 command -v git >/dev/null || die "git is not installed"
 
@@ -29,16 +29,16 @@ SINIT_COMMIT=$(git -C "$STAGE/sinit" rev-parse HEAD)
 echo "==> sinit $SINIT_TAG = commit $SINIT_COMMIT"
 rm -rf "$STAGE/sinit/.git"
 
-echo "==> copying into $LFS/sources (sudo)"
-sudo rm -rf "$LFS/sources/sinit"
-sudo cp -r "$STAGE/sinit" "$LFS/sources/sinit"
-sudo install -m 755 "$HERE/build-base.sh" "$LFS/sources/build-base.sh"
+echo "==> copying into $SYS/sources (sudo)"
+sudo rm -rf "$SYS/sources/sinit"
+sudo cp -r "$STAGE/sinit" "$SYS/sources/sinit"
+sudo install -m 755 "$HERE/build-base.sh" "$SYS/sources/build-base.sh"
 
-if ! sudo grep -q '^SINIT_TAG=' "$LFS/sources/VERSIONS"; then
+if ! sudo grep -q '^SINIT_TAG=' "$SYS/sources/VERSIONS"; then
     printf 'SINIT_TAG=%s\nSINIT_COMMIT=%s\n' "$SINIT_TAG" "$SINIT_COMMIT" \
-        | sudo tee -a "$LFS/sources/VERSIONS" >/dev/null
+        | sudo tee -a "$SYS/sources/VERSIONS" >/dev/null
 fi
-sudo chown -R root:root "$LFS/sources/sinit"
+sudo chown -R root:root "$SYS/sources/sinit"
 
 echo
 echo "==> ready. Now:"
