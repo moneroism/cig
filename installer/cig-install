@@ -870,12 +870,12 @@ EOF
     if [ "$KERNEL_MODE" = compile ]; then
         rm -f "$("$CIGBUILD" pkgfile linux)"
         step "Compiling the kernel for this machine (this takes a while; log: $CIG_VAR/logs/linux.log)"
-        run env CIG_KERNEL_PROFILE=local CIG_KERNEL_LSMOD="$WORK/lsmod" CIG_ROOT="PARTUUID=$PU_ROOT" \
-            "$CIGBUILD" build linux
+        run env -u CIG_PKG_MIRROR CIG_KERNEL_PROFILE=local CIG_KERNEL_LSMOD="$WORK/lsmod" \
+            CIG_ROOT="PARTUUID=$PU_ROOT" "$CIGBUILD" build linux
     fi
     rm -f "$("$CIGBUILD" pkgfile linux-firmware)"
     step "Selecting firmware ($(wc -l < "$fwlist") file(s))"
-    run env CIG_FIRMWARE_LIST="$fwlist" "$CIGBUILD" build linux-firmware
+    run env -u CIG_PKG_MIRROR CIG_FIRMWARE_LIST="$fwlist" "$CIGBUILD" build linux-firmware
 
     step "Installing packages"
     export SMOKE_ROOT="$T"

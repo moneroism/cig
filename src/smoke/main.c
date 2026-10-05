@@ -177,6 +177,14 @@ static void add_pkg(const char *name, enum compile compile, bool yes)
 		free(q);
 	}
 	f = pkgfile_of(name, false);
+	if (compile == NO && !is_file(f)) {   /* a prebuilt package from the install media */
+		const char *mirror = getenv("CIG_PKG_MIRROR");
+		const char *base = strrchr(f, '/') ? strrchr(f, '/') + 1 : f;
+		char *m = mirror ? xasprintf("%s/%s", mirror, base) : NULL;
+		if (m && is_file(m))
+			copy_file(m, f);
+		free(m);
+	}
 	if (compile == NO && !is_file(f))
 		die("%s: no prebuilt package on this system; add it with -c to compile", name);
 	/* compiling for this system needs build tools; offer them once */

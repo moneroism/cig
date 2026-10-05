@@ -403,6 +403,9 @@ add_pkg() {   # add_pkg <name> <compile: yes|no|ask> <assume-yes: 1|"">
         else compile=no; fi
     fi
     f=$("$CIGBUILD" pkgfile "$name")
+    if [ "$compile" = no ] && [ ! -f "$f" ] && [ -f "${CIG_PKG_MIRROR:-/nonexistent}/${f##*/}" ]; then
+        cp "$CIG_PKG_MIRROR/${f##*/}" "$f"     # a prebuilt package from the install media
+    fi
     if [ "$compile" = no ] && [ ! -f "$f" ]; then
         die "$name: no prebuilt package on this system; add it with -c to compile"
     fi
