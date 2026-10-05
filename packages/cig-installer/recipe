@@ -14,7 +14,8 @@ do_build() {
         || { echo "cig-installer is built from the cig repository (with src/installer), not from an installed system"; exit 1; }
     rm -rf "$WORK/installer"
     cp -R "$CIG_REPO/src/installer" "$WORK/installer"
-    make -C "$WORK/installer" clean cig-install
+    make -C "$WORK/installer" clean    # copied from the checkout: drop any host build first
+    make -C "$WORK/installer" cig-install
 }
 do_install() {
     local s="$DEST/usr/share/cig/installer"

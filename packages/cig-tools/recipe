@@ -14,7 +14,8 @@ nostrip=1
 do_build() {
     rm -rf "$WORK/smoke"
     cp -R "$CIG_REPO/src/smoke" "$WORK/smoke"
-    make -C "$WORK/smoke" clean smoke
+    make -C "$WORK/smoke" clean    # copied from the checkout: drop any host build first
+    make -C "$WORK/smoke" smoke
 }
 do_install() {
     local s="$DEST/usr/share/cig"
