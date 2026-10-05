@@ -1,0 +1,10 @@
+# one scenario per line: name | commands (auto H R S | load | mount I M | format I yes/no | new K SIZE M | del I)
+auto-home-swap   | auto yes 40 4
+auto-noh-noswap  | auto no 40 0
+auto-tiny-root   | auto yes 10 0
+dualboot-keep    | load ; mount 1 /boot ; mount 3 / ; mount 4 /home ; new swap 4G swap
+replace-root     | load ; mount 1 /boot ; del 3 ; new linux 30G /
+two-rests        | load ; mount 1 /boot ; new linux rest / ; new linux rest -
+ntfs-home        | load ; mount 1 /boot ; mount 3 / ; mount 2 /home
+keep-root        | load ; mount 1 /boot ; mount 3 / ; format 3 no
+fresh-custom     | wipe ; new esp 1G /boot ; new linux 50G / ; new linux rest /home
