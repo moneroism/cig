@@ -153,7 +153,7 @@ Work:
 - ~~live mode in `rc.init`: read-only root, `/etc` `/var` `/home` `/root` `/mnt` in RAM~~ (done)
 - `cig-live` (media only, no `group=`): logins `root` / `ciglinux` (for the installer) and
   `cig` / `ciglinux` (doas), created at boot; a login banner (`/etc/issue`) from
-  `packages/cig-live/files/issue.in` (the cigarette logo beside the login hints; plain ASCII,
+  `assets/live-issue.txt` (the cigarette logo beside the login hints; plain ASCII,
   <= 80 columns, `{VERSION}` filled in and backslashes escaped at build time). Nothing on the
   live system listens on the network, so the known passwords only matter at the keyboard
 - media kernel: broad drivers, ISO9660 built in, root by its own partition name
