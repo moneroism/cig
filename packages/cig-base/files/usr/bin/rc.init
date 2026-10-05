@@ -23,7 +23,7 @@ if [ -f /etc/cig/live ]; then
     # the medium and is never copied.
     mkdir -p /run/live
     mount -t tmpfs -o mode=0755 tmpfs /run/live
-    for d in etc var home root; do
+    for d in etc var home root mnt; do
         mkdir -p "/run/live/$d"
         for e in "/$d"/* "/$d"/.[!.]*; do
             [ -e "$e" ] || [ -L "$e" ] || continue
@@ -34,7 +34,7 @@ if [ -f /etc/cig/live ]; then
     done
     mkdir -p /run/live/var/cig
     mount --bind /var/cig /run/live/var/cig
-    for d in etc var home root; do mount --rbind "/run/live/$d" "/$d"; done
+    for d in etc var home root mnt; do mount --rbind "/run/live/$d" "/$d"; done
 else
     mount -o remount,rw /
 fi

@@ -57,7 +57,7 @@ trap cleanup EXIT
 step "Live system in $STAGE"
 cleanup
 rm -rf "$STAGE" "$MEDIA_VAR/esp.img"
-mkdir -p "$STAGE"/{usr/bin,usr/lib,usr/sbin,etc/cig,var/log,var/tmp,var/cig,dev,proc,sys,run,tmp,root,home,boot}
+mkdir -p "$STAGE"/{usr/bin,usr/lib,usr/sbin,etc/cig,var/log,var/tmp,var/cig,dev,proc,sys,run,tmp,root,home,boot,mnt}
 ln -s usr/bin "$STAGE/bin"; ln -s usr/lib "$STAGE/lib"; ln -s usr/sbin "$STAGE/sbin"
 chmod 1777 "$STAGE/tmp" "$STAGE/var/tmp"; chmod 0750 "$STAGE/root"
 cat > "$STAGE/etc/passwd" <<'EOF'
