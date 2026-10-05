@@ -120,6 +120,24 @@ cig's own system packages are recipes in the cig repository.
   (GitHub; Codeberg later), are compiled on the device and verified there.
   The repository's tags are signed by the project key.
 
+## Over the network (decided 2026-10-05, planned)
+
+- **Recipes** live in their own repository (`cig-recipes` on GitHub), separate from the
+  tools. `smoke sync` fetches it: a release archive with curl, verified with its detached
+  signature before anything is used (no git needed on the device). Releases are signed by
+  the cig project key.
+- **Signature checks on the device: `gpgv`** (GnuPG's verify-only tool), because upstreams
+  sign with OpenPGP. It is a package that the installer's package screen has ticked by
+  default; unticking it shows a warning (yes / no) explaining that downloads can then only
+  be checked against their pinned SHA256, not against their authors' keys.
+- **Prebuilt packages** are optional and signed by the project key. **Reproducible builds**
+  make them checkable: anyone can rebuild a recipe and compare the checksum, so trusting
+  the prebuilt package never means trusting the cig developer. Compiling on the device
+  stays the default.
+- **No mirrors.** Sources come from their upstreams; cig's own downloads (recipes, prebuilt
+  packages) from the repository's release pages. HTTPS only, and nothing is used before
+  its signature or pinned checksum has been verified.
+
 ## Layout
 
 ```

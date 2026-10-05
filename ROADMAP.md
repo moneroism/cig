@@ -245,6 +245,9 @@ Also in this phase:
   to build, glibc compatibility would allow upstream binaries instead)
 - hardened_malloc
 - sandboxing and privilege separation
+- smoke over the network (see docs/smoke.md): `smoke sync` against a separate recipe
+  repository, `gpgv` on the device (ticked by default; unticking warns), optional signed
+  prebuilt packages with reproducible builds, no mirrors
 - smoke: `update`, name-file recipes, generated recipe drafts, builds as an unprivileged
   user, recipe diffs on update, on-device signature checks (gpgv, later minisign/signify),
   optional glibc compatibility for prebuilt upstream binaries
