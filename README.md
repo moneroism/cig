@@ -5,9 +5,10 @@ of GrapheneOS but for the PC: as little code as possible, every source
 verified, nothing running that isn't needed, and nothing hardcoded to one
 machine.
 
-> **Status:** 0.2.0 (beta). The installer installs a bootable system: tested in
+> **Status:** 0.2.1 (beta). The installer installs a bootable system: tested in
 > QEMU (UEFI), the installed disk boots on its own with its own linux-hardened
 > kernel, signed modules and lockdown, and runs a Wayland desktop (dwl + foot).
+> Disks are partitioned automatically or with the installer's partition editor.
 > Everything is built from recipes with `cigbuild` and managed by `smoke`.
 > Next: the first bare-metal install. Not for daily use. See [`ROADMAP.md`](ROADMAP.md).
 

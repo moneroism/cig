@@ -33,7 +33,8 @@ into `/usr/lib/os-release` of every installed system.
 | Version | Reached when |
 |---|---|
 | 0.1.0 | Phase 0 + 1: boots in QEMU, fully managed by smoke |
-| 0.2.0 | Phase 2: the installer installs a bootable system ← current |
+| 0.2.0 | Phase 2: the installer installs a bootable system |
+| 0.2.1 | partition editor and swap, signature URLs, fixes ← current |
 | 0.3.0 | Phase 3: install media (ISO) and first bare-metal install |
 | 0.4.0 | Phase 4: optional components |
 | 0.5.0 | Phase 5: security layers |
