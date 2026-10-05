@@ -381,6 +381,20 @@ void do_install(struct state *s)
 	step("Checking the new system (smoke audit)");
 	RUN("env", "SMOKE_ROOT=" TARGET, s->smoke, "audit", "--quick");
 
+	/* every user must be able to reach the system (a wrong umask once made /usr 0750) */
+	{
+		static const char *dirs[] = { "", "/usr", "/usr/bin", "/usr/lib", "/usr/sbin", "/usr/share",
+		                              "/usr/pkg", "/etc", "/var", NULL };
+		for (int i = 0; dirs[i]; i++) {
+			struct stat st;
+			char *p = xasprintf("%s%s", TARGET, dirs[i]);
+			if (stat(p, &st) == 0 && (st.st_mode & 0005) != 0005)
+				fail(xasprintf("%s is not readable for all users (mode %o)", *dirs[i] ? dirs[i] : "/",
+				               st.st_mode & 07777));
+			free(p);
+		}
+	}
+
 	step("Users");
 	RUN("chroot", TARGET, "adduser", "-D", "-s", "/bin/bash", "-h", xasprintf("/home/%s", s->user), s->user);
 	{
