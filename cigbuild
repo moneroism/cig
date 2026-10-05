@@ -31,9 +31,9 @@ cmd=${1:-}; shift || true
 
 case "$cmd" in
     build)   [ $# -gt 0 ] || usage; for p in "$@"; do pkg_build "$p"; done ;;
-    install) [ $# -gt 0 ] || usage; exec "$CIG_REPO/smoke" add -c -y "$@" ;;
+    install) [ $# -gt 0 ] || usage; exec "$SMOKE" add -c -y "$@" ;;
     rebuild) [ $# -gt 0 ] || usage; for p in "$@"; do pkg_rebuild "$p"; done ;;
-    remove)  exec "$CIG_REPO/smoke" remove "$@" ;;
+    remove)  exec "$SMOKE" remove "$@" ;;
     pkgfile) [ $# -eq 1 ] || usage; load_recipe "$1"; echo "$PKGFILE" ;;
     meta)    [ $# -eq 1 ] || usage; pkg_meta "$1" ;;
     fetch)   [ $# -gt 0 ] || usage; for p in "$@"; do load_recipe "$p"; fetch_sources; done ;;

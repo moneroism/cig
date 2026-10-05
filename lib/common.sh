@@ -167,7 +167,10 @@ make_package() {
 
 # ---------------- installed packages (smoke) ----------------
 
-SMOKE="$CIG_REPO/smoke"
+# smoke (C): next to cigbuild when installed (cig-tools), otherwise the installed one with
+# this repository's recipes (the dev chroot)
+if [ -x "$CIG_REPO/smoke" ]; then SMOKE="$CIG_REPO/smoke"; else SMOKE=/usr/share/cig/smoke; fi
+export CIG_REPO CIGBUILD="$CIG_REPO/cigbuild"
 is_installed() { "$SMOKE" installed "$1"; }
 
 # ---------------- commands ----------------

@@ -76,7 +76,8 @@ if [ -x "$REPO/cigbuild" ]; then
     mkdir -p "$SYS/cig"
     mountpoint -q "$SYS/cig" || mount --bind "$REPO" "$SYS/cig"
     ln -sfn /cig/cigbuild "$SYS/usr/bin/cigbuild"
-    ln -sfn /cig/smoke "$SYS/usr/bin/smoke"
+    # smoke is the installed C one (cig-tools); CIG_REPO below makes it use these recipes
+    ln -sfn ../share/cig/smoke "$SYS/usr/bin/smoke"
 fi
 
 # the EFI partition (partition 1 of the same disk) at /boot, for kernel installs
@@ -97,5 +98,6 @@ chroot "$SYS" /usr/bin/env -i \
     HOME=/root TERM="${TERM:-xterm}" \
     PS1='(distro) \u:\w\$ ' \
     PATH=/usr/bin:/usr/sbin:/cig \
+    CIG_REPO=/cig CIGBUILD=/cig/cigbuild \
     MAKEFLAGS="-j$(nproc)" \
     /bin/bash --login "${CMD[@]}"

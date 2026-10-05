@@ -1,10 +1,9 @@
 # cig-installer - cig-install, the installer. Only for the install media (and the dev
 # system): no group=, so the installer never offers it and installed systems never get it.
 # The installer is C with ncurses (src/installer), compiled in the build folder.
-# Until the C installer has passed its VM tests, the shell version stays as cig-install-sh.
 name=cig-installer
 version=$(cat "$CIG_REPO/VERSION")
-rel=2
+rel=3
 source=""
 sha256=""
 depends="cig-tools util-linux e2fsprogs ncurses"
@@ -21,7 +20,5 @@ do_install() {
     local s="$DEST/usr/share/cig/installer"
     mkdir -p "$s" "$DEST/usr/bin"
     install -m 755 "$WORK/installer/cig-install" "$s/cig-install"
-    install -m 755 "$CIG_REPO/installer/cig-install" "$s/cig-install-sh"
     ln -s ../share/cig/installer/cig-install "$DEST/usr/bin/cig-install"
-    ln -s ../share/cig/installer/cig-install-sh "$DEST/usr/bin/cig-install-sh"
 }
