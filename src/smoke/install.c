@@ -26,32 +26,45 @@ static void free_meta(struct meta *m)
 	free(m->copy);
 }
 
-/* parse key=value / key="value" lines; *rel receives rel= if asked for */
+/* parse key=value / key="value" lines (a quoted value may span lines, as in
+ * depends="a b\n    c d"); *rel receives rel= if asked for */
 static void parse_assignments(const char *text, struct meta *m, char **rel)
 {
-	char *copy = xstrdup(text), *save = NULL;
-	for (char *l = strtok_r(copy, "\n", &save); l; l = strtok_r(NULL, "\n", &save)) {
-		char *eq = strchr(l, '='), *v;
-		size_t n;
-		if (!eq || l[0] == '#')
+	char *copy = xstrdup(text), *l = copy;
+	while (*l) {
+		size_t n = strcspn(l, "\n");
+		char *eq = memchr(l, '=', n), *v, *end, *next;
+		bool quoted;
+		if (!eq || l[0] == '#') {   /* not an assignment: next line */
+			l += n + (l[n] != '\0');
 			continue;
+		}
 		*eq = '\0';
 		v = eq + 1;
-		n = strlen(v);
-		if (n >= 2 && v[0] == '"' && v[n - 1] == '"') {
-			v[n - 1] = '\0';
+		quoted = *v == '"';
+		if (quoted) {   /* up to the closing quote, line breaks included */
 			v++;
+			end = strchr(v, '"');
+			if (!end)
+				end = v + strlen(v);
+		} else {
+			end = v + strcspn(v, "\n");
 		}
+		next = end + (quoted && *end == '"');   /* past the closing quote */
+		next += strcspn(next, "\n");              /* rest of that line */
+		next += *next != '\0';
+		*end = '\0';
 		char **slot = !strcmp(l, "name") ? &m->name : !strcmp(l, "version") ? &m->version :
 		              !strcmp(l, "depends") ? &m->depends : !strcmp(l, "config_files") ? &m->config :
 		              !strcmp(l, "link_dirs") ? &m->linkdirs : !strcmp(l, "copy_files") ? &m->copy :
 		              (rel && !strcmp(l, "rel")) ? rel : NULL;
-		if (!slot)
-			continue;
-		if (slot == &m->linkdirs)
-			m->has_linkdirs = true;
-		free(*slot);
-		*slot = xstrdup(v);
+		if (slot) {
+			if (slot == &m->linkdirs)
+				m->has_linkdirs = true;
+			free(*slot);
+			*slot = xstrdup(v);
+		}
+		l = next;
 	}
 	free(copy);
 }
