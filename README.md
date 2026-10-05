@@ -5,12 +5,12 @@ of GrapheneOS but for the PC: as little code as possible, every source
 verified, nothing running that isn't needed, and nothing hardcoded to one
 machine.
 
-> **Status:** 0.2.1 (beta). The installer installs a bootable system: tested in
-> QEMU (UEFI), the installed disk boots on its own with its own linux-hardened
-> kernel, signed modules and lockdown, and runs a Wayland desktop (dwl + foot).
-> Disks are partitioned automatically or with the installer's partition editor.
-> Everything is built from recipes with `cigbuild` and managed by `smoke`.
-> Next: the first bare-metal install. Not for daily use. See [`ROADMAP.md`](ROADMAP.md).
+> **Status:** 0.2.1 (beta), on the way to 0.3.0. A bootable install medium (USB image)
+> runs a live system, and its installer installs a system that boots on its own with
+> its own linux-hardened kernel, signed modules and lockdown, and a Wayland desktop
+> (dwl + foot): tested in QEMU (UEFI). smoke and the installer are C; everything is built
+> from recipes with `cigbuild`. Next: the first install on real hardware, a kernel with
+> all drivers for the medium. Not for daily use. See [`ROADMAP.md`](ROADMAP.md).
 
 ## Principles
 
@@ -67,14 +67,13 @@ machine.
 ## Repository
 
 ```
-cigbuild            build tool: recipe -> verified source -> package
-smoke               package manager (shell reference version, being replaced by src/smoke)
-src/smoke/          smoke in C: what cig-tools installs; test/compare.sh checks it
-                    against the shell version on scratch roots
-lib/                shared code (recipes, build styles, hardware detection)
+cigbuild            build tool: recipe -> verified source -> package (shell, as recipes are)
+lib/                cigbuild's shared code (recipes, build styles, hardware detection)
+src/smoke/          smoke, the package manager (C; package cig-tools)
+src/installer/      cig-install, the installer (C, ncurses; package cig-installer, media only);
+                    test/run.sh checks the partition logic against reference results
 packages/<name>/    one recipe per package (+ files/ for extra files)
-installer/          cig-install, the shell installer (package cig-installer, media only)
-scripts/            bootstrap and VM helpers (see below)
+scripts/            bootstrap, the install media (build-media.sh) and VM helpers
 VERSION             the cig release (X.0.0 stable, 0.X.0 beta, x.y.Z fixes)
 docs/               design documents (smoke)
 kernel/             earlier kernel configs (reference)
@@ -184,16 +183,18 @@ skipped.
 
 ## Installing
 
-`cig-install` (run as root on a running cig system) asks for:
+`cig-install` (run as root on the install medium's live system) shows one main menu
+with every section and its current value, like archinstall: arrow keys move, Enter
+edits a section, Esc goes back, Install is at the bottom.
 
-| Screen | |
+| Section | |
 |---|---|
 | Disk | target disk (the running system's disk is not offered); **auto** (erase, default layout: ESP 512M, system, optional swap and `/home`) or **custom** (partition editor: keep, delete, add, format, mount points) |
 | Identity | hostname, user (in `wheel`, `audio`, `video`, `input`), root locked or with password |
 | Components | from the recipes' `group=` / `default=`; base packages always |
 | Hardware | detected GPU and network, firmware per driver (toggle), optional WiFi network |
 | Security | optional layers (placeholders for now) |
-| Build | packages compiled here or prebuilt; kernel compiled for this machine or reused |
+| Build | packages compiled here or prebuilt; kernel compiled for this machine (default) or the medium's generic kernel (with a warning) |
 
 Nothing is written before the summary and typing the disk name; the summary
 lists every partition that is deleted or formatted. The installer writes the
@@ -202,16 +203,27 @@ partition table in one step (GPT: ESP, `cig-root`, optional `cig-swap` and
 another system's ESP can stay), formats, writes fstab by UUID,
 installs the packages with smoke, compiles the kernel for the detected hardware
 (root found by PARTUUID, its own module signing key), runs the package setup,
-creates the users, and enables networking. Log: `/var/log/cig-install.log`.
+creates the users, and enables networking. It ends with `smoke audit` against the new
+system: it must contain exactly what was chosen. Sources and prebuilt packages come
+from the medium only when a chosen package needs them. Log: `/var/log/cig-install.log`.
 
 The installed system boots through the UEFI fallback path for now
 (`EFI/BOOT/BOOTX64.EFI`); boot entries come later.
+
+### The install medium
+
+`scripts/build-media.sh` (in the dev chroot, as root) builds `cig-<version>.img`: a GPT
+with an ESP (the kernel as `EFI/BOOT/BOOTX64.EFI`) and a root partition named `cig-media`.
+It boots as a live system: the medium stays read-only, `/etc`, `/var`, `/home`, `/root`
+and `/mnt` live in RAM, and `/var/cig` on the medium holds every source and prebuilt
+package for the installer. Logins: `root` and `cig`, password `ciglinux` (nothing on the
+live system listens on the network). Write it to a USB stick with `dd`.
 
 ### Testing in QEMU
 
 ```
 qemu-img create -f raw ~/cig-target.img 40G
-CIG_TARGET=~/cig-target.img scripts/run-vm.sh   # dev image + empty second disk
+CIG_IMG=~/cig/cig-0.2.1.img CIG_TARGET=~/cig-target.img scripts/run-vm.sh
 # in the VM, as root:  cig-install
 CIG_IMG=~/cig-target.img scripts/run-vm.sh      # boot the installed disk alone
 ```
@@ -228,13 +240,14 @@ toolchain and a minimal system; from there `cigbuild` builds everything.
 |---|---|---|
 | 1 | `scripts/fetch-sources.sh` | host |
 | 2 | `scripts/build-toolchain.sh`, `scripts/build-temp.sh` | host |
-| 3 | `scripts/enter-chroot.sh` | host (sudo), mounts the repo at `/cig`, links `cigbuild` and `smoke` |
+| 3 | `scripts/enter-chroot.sh [-c "<command>"]` | host (sudo), mounts the repo at `/cig`; `cigbuild` from the repo, the installed C `smoke` with the repo's recipes |
 | 4 | `scripts/prepare-base.sh` → `build-base.sh` | host → chroot |
 | 5 | `cigbuild pin ...` | host (gpg) |
 | 6 | `smoke add -c <packages>` | chroot |
-| 7 | `scripts/run-vm.sh` | host: boot the image in QEMU (UEFI) |
+| 7 | `scripts/build-media.sh` | chroot: the install medium (after the media kernel and firmware, see the script) |
+| 8 | `scripts/run-vm.sh` | host: boot an image in QEMU (UEFI) |
 
-The bootstrap scripts will be replaced by the install media and installer.
+The bootstrap scripts will be replaced by building from the install medium.
 
 cig is an independent distribution built from scratch. The bootstrap method
 (cross toolchain → temporary tools → chroot → final system) was inspired by
