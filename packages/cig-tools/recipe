@@ -1,9 +1,10 @@
-# cig-tools - cig's own tools: cigbuild, smoke, cig-install, and the recipes.
+# cig-tools - cig's own tools on every system: cigbuild, smoke and the recipes.
+# (The installer is its own package, cig-installer, for the install media only.)
 # Built from this repository (no download); version = the cig release.
 # smoke is C (src/smoke), compiled in the build folder, never inside the repository.
 name=cig-tools
 version=$(cat "$CIG_REPO/VERSION")
-rel=2
+rel=3
 makedepends="make"
 source=""
 sha256=""
@@ -21,10 +22,9 @@ do_install() {
     cp "$CIG_REPO/VERSION" "$s/"
     cp "$CIG_REPO/cigbuild" "$s/"
     install -m 755 "$WORK/smoke/smoke" "$s/smoke"
-    cp -R "$CIG_REPO/lib" "$CIG_REPO/packages" "$CIG_REPO/installer" "$s/"
+    cp -R "$CIG_REPO/lib" "$CIG_REPO/packages" "$s/"
     chmod -R u+rwX,go+rX,go-w "$s"          # readable for all, keep execute bits
-    chmod 755 "$s/cigbuild" "$s/smoke" "$s/installer/cig-install"
+    chmod 755 "$s/cigbuild" "$s/smoke"
     ln -s ../share/cig/cigbuild "$DEST/usr/bin/cigbuild"
     ln -s ../share/cig/smoke "$DEST/usr/bin/smoke"
-    ln -s ../share/cig/installer/cig-install "$DEST/usr/bin/cig-install"
 }

@@ -135,12 +135,14 @@ Decisions (after Phase 2):
   (young, few libraries). Phase 7's strict flags, sanitizers and fuzzing apply to both.
 
 Work, first block (before the ISO):
-- split `cig-tools`: smoke + cigbuild + recipes on installed systems, the installer only
-  on the media
-- installer copies to the target only the sources of the chosen packages (and only when
-  compiling) and no prebuilt packages that were not chosen; final `smoke audit` check
-- smoke in C: same commands, inventory format and package format as the shell version,
-  so both can be tested against each other on the same system
+- ~~split `cig-tools`: smoke + cigbuild + recipes on installed systems, the installer only
+  on the media~~ (done: `cig-installer`)
+- ~~installer copies to the target only the sources of the chosen packages (and only when
+  compiling) and no prebuilt packages that were not chosen; final `smoke audit` check~~
+  (done: `CIG_SOURCE_MIRROR` / `CIG_PKG_MIRROR`, copied only when needed)
+- ~~smoke in C: same commands, inventory format and package format as the shell version,
+  so both can be tested against each other on the same system~~ (done: `src/smoke`,
+  `test/compare.sh`); remaining: test on a real install, then retire the shell version
 - installer in C + ncurses with the same screens and features as the shell version
   (partition editor included), then the shell installer is removed
 

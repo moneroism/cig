@@ -1,0 +1,16 @@
+# cig-installer - cig-install, the installer. Only for the install media (and the dev
+# system): no group=, so the installer never offers it and installed systems never get it.
+name=cig-installer
+version=$(cat "$CIG_REPO/VERSION")
+source=""
+sha256=""
+depends="cig-tools util-linux e2fsprogs"
+style=custom
+nostrip=1
+do_build() { :; }
+do_install() {
+    local s="$DEST/usr/share/cig/installer"
+    mkdir -p "$s" "$DEST/usr/bin"
+    install -m 755 "$CIG_REPO/installer/cig-install" "$s/cig-install"
+    ln -s ../share/cig/installer/cig-install "$DEST/usr/bin/cig-install"
+}

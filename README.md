@@ -73,7 +73,7 @@ src/smoke/          smoke in C: what cig-tools installs; test/compare.sh checks 
                     against the shell version on scratch roots
 lib/                shared code (recipes, build styles, hardware detection)
 packages/<name>/    one recipe per package (+ files/ for extra files)
-installer/          cig-install, the shell TUI installer
+installer/          cig-install, the shell installer (package cig-installer, media only)
 scripts/            bootstrap and VM helpers (see below)
 VERSION             the cig release (X.0.0 stable, 0.X.0 beta, x.y.Z fixes)
 docs/               design documents (smoke)

@@ -62,10 +62,14 @@ fetch_sources() {
     local -a sums; read -r -a sums <<< "$(echo $sha256)"
     for e in $source; do
         f=$(src_name "$e"); url=$(src_url "$e")
-        # reuse the copy the bootstrap already downloaded (checksum still enforced)
-        if [ ! -s "$CIG_VAR/sources/$f" ] && [ -s "/sources/$f" ]; then
-            cp "/sources/$f" "$CIG_VAR/sources/$f"
-        fi
+        # reuse a copy from the install media (CIG_SOURCE_MIRROR) or the bootstrap;
+        # only what a build needs is copied, and the checksum is still enforced
+        local m
+        for m in ${CIG_SOURCE_MIRROR:-} /sources; do
+            if [ ! -s "$CIG_VAR/sources/$f" ] && [ -s "$m/$f" ]; then
+                cp "$m/$f" "$CIG_VAR/sources/$f"
+            fi
+        done
         if [ ! -s "$CIG_VAR/sources/$f" ]; then
             info "$name: downloading $f"
             curl -fL --proto '=https' --tlsv1.2 -o "$CIG_VAR/sources/$f.part" "$url" \
@@ -175,6 +179,12 @@ pkg_build() {
     case "$BUILDING" in *" $p "*) die "dependency loop at $p";; esac
     BUILDING="$BUILDING$p "
     load_recipe "$p"
+    # a prebuilt package from the install media (CIG_PKG_MIRROR, set only when the
+    # user chose prebuilt packages): copied only when it is actually installed
+    if [ ! -f "$PKGFILE" ] && [ -n "${CIG_PKG_MIRROR:-}" ] && [ -f "$CIG_PKG_MIRROR/${PKGFILE##*/}" ]; then
+        cp "$CIG_PKG_MIRROR/${PKGFILE##*/}" "$PKGFILE"
+    fi
+    if [ -f "$PKGFILE" ]; then info "$name $version-$rel: package exists"; BUILDING=${BUILDING/ $p / }; return; fi
     # dependencies must be installed before we can build
     # Building happens on THIS machine, so everything needed to build must be
     # installed here - even when installing into another root (SMOKE_ROOT, the
@@ -186,7 +196,6 @@ pkg_build() {
         SMOKE_ROOT= "$SMOKE" installed "$d" || SMOKE_ROOT= "$SMOKE" install --as build "$d"
     done
     load_recipe "$p"
-    if [ -f "$PKGFILE" ]; then info "$name $version-$rel: package exists"; BUILDING=${BUILDING/ $p / }; return; fi
     fetch_sources
     info "$name $version-$rel: building (log: $CIG_VAR/logs/$name.log)"
     local rc

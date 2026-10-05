@@ -848,16 +848,17 @@ EOF
     done
     sort -u -o "$fwlist" "$fwlist"
 
-    # Everything is built on the target disk, in the new system's own /var/cig:
-    # the sources (and packages) stay there for later "smoke add -c".
+    # Everything is built on the target disk, in the new system's own /var/cig.
+    # Nothing is copied in bulk: cigbuild takes a source (or, for prebuilt, a package)
+    # from the install media only when a chosen package needs it, so the new system
+    # holds only what the user chose (checked by smoke audit at the end).
     local MEDIA_VAR="$CIG_VAR"
     export CIG_VAR="$T/var/cig"
     mkdir -p "$CIG_VAR"/{sources,pkgs,build,logs}
-    step "Copying sources to the new system"
-    cp -a "$MEDIA_VAR/sources/." "$CIG_VAR/sources/"
+    export CIG_SOURCE_MIRROR="$MEDIA_VAR/sources"
     step "Preparing packages ($BUILD_MODE)"
     if [ "$BUILD_MODE" = prebuilt ]; then
-        cp -a "$MEDIA_VAR/pkgs/." "$CIG_VAR/pkgs/"
+        export CIG_PKG_MIRROR="$MEDIA_VAR/pkgs"
     fi
     if [ "$KERNEL_MODE" = generic ]; then
         cp -a "$(CIG_VAR="$MEDIA_VAR" "$CIGBUILD" pkgfile linux)" "$CIG_VAR/pkgs/"
@@ -885,16 +886,19 @@ EOF
     done
     unset SMOKE_ROOT
 
-    # prebuilt build tools stay available (not installed): the first "smoke add -c"
-    # on the new system can then offer them without compiling a compiler first
-    step "Keeping prebuilt build tools available"
-    cp -an "$MEDIA_VAR/pkgs/." "$CIG_VAR/pkgs/" 2>/dev/null || true
+    unset CIG_SOURCE_MIRROR CIG_PKG_MIRROR
     rm -rf "$CIG_VAR/build"/*
 
     step "Running package setup inside the new system"
     mount --bind /dev "$T/dev"; mount -t devpts devpts "$T/dev/pts" 2>/dev/null || true
     mount -t proc proc "$T/proc"; mount -t sysfs sysfs "$T/sys"; mount -t tmpfs tmpfs "$T/run"
     run env SMOKE_ROOT="$T" "$SMOKE" hooks --all || echo "    ! some package setup failed (see $LOG)"
+
+    # the new system must contain exactly what its inventory says, nothing more
+    step "Checking the new system (smoke audit)"
+    if ! run env SMOKE_ROOT="$T" "$SMOKE" audit --quick; then
+        echo "    the new system does not match its inventory (see $LOG)"; false
+    fi
 
     step "Users"
     run chroot "$T" adduser -D -s /bin/bash -h "/home/$USERNAME" "$USERNAME"
