@@ -11,4 +11,3 @@ _opts="prefix=/usr NO_PERL=1 NO_PYTHON=1 NO_TCLTK=1 NO_GETTEXT=1 NO_EXPAT=1
 do_build()   { make $_opts; }
 do_install() { make $_opts DESTDIR="$DEST" install; }
 group="tools"
-default=on

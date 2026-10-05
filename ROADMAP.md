@@ -121,6 +121,29 @@ Decisions (after Phase 2):
   a local recursive resolver (no third parties), or plain DHCP DNS.
 - **Route to bare metal: an ISO written to a USB stick.**
 
+- **The installer is feature-heavy, the installed system is not** (2026-10-05): the
+  installer and the media may carry anything they need; an installed system contains only
+  what the user chose. Nothing is copied to the target only to be deleted later; instead
+  the install ends with `smoke audit` against the target, and anything not in the
+  inventory fails the install loudly.
+- **Languages** (2026-10-05): **smoke is rewritten in C** (security-critical, runs as root,
+  parses packages and the inventory; C adds no dependency, gcc and musl are already the
+  base). **The installer is rewritten in C with ncurses**, archinstall-style: a main menu
+  with every section and its current value, arrow keys, Enter to edit, Install at the
+  bottom. ncurses goes on the media only. **cigbuild stays shell**: recipes are shell and
+  run configure/make anyway. Rust and Go are out (toolchain size); Hare was considered
+  (young, few libraries). Phase 7's strict flags, sanitizers and fuzzing apply to both.
+
+Work, first block (before the ISO):
+- split `cig-tools`: smoke + cigbuild + recipes on installed systems, the installer only
+  on the media
+- installer copies to the target only the sources of the chosen packages (and only when
+  compiling) and no prebuilt packages that were not chosen; final `smoke audit` check
+- smoke in C: same commands, inventory format and package format as the shell version,
+  so both can be tested against each other on the same system
+- installer in C + ncurses with the same screens and features as the shell version
+  (partition editor included), then the shell installer is removed
+
 Work:
 - xorriso recipe; hybrid ISO bootable from USB and optical media via UEFI
 - live mode in `rc.init`: read-only ISO root, `/etc` `/var` `/home` `/tmp` in RAM
