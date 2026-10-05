@@ -325,6 +325,7 @@ static void preflight(struct state *s)
 int main(void)
 {
 	static struct state s;
+	umask(022);   /* system files are world-readable, whatever the caller's umask (cig's profile: 027) */
 	settings(&s);
 	if (getenv("CIG_INSTALL_DEMO"))
 		LOG = WORKDIR "/install.log";   /* demo/testing: never touches the real log */
