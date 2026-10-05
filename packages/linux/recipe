@@ -12,7 +12,6 @@ name=linux
 _kver=6.18.54
 _hardened=hardened1
 version=$_kver.$_hardened
-rel=2
 _tag="v$_kver-$_hardened"
 _aports=8f13294206888f3dd44ed74a8eb3dd9934499e81
 source="https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-$_kver.tar.xz
