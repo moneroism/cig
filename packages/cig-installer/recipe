@@ -10,6 +10,8 @@ nostrip=1
 do_build() { :; }
 do_install() {
     local s="$DEST/usr/share/cig/installer"
+    [ -f "$CIG_REPO/installer/cig-install" ] \
+        || { echo "cig-installer is built from the cig repository (with installer/), not from an installed system"; exit 1; }
     mkdir -p "$s" "$DEST/usr/bin"
     install -m 755 "$CIG_REPO/installer/cig-install" "$s/cig-install"
     ln -s ../share/cig/installer/cig-install "$DEST/usr/bin/cig-install"
