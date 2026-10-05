@@ -131,7 +131,7 @@ for f in "$DEV_VAR"/pkgs/*.tar.gz "$MEDIA_VAR"/pkgs/cig-*.tar.gz; do
     [ -f "$f.sha256" ] && link "$f.sha256" "$STAGE/var/cig/pkgs/"
 done
 if [ -d "$DEV_VAR/generic/pkgs" ]; then
-    mkdir -p "$STAGE/var/cig/generic"
+    mkdir -p "$STAGE"/var/cig/generic/{sources,build,db,logs}
     link "$DEV_VAR/generic/pkgs" "$STAGE/var/cig/generic/"
 fi
 
