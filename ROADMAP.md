@@ -144,7 +144,9 @@ Work, first block (before the ISO):
   so both can be tested against each other on the same system~~ (done: `src/smoke`,
   `test/compare.sh`); remaining: test on a real install, then retire the shell version
 - installer in C + ncurses with the same screens and features as the shell version
-  (partition editor included), then the shell installer is removed
+  (partition editor included), then the shell installer is removed: written
+  (`src/installer`), auto layout installed and booted in the VM (2026-10-05); remaining:
+  VM test of the partition editor keeping /home, then remove `cig-install-sh` and the shell smoke
 
 Work:
 - xorriso recipe; hybrid ISO bootable from USB and optical media via UEFI
