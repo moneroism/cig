@@ -75,7 +75,7 @@ src/installer/      cig-install, the installer (C, ncurses; package cig-installe
 packages/<name>/    one recipe per package (+ files/ for extra files)
 scripts/            bootstrap, the install media (build-media.sh) and VM helpers
 VERSION             the cig release (X.0.0 stable, 0.X.0 beta, x.y.Z fixes)
-docs/               design documents (smoke)
+docs/               design documents: smoke, sources (how every source is authenticated)
 kernel/             earlier kernel configs (reference)
 ROADMAP.md          goals and phases
 ```
