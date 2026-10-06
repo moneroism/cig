@@ -14,6 +14,9 @@ _hardened=hardened1
 version=$_kver.$_hardened
 _tag="v$_kver-$_hardened"
 _aports=8f13294206888f3dd44ed74a8eb3dd9934499e81
+# updates: linux-hardened releases of the 6.18 LTS series
+upstream="https://github.com/anthraxx/linux-hardened.git"
+track=6.18
 source="https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-$_kver.tar.xz
     https://github.com/anthraxx/linux-hardened/releases/download/$_tag/linux-hardened-$_tag.patch
     alpine-lts.x86_64.config::https://gitlab.alpinelinux.org/alpine/aports/-/raw/$_aports/main/linux-lts/lts.x86_64.config"

@@ -1,6 +1,7 @@
 # mpfr - multiple-precision floating point. Needed for GCC plugin headers.
 name=mpfr
 version=4.2.2
+upstream="https://www.mpfr.org/mpfr-current/"
 source="https://www.mpfr.org/mpfr-$version/mpfr-$version.tar.xz"
 signature="https://www.mpfr.org/mpfr-$version/mpfr-$version.tar.xz.asc"
 sha256="b67ba0383ef7e8a8563734e2e889ef5ec3c3b898a01d00fa0a6869ad81c6ce01"

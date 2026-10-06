@@ -11,3 +11,8 @@ do_install() {
     mkdir -p "$DEST/etc/ssl/certs"
     ln -sf ../cert.pem "$DEST/etc/ssl/certs/ca-certificates.crt"
 }
+# updates: the bundle is dated (cacert-2026-10-02.pem); curl's page names the current one
+upstream_version() {
+    curl -fsL --proto '=https' --tlsv1.2 --max-time 20 https://curl.se/docs/caextract.html \
+        | grep -oE 'cacert-[0-9]{4}-[0-9]{2}-[0-9]{2}' | sed 's/cacert-//; s/-/./g'
+}

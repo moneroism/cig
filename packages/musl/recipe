@@ -1,6 +1,7 @@
 # musl - the C library
 name=musl
 version=1.2.6
+upstream="https://musl.libc.org/releases.html"
 rel=3
 source="https://musl.libc.org/releases/musl-$version.tar.gz"
 signature="https://musl.libc.org/releases/musl-$version.tar.gz.asc"

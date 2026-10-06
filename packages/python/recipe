@@ -1,6 +1,8 @@
 # python - build tool only (meson, some build scripts). 3.13: GPG-signed releases.
 name=python
 version=3.13.16
+# track 3.13: the last series with GPG-signed releases (README)
+track=3.13
 source="https://www.python.org/ftp/python/$version/Python-$version.tar.xz"
 signature="https://www.python.org/ftp/python/$version/Python-$version.tar.xz.asc"
 sha256="f4b1bfb3c79b5bb11b8d228a12504163b4c0dab4d679828d8f5f26b6cb6ab35d"

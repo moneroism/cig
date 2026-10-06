@@ -1,6 +1,8 @@
 # git - version control (2.x: no Rust)
 name=git
 version=2.56.0
+# track 2: git 3.0 makes Rust mandatory (README)
+track=2
 source="https://cdn.kernel.org/pub/software/scm/git/git-$version.tar.xz"
 signature="https://cdn.kernel.org/pub/software/scm/git/git-$version.tar.sign"
 sha256="26c56c296b38c0695b26fa95f475f1d01704d2d38e73465ca30b0b2f5dc789d3"

@@ -38,8 +38,8 @@ load_recipe() {
     [ -f "$f" ] || die "no recipe: packages/$1/recipe"
     # reset everything a recipe may set
     name= version= rel=1 source= signature= sha256= depends= makedepends= style=
-    configure_args= meson_args= make_args= wrksrc= keep_static= nostrip= config_files= link_dirs= copy_files= noextract=
-    unset -f pre_build do_build do_install post_install 2>/dev/null || true
+    configure_args= meson_args= make_args= wrksrc= keep_static= nostrip= config_files= link_dirs= copy_files= noextract= track= upstream= stable=
+    unset -f pre_build do_build do_install post_install upstream_version 2>/dev/null || true
     PKGDIR="$CIG_REPO/packages/$1"
     # shellcheck disable=SC1090
     . "$f"
@@ -419,3 +419,119 @@ pkg_info() {
 }
 
 pkg_list() { "$SMOKE" list; }
+
+# ---------------- upstream releases ----------------
+# A release version: numbers with dots (or underscores in tags), optionally one letter or
+# an OpenSSH-style pN at the end. Anything else (rc, alpha, beta, pre, dev) is not stable.
+VER_RE='[0-9]+([._][0-9]+)*(p[0-9]+|[a-z])?'
+
+# git_repo_of <source url>: the git repository of a source on a git host, if it can be told
+git_repo_of() {
+    case "$1" in
+        https://github.com/*|https://codeberg.org/*|https://gitlab.com/*)
+            echo "$1" | sed -E 's#^(https://[^/]+/[^/]+/[^/]+).*#\1.git#' ;;
+        https://gitlab.freedesktop.org/*/-/*)
+            echo "${1%%/-/*}.git" ;;
+        https://git.sr.ht/*)
+            echo "$1" | sed -E 's#^(https://git.sr.ht/[^/]+/[^/]+).*#\1#' ;;
+    esac
+}
+
+# versions_git <repo> <current>: stable versions from the repository's tags. Tags carry
+# prefixes and suffixes (v1.2, libnl3_11_0, pcre2-10.49, json-c-0.19-20260627): they are
+# learnt from the tag of the current release, so other tag series in the repository are
+# ignored. Underscores and dashes between numbers count as dots.
+versions_git() {
+    local repo=$1 cur=$2 tags t pre="" suf="" sre="" word="" re v found=0
+    tags=$(git ls-remote --tags --refs "$repo" 2>/dev/null | sed 's#.*refs/tags/##') || return 0
+    # a release suffix word the current version carries (6.18.54.hardened1 <- v6.18.54-hardened1)
+    if [[ "$cur" =~ \.([a-z]+)[0-9]+$ ]]; then word=${BASH_REMATCH[1]}; fi
+    re="^$VER_RE${word:+([.]$word[0-9]+)?}\$"
+    while read -r t; do   # the current release's tag: its version written with . _ or -
+        v=$t
+        for sep in . _ -; do
+            local c=${cur//./$sep}; [ -z "$word" ] || c=${c%$sep$word*}-$word${cur##*$word}
+            if [[ "$t" == *"$c"* ]]; then
+                pre=${t%%"$c"*}; suf=${t#*"$c"}
+                if [[ "$pre" =~ (^|[^0-9])$ ]] && [[ ! "$suf" =~ ^[0-9] ]]; then found=1; break 2; fi
+                pre= suf=
+            fi
+        done
+    done <<< "$tags"
+    sre=$(printf '%s' "$suf" | sed 's/[0-9]/[0-9]/g')
+    while read -r t; do
+        [ -n "$t" ] || continue
+        if [ $found = 1 ]; then
+            [[ "$t" == "$pre"* ]] || continue
+            v=${t#"$pre"}
+            if [ -n "$suf" ]; then [[ "$v" =~ ^(.*)$sre$ ]] || continue; v=${BASH_REMATCH[1]}; fi
+        else
+            v=${t#"${t%%[0-9]*}"}
+        fi
+        [ -z "$word" ] || v=${v//-$word/.$word}
+        v=${v//_/.}; v=${v//-/.}
+        if [[ "$v" =~ $re ]]; then echo "$v"; fi
+    done <<< "$tags"
+    return 0
+}
+
+# versions_pypi <source url>: the newest release of a Python package on PyPI
+versions_pypi() {
+    local n; n=${1##*/}; n=${n%-[0-9]*}
+    curl -fsL --proto '=https' --tlsv1.2 --max-time 20 "https://pypi.org/pypi/$n/json" 2>/dev/null \
+        | grep -oE '"version": ?"[^"]+"' | head -1 | sed -E 's/.*"([^"]+)"$/\1/'
+}
+
+# versions_list <page> <file name> <current>: stable versions named on a download page or
+# directory listing. If a directory in the path carries the version (python/3.13.5/), the
+# parent directory is listed instead. Only for finding versions: downloads still come from
+# the recipe's source and are verified as always, so a GNU mirror may answer when
+# ftp.gnu.org is slow.
+versions_list() {
+    local page=$1 base=$2 cur=$3 pre suf m re html
+    if [[ "${page%/*}" == *"$cur"* ]] && [ "$page" != "${upstream:-}" ]; then
+        base=${page%%"$cur"*}; base='"'${base##*/}"$cur"; suf=${page#*"$cur"}; base=$base${suf%%/*}/
+        page=${page%%"$cur"*}; page=${page%/*}/
+    elif [ "$page" != "${upstream:-}" ]; then
+        page=${page%/*}/
+    fi
+    pre=${base%%"$cur"*}; suf=${base#*"$cur"}
+    re=$(printf '%s' "$pre" | sed 's/[].[\*^$+?(){}|]/\\&/g')"$VER_RE"$(printf '%s' "$suf" | sed 's/[].[\*^$+?(){}|]/\\&/g')
+    html=$(curl -fsL --proto '=https' --tlsv1.2 --max-time 20 "$page" 2>/dev/null) || html=
+    if [ -z "$html" ] && [[ "$page" == https://ftp.gnu.org/gnu/* ]]; then
+        html=$(curl -fsL --proto '=https' --tlsv1.2 --max-time 30 "https://mirrors.kernel.org/gnu/${page#https://ftp.gnu.org/gnu/}" 2>/dev/null) || html=
+    fi
+    while read -r m; do
+        m=${m#"$pre"}; echo "${m%"$suf"}"
+    done < <(printf '%s' "$html" | grep -oE "$re" | sort -u)
+}
+
+# pkg_latest <pkg>: "<name> <recipe version> <newest upstream> <how>"; how = current, update,
+# unknown (nothing found: set upstream= in the recipe: a git repository, or a page that names
+# the release files). track=X limits it to the X series, stable=<ERE> to versions that match;
+# a recipe may define upstream_version() to print the candidates itself.
+pkg_latest() {
+    local e url repo cand best
+    load_recipe "$1"
+    e=$(echo $source | cut -d' ' -f1); url=$(src_url "$e")
+    case "${upstream:-}" in
+        *.git|https://git.sr.ht/*) repo=$upstream ;;
+        "") repo=$(git_repo_of "$url") ;;
+        *) repo=; url=$upstream ;;
+    esac
+    if declare -F upstream_version >/dev/null; then cand=$(upstream_version)
+    elif [ -n "$repo" ]; then cand=$(versions_git "$repo" "$version")
+    elif [[ "$url" == https://files.pythonhosted.org/* ]]; then cand=$(versions_pypi "$url")
+    else cand=$(versions_list "$url" "$(src_name "$e")" "$version"); fi
+    if [ -n "${track:-}" ]; then
+        cand=$(echo "$cand" | grep -E "^${track//./\\.}([.]|$)" || true)
+    fi
+    if [ -n "${stable:-}" ]; then cand=$(echo "$cand" | grep -E "$stable" || true); fi
+    # dated snapshot tags (20021030) are not releases: the first number may not be much longer
+    local n=${version%%[!0-9]*}; n=$(( ${#n} > 3 ? ${#n} : 3 ))
+    cand=$(echo "$cand" | grep -E "^[0-9]{1,$n}([.]|[a-z]|p|\$)" || true)
+    best=$( (echo "$cand"; echo "$version") | grep -v '^$' | sort -V | tail -1)
+    if [ -z "$cand" ]; then echo "$name $version ? unknown"
+    elif [ "$best" = "$version" ]; then echo "$name $version $version current"
+    else echo "$name $version $best update"; fi
+}
