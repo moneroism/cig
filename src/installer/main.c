@@ -78,6 +78,14 @@ static void identity_screen(struct state *s)
 		ui_msg("Identity", "A user name starts with a lowercase letter or _, then letters, digits, - or _.");
 		return;
 	}
+	/* accounts the system or its packages create: adduser would fail at the end of the install */
+	static const char *const taken[] = { "root", "nobody", "unbound", "sshd", "daemon", "bin", "sys", "tty",
+	                                     "wheel", "audio", "video", "input", "users", "nogroup", NULL };
+	for (int i = 0; taken[i]; i++)
+		if (!strcmp(buf, taken[i])) {
+			ui_msg("Identity", "That name belongs to a system account. Choose another user name.");
+			return;
+		}
 	snprintf(s->user, sizeof(s->user), "%.32s", buf);
 	if (!password("Identity", s->user, s->userpass, sizeof(s->userpass)))
 		return;
