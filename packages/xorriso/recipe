@@ -1,0 +1,12 @@
+# xorriso - creates and inspects ISO 9660 images (libisoburn); builds the hybrid install ISO
+# (UEFI from CD/DVD and from a USB stick). A build tool for the install media only.
+name=xorriso
+version=1.5.8.pl02
+source="https://files.libburnia-project.org/releases/libisoburn-$version.tar.gz"
+signature="https://files.libburnia-project.org/releases/libisoburn-$version.tar.gz.sig"
+keys="44BC9FD0D688EB007C4DD029E9CBDFC0ABC0A854"
+sha256="a977b03dc3686d9fdca600458b1578f9cac2b875609bd5ec21f5ada55f20ec50"
+wrksrc="libisoburn-1.5.8"
+depends="libburn libisofs zlib"
+style=gnu
+configure_args="--disable-libreadline --disable-libedit --disable-xorrecord --disable-launch-frontend"

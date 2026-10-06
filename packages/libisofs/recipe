@@ -1,0 +1,10 @@
+# libisofs - creates ISO 9660 images with Rock Ridge; part of xorriso (builds the install ISO)
+name=libisofs
+version=1.5.8.pl02
+source="https://files.libburnia-project.org/releases/libisofs-$version.tar.gz"
+signature="https://files.libburnia-project.org/releases/libisofs-$version.tar.gz.sig"
+keys="44BC9FD0D688EB007C4DD029E9CBDFC0ABC0A854"
+sha256="10bd584d8f00d8091e814902b9f0a3e209f16e938f510fc23ba05f3fa469db5a"
+wrksrc="libisofs-1.5.8"
+depends="zlib"
+style=gnu

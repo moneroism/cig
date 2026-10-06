@@ -1,0 +1,8 @@
+# libburn - writes to optical media; part of xorriso (builds the install ISO)
+name=libburn
+version=1.5.8
+source="https://files.libburnia-project.org/releases/libburn-$version.tar.gz"
+signature="https://files.libburnia-project.org/releases/libburn-$version.tar.gz.sig"
+keys="44BC9FD0D688EB007C4DD029E9CBDFC0ABC0A854"
+sha256="8e24dd99f5b7cafbecf0116d61b619ee89098e20263e6f47c793aaf4a98d6473"
+style=gnu
