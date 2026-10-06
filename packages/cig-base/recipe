@@ -3,7 +3,7 @@
 # version = the cig release (VERSION in the repository root).
 name=cig-base
 version=$(cat "$CIG_REPO/VERSION")
-rel=7
+rel=8
 source=""
 sha256=""
 style=custom

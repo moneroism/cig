@@ -7,12 +7,18 @@ case "$1" in
         ip -4 addr flush dev "$interface"
         ip link set "$interface" up ;;
     bound|renew)
-        ip -4 addr flush dev "$interface"
-        ip -4 addr add "$ip/${mask:-24}" ${broadcast:+broadcast "$broadcast"} dev "$interface"
+        # a renewal with the same address changes nothing: flushing it would break open
+        # connections every time the lease is renewed
+        if ! ip -4 addr show dev "$interface" | grep -q "inet $ip/${mask:-24} "; then
+            ip -4 addr flush dev "$interface"
+            ip -4 addr add "$ip/${mask:-24}" ${broadcast:+broadcast "$broadcast"} dev "$interface"
+        fi
         if [ -n "$router" ]; then
-            while ip -4 route del default dev "$interface" 2>/dev/null; do :; done
             set -- $router
-            ip -4 route add default via "$1" dev "$interface"
+            if ! ip -4 route show default dev "$interface" | grep -q "via $1 "; then
+                while ip -4 route del default dev "$interface" 2>/dev/null; do :; done
+                ip -4 route add default via "$1" dev "$interface"
+            fi
         fi
         if [ -f /etc/resolv.conf.static ]; then
             cp /etc/resolv.conf.static /etc/resolv.conf
