@@ -151,9 +151,10 @@ static char *cigbuild_pkgfile(const char *pkg, const char *cig_var)
 /* ---------------- UEFI boot entry ---------------- */
 
 /* Many laptops only boot internal disks through an NVRAM boot entry, not through the
- * fallback EFI/BOOT/BOOTX64.EFI: write one, as efibootmgr would. Not fatal: the fallback
- * stays. Load option: attributes, file path list length, description (UCS-2), then the
- * device path HD(partition, GPT GUID)/File(\EFI\cig\vmlinuz.efi)/End. */
+ * fallback path alone: write one, as efibootmgr would, for the same file: the kernel lives at
+ * EFI/BOOT/BOOTX64.EFI (some firmware finds nothing else). Not fatal. Load option:
+ * attributes, file path list length, description (UCS-2), then the device path
+ * HD(partition, GPT GUID)/File(\EFI\BOOT\BOOTX64.EFI)/End. */
 #define EFI_GLOBAL "8be4df61-93ca-11d2-aa0d-00e098032b8c"
 #define EFIVARS "/sys/firmware/efi/efivars"
 
@@ -242,7 +243,7 @@ static void efi_boot_entry(struct state *s, const struct part *esp)
 	p += 16;
 	*p++ = 2;                           /* GPT */
 	*p++ = 2;                           /* signature is a GUID */
-	const char *file = "\\EFI\\cig\\vmlinuz.efi";
+	const char *file = "\\EFI\\BOOT\\BOOTX64.EFI";
 	*p++ = 4; *p++ = 4; put16(&p, (unsigned)(4 + 2 * (strlen(file) + 1)));
 	put_ucs2(&p, file);
 	*p++ = 0x7f; *p++ = 0xff; put16(&p, 4);   /* end of the device path */
@@ -272,7 +273,7 @@ static void efi_boot_entry(struct state *s, const struct part *esp)
 		}
 	if (!write_var("BootOrder", nb, (size_t)(q - nb)))
 		logf_("    ! could not put the boot entry first in BootOrder\n");
-	logf_("boot entry %s \"cig\" -> \\EFI\\cig\\vmlinuz.efi on partition %d\n", name, esp->num);
+	logf_("boot entry %s \"cig\" -> \\EFI\\BOOT\\BOOTX64.EFI on partition %d\n", name, esp->num);
 }
 
 /* ---------------- the install ---------------- */
@@ -407,7 +408,8 @@ void do_install(struct state *s)
 		fstab = xasprintf("%stmpfs                                      /tmp   tmpfs  "
 		                  "nosuid,nodev,noexec,mode=1777          0    0\n", fstab);
 		put_file(TARGET "/etc/fstab", fstab, 0644);
-		/* no boot entries yet: boot via EFI/BOOT/BOOTX64.EFI */
+		/* the kernel goes to EFI/BOOT/BOOTX64.EFI: kernels built before cig-kernel-install
+		 * made that its only path still need this switch */
 		put_file(TARGET "/etc/cig/efi-fallback", "", 0644);
 	}
 

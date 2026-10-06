@@ -143,7 +143,7 @@ dropped and reported in the build log.
 | `CIG_ROOT` | root device (default `PARTLABEL=cig-root`) |
 | `CIG_FIRMWARE=all` | install all firmware instead of the detected set |
 | `/etc/cig/firmware.list` | explicit firmware list (the installer writes this) |
-| `/etc/cig/efi-fallback` | also install the kernel as `EFI/BOOT/BOOTX64.EFI` |
+| `/etc/cig/efi-fallback` | only for kernels built before 2026-10-07: also install as `EFI/BOOT/BOOTX64.EFI` (newer kernels always go there) |
 
 The kernel base config is Alpine's `linux-lts` (pinned commit) with cig's
 settings from `packages/linux/files/cig.config` on top; a reviewed cig base
@@ -226,8 +226,10 @@ skipped and listed at the end (a base package stops the install). It ends with `
 system: it must contain exactly what was chosen. Sources and prebuilt packages come
 from the medium only when a chosen package needs them. Log: `/var/log/cig-install.log`.
 
-The installed system boots through the UEFI fallback path for now
-(`EFI/BOOT/BOOTX64.EFI`); boot entries come later.
+The kernel is installed as `EFI/BOOT/BOOTX64.EFI`, the path every UEFI firmware finds
+(some find no other), and the installer also adds a firmware boot entry "cig" for that
+file. The previous kernel stays as `EFI/cig/vmlinuz-old.efi` (choose it in the firmware's
+boot menu).
 
 ### The install medium
 
