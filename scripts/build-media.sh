@@ -87,7 +87,8 @@ touch "$STAGE/etc/cig/efi-fallback"     # the kernel also goes to EFI/BOOT/BOOTX
 step "Building the media's cig packages"
 # always fresh: they are built from this repository, and their version does not change
 # with every edit (an existing package file would otherwise be reused)
-for p in cig-base cig-tools cig-installer cig-live; do
+REPO_PKGS="cig-base cig-tools cig-installer cig-live pixel"
+for p in $REPO_PKGS; do
     rm -f "$(CIG_VAR=$MEDIA_VAR "$CIGBUILD" pkgfile "$p")"
     CIG_VAR=$MEDIA_VAR CIG_SOURCE_MIRROR=$DEV_VAR/sources "$CIGBUILD" build "$p"
 done
@@ -128,7 +129,8 @@ step "Installer mirror (sources, packages)"
 link() { cp -al "$@" 2>/dev/null || cp -a "$@"; }
 mkdir -p "$STAGE/var/cig/sources" "$STAGE/var/cig/pkgs"
 link "$DEV_VAR/sources/." "$STAGE/var/cig/sources/"
-for f in "$DEV_VAR"/pkgs/*.tar.gz "$MEDIA_VAR"/pkgs/cig-*.tar.gz; do
+for f in "$DEV_VAR"/pkgs/*.tar.gz $(for p in $REPO_PKGS; do echo "$MEDIA_VAR/pkgs/$p-[0-9]*.tar.gz"; done); do
+    [ -f "$f" ] || continue
     case "${f##*/}" in linux-[0-9]*|linux-firmware-*) continue ;; esac
     link "$f" "$STAGE/var/cig/pkgs/"
     [ -f "$f.sha256" ] && link "$f.sha256" "$STAGE/var/cig/pkgs/"

@@ -1,8 +1,8 @@
 # mesa - GPU drivers without LLVM: Vulkan for AMD (RADV, with its own ACO compiler) and OpenGL/GLES
-# through Vulkan (Zink); EGL and GBM for Wayland compositors. softpipe is the software fallback.
+# through Vulkan (Zink); EGL and GBM for Wayland compositors. (no software renderer: without a GPU driver, wlroots uses pixman)
 name=mesa
 version=26.2.4
-rel=2
+rel=3
 source="https://archive.mesa3d.org/mesa-$version.tar.xz"
 signature="https://archive.mesa3d.org/mesa-$version.tar.xz.sig"
 sha256="bce5f7fbebb934373b86c999a064d52fb5065878dc57f287f95346648ec832e9"
@@ -11,7 +11,7 @@ makedepends="meson pkgconf python-mako python-packaging python-pyyaml wayland-pr
 style=meson
 group="desktop"
 # Wayland only, no LLVM, no X11; only what the drivers above need
-meson_args="-Dplatforms=wayland -Dgallium-drivers=zink,softpipe -Dvulkan-drivers=amd -Dllvm=disabled
+meson_args="-Dplatforms=wayland -Dgallium-drivers=zink -Dvulkan-drivers=amd -Dllvm=disabled
     -Dglx=disabled -Degl=enabled -Dgbm=enabled -Dgles1=disabled -Dgles2=enabled -Dopengl=true
     -Dvalgrind=disabled -Dlibunwind=disabled -Dzstd=disabled -Dlmsensors=disabled
     -Dvideo-codecs= -Dvulkan-layers= -Dtools= -Dbuild-tests=false -Dmicrosoft-clc=disabled
