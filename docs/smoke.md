@@ -156,7 +156,10 @@ when nothing needs it), **build** (build tools; never removed automatically).
 `smoke audit` reports package folders outside the inventory, modified package
 files, files in `/usr` that aren't links into `/usr/pkg`, broken links, links
 replaced by real files, changed configuration, orphans, and a hand-edited
-inventory. (done)
+inventory. It also reads every installed ELF file's needed libraries (`DT_NEEDED`) and
+reports any that no installed package provides, so a missing runtime library shows up
+before a program fails with "Error relocating" (links are resolved inside `SMOKE_ROOT`).
+(done)
 
 The optional allowlisting layers (see `ROADMAP.md`, Phase 5) build on the
 inventory: only software it lists may run or start. On-device compiling needs
