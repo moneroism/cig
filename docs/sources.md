@@ -23,6 +23,12 @@ does not say who signed: `pin` records the keys on first use and refuses any oth
 afterwards. A new key is added only with `cigbuild trust <pkg> <fingerprint>`, after the
 project announced it on its own site.
 
+Where the check happens (2026-10-07): a source with a detached signature pins no SHA256 (its
+`sha256=` entry is `-`); every device that builds it checks the signature with `gpgv` against
+the recipe's keys, whose public halves are in `keys/<fingerprint>.gpg`. Signed checksum files,
+signed tags and unsigned sources keep a pinned SHA256 (for unsigned sources it is the only
+check). A source with neither is trusted on first use on each device (`$CIG_VAR/tofu`).
+
 Keys are fetched by ID from public keyservers only, never from the forge that hosts the code.
 All checks run once, on the host, when a source is pinned (`cigbuild pin`, `cigbuild sig`);
 devices then check the pinned SHA256. Every other source is **flagged**: its SHA256 was pinned
@@ -61,6 +67,7 @@ on first download (trust on first use), and `smoke add` warns about it on every 
 | cairo | cairographics.org | signed git tag (archive = tag tree) |
 | cmake | github.com | signed checksum file |
 | curl | curl.se | upstream GPG signature |
+| dosfstools | github.com | upstream GPG signature |
 | dwl | codeberg.org | **UNVERIFIED** (pinned SHA256 only, trusted on first use) |
 | e2fsprogs | cdn.kernel.org | upstream GPG signature |
 | elfutils | sourceware.org | upstream GPG signature |
@@ -91,6 +98,7 @@ on first download (trust on first use), and `smoke add` warns about it on every 
 | json-c | github.com | **UNVERIFIED** (pinned SHA256 only, trusted on first use) |
 | less | www.greenwoodsoftware.com | upstream GPG signature |
 | libassuan | gnupg.org | upstream GPG signature |
+| libburn | files.libburnia-project.org | upstream GPG signature |
 | libdisplay-info | gitlab.freedesktop.org | signed git tag (archive = tag tree) |
 | libdrm | dri.freedesktop.org | upstream GPG signature |
 | libevdev | www.freedesktop.org | upstream GPG signature |
@@ -99,6 +107,7 @@ on first download (trust on first use), and `smoke add` warns about it on every 
 | libgcrypt | gnupg.org | upstream GPG signature |
 | libgpg-error | gnupg.org | upstream GPG signature |
 | libinput | gitlab.freedesktop.org | signed git tag (archive = tag tree) |
+| libisofs | files.libburnia-project.org | upstream GPG signature |
 | libjpeg-turbo | github.com | upstream GPG signature |
 | libksba | gnupg.org | upstream GPG signature |
 | libnl | github.com | upstream GPG signature |
@@ -162,8 +171,9 @@ on first download (trust on first use), and `smoke add` warns about it on every 
 | wmenu | codeberg.org | **UNVERIFIED** (pinned SHA256 only, trusted on first use) |
 | wpa_supplicant | w1.fi | upstream GPG signature |
 | xkeyboard-config | www.x.org | upstream GPG signature |
+| xorriso | files.libburnia-project.org | upstream GPG signature |
 | xz | github.com | upstream GPG signature |
 | zlib | github.com | upstream GPG signature |
 | zstd | github.com | upstream GPG signature |
 
-78 sources verified, 39 flagged.
+82 sources verified, 39 flagged.
