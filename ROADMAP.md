@@ -168,7 +168,9 @@ Work:
 - ~~installer: auto partitioning with optional swap, partition editor~~ (done)
 - ~~smoke: `add` (replaces `install`) with the compile/install questions, `-c`, the
   build-tools prompt, the unsigned warning~~ (done); name-file lookup (local file first)
-- unbound recipe; DNS choice in the installer
+- ~~unbound recipe; DNS choice in the installer~~ (done 2026-10-06: DNS over TLS to Quad9 and
+  Cloudflare by default, unbound as its own resolver, or DHCP DNS; servers in
+  `/etc/unbound/unbound.conf.d/forward-tls.conf`)
 - day-one usability (so cig can be used for a full day on the PC), all optional:
   sound (ALSA), ~~clipboard (wl-clipboard), screenshots (grim, slurp)~~ (done). No browser
   yet (see Phase 6)
