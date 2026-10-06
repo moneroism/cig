@@ -80,29 +80,81 @@ fetch() {
     return 1
 }
 
+# get_local <file in $CIG_VAR/sources>: a copy from the install media (CIG_SOURCE_MIRROR) or
+# the bootstrap, if there is one; only what a build needs is copied, and it is still verified
+get_local() {
+    local f=$1 m
+    for m in ${CIG_SOURCE_MIRROR:-} /sources; do
+        if [ ! -s "$f" ] && [ -s "$m/${f##*/}" ]; then cp "$m/${f##*/}" "$f"; fi
+    done
+    [ -s "$f" ]
+}
+
+# gpgv_verify <file> <signature entry>: the upstream signature, checked on this device with
+# gpgv against the recipe's own keys (keys/<fingerprint>.gpg in the repository) and no
+# others. Returns 2 when it cannot be checked here: no gpgv yet (bootstrap), no keys=, or a
+# signed checksum file or tag (still checked through the pinned sha256).
+gpgv_verify() {
+    local f=$1 e=$2 d sigf out signer k
+    command -v gpgv >/dev/null && [ -n "${keys:-}" ] || return 2
+    case "$e" in sums=*|tag=*) return 2 ;; esac
+    d=$(mktemp -d)
+    for k in $keys; do
+        [ -s "$CIG_REPO/keys/$k.gpg" ] || { rm -rf "$d"; die "$name: key $k is not in keys/ (on the host: cigbuild keys $name)"; }
+        cat "$CIG_REPO/keys/$k.gpg" >> "$d/keyring.gpg"
+    done
+    sigf="$CIG_VAR/sources/${e##*/}"
+    get_local "$sigf" || fetch "$e" "$sigf" || { rm -rf "$d"; die "signature download failed: $e"; }
+    case "$e:$f" in   # kernel.org signs the uncompressed tarball
+        *.sign:*.xz) out=$(xz -dc "$f" | gpgv --homedir "$d" --keyring "$d/keyring.gpg" --status-fd 1 "$sigf" - 2>/dev/null || true) ;;
+        *.sign:*.gz) out=$(gzip -dc "$f" | gpgv --homedir "$d" --keyring "$d/keyring.gpg" --status-fd 1 "$sigf" - 2>/dev/null || true) ;;
+        *)           out=$(gpgv --homedir "$d" --keyring "$d/keyring.gpg" --status-fd 1 "$sigf" "$f" 2>/dev/null || true) ;;
+    esac
+    rm -rf "$d"
+    signer=$(echo "$out" | awk '/VALIDSIG/ { p = $NF; if (length(p) < 40) p = $3; print p; exit }')
+    [ -n "$signer" ] || die "$name: no valid signature on ${f##*/} by its trusted keys ($keys): tampered, or signed by another key"
+    case " $keys " in *" $signer "*) ;; *) die "$name: ${f##*/} is signed by $signer, not by $keys" ;; esac
+    return 0
+}
+
+# fetch_sources: every source, checked against its pinned sha256 (if the recipe has one) and
+# its upstream signature with gpgv (if it has one and gpgv is installed): signed sources need
+# no sha256 in the recipe. A source with neither is trusted on first use: its sha256 is
+# recorded on this device ($CIG_VAR/tofu) and any later change refuses it.
 fetch_sources() {
-    local i=0 e f url want have
-    local -a sums; read -r -a sums <<< "$(echo $sha256)"
+    local i=0 e f url want have sig ok tofu
+    local -a sums sigs
+    read -r -a sums <<< "$(echo $sha256)"
+    read -r -a sigs <<< "$(echo $signature)"
     for e in $source; do
         f=$(src_name "$e"); url=$(src_url "$e")
-        # reuse a copy from the install media (CIG_SOURCE_MIRROR) or the bootstrap;
-        # only what a build needs is copied, and the checksum is still enforced
-        local m
-        for m in ${CIG_SOURCE_MIRROR:-} /sources; do
-            if [ ! -s "$CIG_VAR/sources/$f" ] && [ -s "$m/$f" ]; then
-                cp "$m/$f" "$CIG_VAR/sources/$f"
-            fi
-        done
-        if [ ! -s "$CIG_VAR/sources/$f" ]; then
+        if ! get_local "$CIG_VAR/sources/$f"; then
             info "$name: downloading $f"
             fetch "$url" "$CIG_VAR/sources/$f" || die "download failed: $url"
         fi
-        want=${sums[$i]:-}
+        want=${sums[$i]:-}; sig=${sigs[$i]:--}
         have=$(sha256sum "$CIG_VAR/sources/$f" | cut -d' ' -f1)
-        [ -n "$want" ] || die "$name: no sha256 pinned for $f (got $have). Run: cigbuild pin $name"
-        if [ "$want" != "$have" ]; then
+        if [ -n "$want" ] && [ "$want" != "$have" ]; then
             rm -f "$CIG_VAR/sources/$f"
             die "$name: CHECKSUM MISMATCH for $f (expected $want, got $have). File deleted."
+        fi
+        ok=0
+        if [ "$sig" != - ]; then
+            gpgv_verify "$CIG_VAR/sources/$f" "$sig" && ok=1 || [ $? -eq 2 ] \
+                || die "$name: signature check failed for $f"
+        fi
+        if [ -z "$want" ] && [ $ok -eq 0 ]; then
+            [ "$sig" = - ] || die "$name: $f has no pinned sha256 and its signature cannot be checked here (needs gpgv and keys=)"
+            tofu="$CIG_VAR/tofu/$f.sha256"
+            if [ -s "$tofu" ]; then
+                if [ "$(cat "$tofu")" != "$have" ]; then
+                    rm -f "$CIG_VAR/sources/$f"
+                    die "$name: $f CHANGED since its first use here (expected $(cat "$tofu"), got $have). File deleted."
+                fi
+            else
+                mkdir -p "$CIG_VAR/tofu"; echo "$have" > "$tofu"
+                warn "$name: $f is not signed upstream and not pinned: trusted on first use (sha256 recorded in $tofu)"
+            fi
         fi
         i=$((i + 1))
     done
@@ -368,13 +420,23 @@ check_signer() {   # check_signer <pkg> <what was verified>
     local p=$1 what=$2
     if [ -z "${keys:-}" ]; then
         case " $NEWKEYS " in *" $SIGNER "*) ;; *) NEWKEYS="${NEWKEYS:+$NEWKEYS }$SIGNER" ;; esac
+        export_key "$SIGNER"
         return 0
     fi
-    case " $keys " in *" $SIGNER "*) return 0 ;; esac
+    case " $keys " in *" $SIGNER "*) export_key "$SIGNER"; return 0 ;; esac
     die "SIGNING KEY CHANGED: $what is signed by $SIGNER,
    but $p trusts only: $keys
    Do not continue unless the project announced the new key on its own site (not only the
    download host). Then: cigbuild trust $p $SIGNER, and pin again."
+}
+# export_key <fingerprint>: the public key into keys/ (what gpgv on a device checks against)
+export_key() {
+    local k=$1 out="$CIG_REPO/keys/$1.gpg"
+    [ ! -s "$out" ] || return 0
+    [ -w "$CIG_REPO" ] || return 0
+    mkdir -p "$CIG_REPO/keys"
+    gpg --homedir "$GH" --export-options export-minimal --export "$k" > "$out.part" 2>/dev/null
+    if [ -s "$out.part" ]; then mv "$out.part" "$out"; else rm -f "$out.part"; die "cannot export key $k"; fi
 }
 set_recipe_keys() {   # set_recipe_keys <recipe> <fingerprints>
     local r=$1 k=$2
