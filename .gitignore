@@ -22,6 +22,8 @@
 *.p12
 *.pfx
 *.gpg
+# public signing keys of upstream projects (checked: no secret packets) - gpgv verifies against them
+!/keys/*.gpg
 *.kbx
 signing_key*
 x509.genkey
