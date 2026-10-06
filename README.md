@@ -99,6 +99,7 @@ cigbuild pin     <pkg>...   verify upstream signature, pin the SHA256
 cigbuild sig     <pkg> <url|->...  check pinned sources against upstream signatures, record the URLs
 cigbuild keys    <pkg>...   check pinned sources again, record their signing keys (keys=)
 cigbuild trust   <pkg> <fpr>  accept one more signing key (only after checking it independently)
+cigbuild sigonly <pkg>...   signed sources: verify, then drop the pinned SHA256 (gpgv decides)
 cigbuild info    <pkg>      show a recipe
 cigbuild pkgfile <pkg>      path of the package file for the current recipe
 ```
@@ -116,7 +117,8 @@ version=0.8
 source="https://codeberg.org/dwl/dwl/releases/download/v$version/dwl-v$version.tar.gz"
 signature=""                 # signature URL per source, or "-"
 keys=""                      # fingerprints allowed to sign (filled in by pin/sig/keys; new ones: cigbuild trust)
-sha256="ccc8bbb3..."         # filled in by: cigbuild pin dwl
+sha256="-"                   # filled in by: cigbuild pin dwl ("-" for a signed source:
+                             # gpgv checks it on every device; unsigned sources get a hash)
 depends="wlroots libinput libxkbcommon wayland"
 makedepends="wayland-protocols pkgconf"
 style=make                   # gnu | meson | make | custom
@@ -253,6 +255,9 @@ CIG_IMG=~/cig/cig-0.2.1.iso CIG_TARGET=~/cig-target.img scripts/run-vm.sh     # 
 # in the VM, as root:  cig-install
 CIG_IMG=~/cig-target.img scripts/run-vm.sh      # boot the installed disk alone
 ```
+
+`CIG_VM_MONITOR=<socket>` adds a QEMU monitor on a unix socket: `screendump <file> -f png`
+and `sendkey` let a test run without a person at the VM window.
 
 Boot an installed target disk alone, never together with the dev image: both
 contain a partition named `cig-root`. Recreate the target image for each test.
