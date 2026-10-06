@@ -35,6 +35,9 @@ bool ui_input(const char *title, const char *prompt, char *buf, size_t n, bool h
 bool ui_yesno(const char *title, const char *text, bool def);
 void ui_msg(const char *title, const char *text);
 
+/* a message shown while something short runs (no key needed; the next screen replaces it) */
+void ui_wait(const char *title, const char *text);
+
 /* a running job: a title and the last lines of its log, redrawn by the caller */
 void ui_progress(const char *title, const char *step, const char *logfile);
 

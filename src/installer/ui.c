@@ -390,6 +390,13 @@ void ui_msg(const char *title, const char *text)
 	} while (k != '\n' && k != KEY_ESC);
 }
 
+void ui_wait(const char *title, const char *text)
+{
+	frame(title);
+	text_block(4, text);
+	refresh();
+}
+
 void ui_progress(const char *title, const char *step, const char *logfile)
 {
 	char lines[64][256];

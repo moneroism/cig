@@ -88,6 +88,14 @@ static _Noreturn void fail(const char *why)
 			fail("command failed: " #__VA_ARGS__); \
 	} while (0)
 
+/* a path inside the new system: its /usr links are absolute (/usr/pkg/...) and only
+ * resolve there, never from the install media */
+static bool target_has(const char *path)
+{
+	char *argv[] = { "chroot", TARGET, "test", "-e", (char *)path, NULL };
+	return run(argv) == 0;
+}
+
 static void put_file(const char *path, const char *text, mode_t mode)
 {
 	FILE *f = fopen(path, "w");
@@ -480,12 +488,30 @@ void do_install(struct state *s)
 		for (int i = 0; i < s->ncomp; i++)
 			if (s->comps[i].on)
 				all = xasprintf("%s %s", all, s->comps[i].name);
-		char *sv = NULL;
+		char *sv = NULL, *skipped = xstrdup("");
+		size_t nbase = strlen(s->base);
 		for (char *p = strtok_r(all, " ", &sv); p; p = strtok_r(NULL, " ", &sv)) {
 			bool prebuilt = !s->compile_pkgs || !strcmp(p, "linux") || !strcmp(p, "linux-firmware");
 			step("Installing packages: %s", p);
-			RUN(s->smoke, "add", prebuilt ? "-p" : "-c", "-y", p);
+			if ((size_t)(p - all) < nbase) {   /* base packages: the system needs them */
+				RUN(s->smoke, "add", prebuilt ? "-p" : "-c", "-y", p);
+				continue;
+			}
+			/* an optional component that fails is skipped, never a failed install: builds
+			 * can run for hours unattended (the final smoke audit still checks everything) */
+			char *argv[] = { s->smoke, "add", prebuilt ? "-p" : "-c", "-y", p, NULL };
+			if (run(argv) != 0) {
+				logf_("    ! %s failed and was skipped\n", p);
+				char *n = xasprintf("%s %s", skipped, p);
+				free(skipped);
+				skipped = n;
+			}
 		}
+		if (*skipped)
+			snprintf(s->warnings + strlen(s->warnings), sizeof(s->warnings) - strlen(s->warnings),
+			         "Not installed (failed, see /var/log/cig-install.log):%s\n"
+			         "Try again after the first boot: smoke add <name>\n", skipped);
+		free(skipped);
 	}
 	unsetenv("SMOKE_ROOT");
 	unsetenv("CIG_SOURCE_MIRROR");
@@ -560,14 +586,14 @@ void do_install(struct state *s)
 
 	step("Network");
 	mkdirs(TARGET "/etc/service");
-	if (file_exists(TARGET "/usr/sbin/unbound")) {   /* the local validating resolver answers all DNS */
+	if (target_has("/usr/sbin/unbound")) {   /* the local validating resolver answers all DNS */
 		RUN("ln", "-sfn", "/etc/sv/unbound", TARGET "/etc/service/unbound");
 		put_file(TARGET "/etc/resolv.conf.static", "nameserver 127.0.0.1\nnameserver ::1\n", 0644);
 		put_file(TARGET "/etc/resolv.conf", "nameserver 127.0.0.1\nnameserver ::1\n", 0644);
 	}
 	if (file_exists("/sys/class/net/eth0") && file_exists(TARGET "/etc/sv/udhcpc-eth0"))
 		RUN("ln", "-sfn", "/etc/sv/udhcpc-eth0", TARGET "/etc/service/udhcpc-eth0");
-	if (file_exists("/sys/class/net/wlan0") && file_exists(TARGET "/usr/sbin/wpa_supplicant")) {
+	if (file_exists("/sys/class/net/wlan0") && target_has("/usr/sbin/wpa_supplicant")) {
 		RUN("ln", "-sfn", "/etc/sv/wpa_supplicant", TARGET "/etc/service/wpa_supplicant");
 		RUN("ln", "-sfn", "/etc/sv/udhcpc-wlan0", TARGET "/etc/service/udhcpc-wlan0");
 		if (*s->ssid) {   /* the passphrase goes through stdin: never in a command line or the log */

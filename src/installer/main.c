@@ -166,6 +166,7 @@ static bool generic_kernel_ok(struct state *s)
 	char *argv[] = { "env", var, s->cigbuild, "pkgfile", "linux", NULL }, *pkg = capture(argv), *root = NULL;
 	free(var);
 	if (pkg && file_exists(pkg)) {
+		ui_wait("Build: kernel", "Checking the generic kernel on the install media (a few seconds)...");
 		char *sh[] = { "sh", "-c",
 			"f=$(tar -tzf \"$0\" | grep '/vmlinuz$' | head -n1) && "
 			"tar -xOzf \"$0\" \"$f\" | grep -ao 'root=[^ ]*' | head -n1", pkg, NULL };
