@@ -20,9 +20,16 @@ meson_known_opts() {
                 n=${a#-D}; n=${n%%=*}
                 # match the quoted name anywhere: many projects write option(
                 #     'name', ...) across several lines
+                # without an options file a project defines no options: only meson's own
+                # built-in ones (b_*, c_*, default_library, ...) are valid then
                 if [ -n "$f" ] && ! grep -qE "['\"]$n['\"]" "$f"; then
                     echo "   (skipping option not defined by this version: $a)" >&2
                     continue
+                elif [ -z "$f" ]; then
+                    case "$n" in
+                        b_*|c_*|cpp_*|default_library|buildtype|optimization|debug|warning_level|werror|wrap_mode) ;;
+                        *) echo "   (skipping option: this project defines no options: $a)" >&2; continue ;;
+                    esac
                 fi ;;
         esac
         printf '%s\n' "$a"
