@@ -82,6 +82,7 @@ on first download (trust on first use), and `smoke add` warns about it on every 
 | glslang | github.com | **UNVERIFIED** (pinned SHA256 only, trusted on first use) |
 | gmp | ftp.gnu.org | upstream GPG signature |
 | gperf | ftp.gnu.org | upstream GPG signature |
+| gpgv | gnupg.org | upstream GPG signature |
 | grim | gitlab.freedesktop.org | upstream GPG signature |
 | harfbuzz | github.com | signed git tag (archive = tag tree) |
 | htop | github.com | **UNVERIFIED** (pinned SHA256 only, trusted on first use) |
@@ -89,13 +90,17 @@ on first download (trust on first use), and `smoke add` warns about it on every 
 | jq | github.com | **UNVERIFIED** (pinned SHA256 only, trusted on first use) |
 | json-c | github.com | **UNVERIFIED** (pinned SHA256 only, trusted on first use) |
 | less | www.greenwoodsoftware.com | upstream GPG signature |
+| libassuan | gnupg.org | upstream GPG signature |
 | libdisplay-info | gitlab.freedesktop.org | signed git tag (archive = tag tree) |
 | libdrm | dri.freedesktop.org | upstream GPG signature |
 | libevdev | www.freedesktop.org | upstream GPG signature |
 | libevent | github.com | upstream GPG signature |
 | libffi | github.com | **UNVERIFIED** (pinned SHA256 only, trusted on first use) |
+| libgcrypt | gnupg.org | upstream GPG signature |
+| libgpg-error | gnupg.org | upstream GPG signature |
 | libinput | gitlab.freedesktop.org | signed git tag (archive = tag tree) |
 | libjpeg-turbo | github.com | upstream GPG signature |
+| libksba | gnupg.org | upstream GPG signature |
 | libnl | github.com | upstream GPG signature |
 | libpng | github.com | **UNVERIFIED** (pinned SHA256 only, trusted on first use) |
 | libtool | ftp.gnu.org | upstream GPG signature |
@@ -120,6 +125,7 @@ on first download (trust on first use), and `smoke add` warns about it on every 
 | musl | musl.libc.org | upstream GPG signature |
 | nano | www.nano-editor.org | upstream GPG signature |
 | ncurses | ftp.gnu.org | upstream GPG signature |
+| npth | gnupg.org | upstream GPG signature |
 | opendoas | github.com | upstream GPG signature |
 | openssh | cdn.openbsd.org | upstream GPG signature |
 | openssl | github.com | upstream GPG signature |
@@ -160,4 +166,4 @@ on first download (trust on first use), and `smoke add` warns about it on every 
 | zlib | github.com | upstream GPG signature |
 | zstd | github.com | upstream GPG signature |
 
-72 sources verified, 39 flagged.
+78 sources verified, 39 flagged.
