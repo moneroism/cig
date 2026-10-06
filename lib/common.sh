@@ -38,7 +38,7 @@ load_recipe() {
     [ -f "$f" ] || die "no recipe: packages/$1/recipe"
     # reset everything a recipe may set
     name= version= rel=1 source= signature= sha256= depends= makedepends= style=
-    configure_args= meson_args= make_args= wrksrc= keep_static= nostrip= config_files= link_dirs= copy_files= noextract= track= upstream= stable=
+    configure_args= meson_args= make_args= wrksrc= keep_static= nostrip= config_files= link_dirs= copy_files= noextract= track= upstream= stable= keys=
     unset -f pre_build do_build do_install post_install upstream_version 2>/dev/null || true
     PKGDIR="$CIG_REPO/packages/$1"
     # shellcheck disable=SC1090
@@ -272,7 +272,9 @@ gpg_check() {
         out=$("$@" 2>&1 || true)
     fi
     echo "$out" | grep -q BADSIG && die "BAD SIGNATURE on $what"
-    SIGNER=$(echo "$out" | awk '/VALIDSIG/ {print $3; exit}')
+    # the primary key's fingerprint (the last VALIDSIG field), so signing subkeys of the same
+    # key count as the same signer; old keys without it: the signing key itself
+    SIGNER=$(echo "$out" | awk '/VALIDSIG/ { p = $NF; if (length(p) < 40) p = $3; print p; exit }')
     [ -n "$SIGNER" ] || die "could not verify the signature of $what (key not found?)"
 }
 
@@ -352,9 +354,76 @@ verify_source() {
     esac
 }
 
+# ---------------- signing keys ----------------
+# keys= in a recipe lists the fingerprints (primary keys) that may sign its sources. pin and
+# sig record them on first use, like sha256=, and from then on a signature by any other key
+# stops the pin: a keyserver hands out whatever key has the signature's key ID, so a valid
+# signature alone does not say who signed. A new key is accepted only with `cigbuild trust`.
+NEWKEYS=
+check_signer() {   # check_signer <pkg> <what was verified>
+    local p=$1 what=$2
+    if [ -z "${keys:-}" ]; then
+        case " $NEWKEYS " in *" $SIGNER "*) ;; *) NEWKEYS="${NEWKEYS:+$NEWKEYS }$SIGNER" ;; esac
+        return 0
+    fi
+    case " $keys " in *" $SIGNER "*) return 0 ;; esac
+    die "SIGNING KEY CHANGED: $what is signed by $SIGNER,
+   but $p trusts only: $keys
+   Do not continue unless the project announced the new key on its own site (not only the
+   download host). Then: cigbuild trust $p $SIGNER, and pin again."
+}
+set_recipe_keys() {   # set_recipe_keys <recipe> <fingerprints>
+    local r=$1 k=$2
+    if grep -q '^keys=' "$r"; then sed -i "s|^keys=.*|keys=\"$k\"|" "$r"
+    else sed -i "/^sha256=/i keys=\"$k\"" "$r"; fi
+}
+record_keys() {   # after pin/sig/keys: write the keys seen on first use
+    local p=$1 r
+    [ -z "${keys:-}" ] && [ -n "$NEWKEYS" ] || return 0
+    r=$(recipe_path "$p")
+    if [ -w "$r" ]; then
+        set_recipe_keys "$r" "$NEWKEYS"
+        info "$p: signing key(s) recorded: $NEWKEYS"
+    else
+        echo "keys=\"$NEWKEYS\""
+    fi
+}
+pkg_trust() {   # pkg_trust <pkg> <fingerprint>: accept one more signing key
+    local p=$1 fp=${2^^} r
+    [[ "$fp" =~ ^[0-9A-F]{40}$ ]] || die "a key fingerprint is 40 hex digits (gpg --fingerprint)"
+    load_recipe "$p"
+    r=$(recipe_path "$p")
+    case " ${keys:-} " in *" $fp "*) info "$p: $fp is already trusted"; return 0 ;; esac
+    set_recipe_keys "$r" "${keys:+$keys }$fp"
+    warn "$p: now also trusts $fp"
+}
+pkg_keys() {   # pkg_keys <pkg>: verify the pinned sources again and record their signers
+    local p=$1 e f i=0 sig
+    local -a sums sigs
+    NEWKEYS=
+    load_recipe "$p"
+    read -r -a sums <<< "$(echo $sha256)"
+    read -r -a sigs <<< "$(echo $signature)"
+    for e in $source; do
+        f=$(src_name "$e"); sig=${sigs[$i]:--}
+        if [ "$sig" != - ] && [ -n "${sums[$i]:-}" ]; then
+            [ -s "$CIG_VAR/sources/$f" ] || fetch "$(src_url "$e")" "$CIG_VAR/sources/$f" \
+                || die "download failed: $(src_url "$e")"
+            [ "$(sha256sum "$CIG_VAR/sources/$f" | cut -d' ' -f1)" = "${sums[$i]}" ] \
+                || die "$p: $f does not match its pinned sha256"
+            verify_source "$CIG_VAR/sources/$f" "$sig"
+            check_signer "$p" "$f"
+            info "$p: $f -> $HOW OK (key $SIGNER)"
+        fi
+        i=$((i + 1))
+    done
+    record_keys "$p"
+}
+
 pkg_pin() {
     local p=$1 e f have known i=0 new="" changed=0 sig sigf
     local -a sums sigs
+    NEWKEYS=
     load_recipe "$p"
     read -r -a sums <<< "$(echo $sha256)"
     read -r -a sigs <<< "$(echo $signature)"
@@ -373,6 +442,7 @@ pkg_pin() {
             if [ "$sig" != "-" ]; then
                 # 2. upstream: a GPG signature, a signed checksum file or a signed git tag
                 verify_source "$CIG_VAR/sources/$f" "$sig"
+                check_signer "$p" "$f"
                 info "$p: $f -> $HOW OK (key $SIGNER)"
             else
                 # 3. nothing to verify against
@@ -382,6 +452,7 @@ pkg_pin() {
         new="$new $have"; changed=1; i=$((i+1))
     done
     new=${new# }
+    record_keys "$p"
     if [ $changed -eq 1 ]; then
         if [ -w "$(recipe_path "$p")" ]; then
             sed -i "s|^sha256=.*|sha256=\"$new\"|" "$(recipe_path "$p")"
@@ -397,6 +468,7 @@ pkg_pin() {
 pkg_sig() {   # pkg_sig <pkg> <signature URL | ->...: check pinned sources against upstream signatures, then record them
     local p=$1 e f i=0 n sig sigf r; shift
     local -a sums sigs=("$@")
+    NEWKEYS=
     load_recipe "$p"
     r=$(recipe_path "$p")
     read -r -a sums <<< "$(echo $sha256)"
@@ -413,10 +485,12 @@ pkg_sig() {   # pkg_sig <pkg> <signature URL | ->...: check pinned sources again
             [ "$(sha256sum "$CIG_VAR/sources/$f" | cut -d' ' -f1)" = "${sums[$i]}" ] \
                 || die "$p: $f does not match its pinned sha256"
             verify_source "$CIG_VAR/sources/$f" "$sig"
+            check_signer "$p" "$f"
             info "$p: $f -> $HOW OK (key $SIGNER)"
         fi
         i=$((i + 1))
     done
+    record_keys "$p"
     sig="$*"; sig=${sig//"$version"/'$version'}   # follows the recipe's version on updates
     if grep -q '^signature=' "$r"; then
         sed -i "s|^signature=.*|signature=\"$sig\"|" "$r"

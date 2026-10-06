@@ -19,8 +19,9 @@ machine.
 - **Minimal attack surface.** Small implementations are preferred (musl,
   BusyBox, sinit, samurai); features nobody uses are compiled out.
 - **Every source verified.** Recipes pin a SHA256; `cigbuild pin` checks the
-  upstream GPG signature before a checksum is pinned. Sources without an
-  upstream signature are marked as trust-on-first-use, openly.
+  upstream GPG signature before a checksum is pinned, and only from the keys the
+  recipe names (`keys=`, recorded on first use): a signature by any other key stops
+  the pin. Sources without an upstream signature are marked as trust-on-first-use, openly.
 - **Compiled on the machine.** The kernel is configured for the hardware it
   runs on, with a module signing key that is generated during the build and
   deleted afterwards, so every installation has its own key.
@@ -96,6 +97,8 @@ cigbuild install <pkg>...   same as: smoke add -c -y
 cigbuild rebuild <pkg>...   build again from source; smoke switches to the new build
 cigbuild pin     <pkg>...   verify upstream signature, pin the SHA256
 cigbuild sig     <pkg> <url|->...  check pinned sources against upstream signatures, record the URLs
+cigbuild keys    <pkg>...   check pinned sources again, record their signing keys (keys=)
+cigbuild trust   <pkg> <fpr>  accept one more signing key (only after checking it independently)
 cigbuild info    <pkg>      show a recipe
 cigbuild pkgfile <pkg>      path of the package file for the current recipe
 ```
@@ -112,6 +115,7 @@ name=dwl
 version=0.8
 source="https://codeberg.org/dwl/dwl/releases/download/v$version/dwl-v$version.tar.gz"
 signature=""                 # signature URL per source, or "-"
+keys=""                      # fingerprints allowed to sign (filled in by pin/sig/keys; new ones: cigbuild trust)
 sha256="ccc8bbb3..."         # filled in by: cigbuild pin dwl
 depends="wlroots libinput libxkbcommon wayland"
 makedepends="wayland-protocols pkgconf"

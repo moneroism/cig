@@ -12,6 +12,12 @@ upstream project's own cryptographic statement:
 | signed checksum file | `sums=<url>` | a GPG-signed list of checksums (inline, or with `<url>.asc`) that names the file |
 | signed git tag | `tag=<git url>#<tag>` | the tag's GPG signature (`git verify-tag`), and the archive holds exactly the tag's tree, file for file |
 
+In every method the signer must be one of the recipe's `keys=` (primary key fingerprints).
+A keyserver returns whatever key carries the signature's key ID, so a valid signature alone
+does not say who signed: `pin` records the keys on first use and refuses any other key
+afterwards. A new key is added only with `cigbuild trust <pkg> <fingerprint>`, after the
+project announced it on its own site.
+
 Keys are fetched by ID from public keyservers only, never from the forge that hosts the code.
 All checks run once, on the host, when a source is pinned (`cigbuild pin`, `cigbuild sig`);
 devices then check the pinned SHA256. Every other source is **flagged**: its SHA256 was pinned
