@@ -133,6 +133,7 @@ fetch_sources() {
             fetch "$url" "$CIG_VAR/sources/$f" || die "download failed: $url"
         fi
         want=${sums[$i]:-}; sig=${sigs[$i]:--}
+        [ "$want" != - ] || want=""   # "-": no pin, the signature decides
         have=$(sha256sum "$CIG_VAR/sources/$f" | cut -d' ' -f1)
         if [ -n "$want" ] && [ "$want" != "$have" ]; then
             rm -f "$CIG_VAR/sources/$f"
@@ -404,7 +405,7 @@ verify_source() {
             HOW="signed git tag $tag" ;;
         *)
             sumf="$CIG_VAR/sources/$(basename "$e")"
-            fetch "$e" "$sumf" 2>/dev/null || die "signature download failed: $e"
+            [ -s "$sumf" ] || fetch "$e" "$sumf" 2>/dev/null || die "signature download failed: $e"
             verify_sig "$f" "$sumf"
             HOW="GPG signature" ;;
     esac
@@ -435,7 +436,7 @@ export_key() {
     [ ! -s "$out" ] || return 0
     [ -w "$CIG_REPO" ] || return 0
     mkdir -p "$CIG_REPO/keys"
-    gpg --homedir "$GH" --export-options export-minimal --export "$k" > "$out.part" 2>/dev/null
+    gpg --homedir "$GH" --export "$k" > "$out.part" 2>/dev/null   # whole key: export-minimal dropped signing subkeys
     if [ -s "$out.part" ]; then mv "$out.part" "$out"; else rm -f "$out.part"; die "cannot export key $k"; fi
 }
 set_recipe_keys() {   # set_recipe_keys <recipe> <fingerprints>
@@ -475,7 +476,7 @@ pkg_keys() {   # pkg_keys <pkg>: verify the pinned sources again and record thei
         if [ "$sig" != - ] && [ -n "${sums[$i]:-}" ]; then
             [ -s "$CIG_VAR/sources/$f" ] || fetch "$(src_url "$e")" "$CIG_VAR/sources/$f" \
                 || die "download failed: $(src_url "$e")"
-            [ "$(sha256sum "$CIG_VAR/sources/$f" | cut -d' ' -f1)" = "${sums[$i]}" ] \
+            [ "${sums[$i]}" = - ] || [ "$(sha256sum "$CIG_VAR/sources/$f" | cut -d' ' -f1)" = "${sums[$i]}" ] \
                 || die "$p: $f does not match its pinned sha256"
             verify_source "$CIG_VAR/sources/$f" "$sig"
             check_signer "$p" "$f"
@@ -484,6 +485,36 @@ pkg_keys() {   # pkg_keys <pkg>: verify the pinned sources again and record thei
         i=$((i + 1))
     done
     record_keys "$p"
+}
+
+pkg_sigonly() {   # pkg_sigonly <pkg>: signed sources drop their pinned sha256 ("-")
+    local p=$1 e f i=0 sig new="" r
+    local -a sums sigs
+    NEWKEYS=
+    load_recipe "$p"
+    r=$(recipe_path "$p")
+    [ -n "${keys:-}" ] || die "$p: no keys= yet (cigbuild keys $p first)"
+    read -r -a sums <<< "$(echo $sha256)"
+    read -r -a sigs <<< "$(echo $signature)"
+    for e in $source; do
+        f=$(src_name "$e"); sig=${sigs[$i]:--}
+        case "$sig" in
+            -|sums=*|tag=*) new="$new ${sums[$i]:-}" ;;   # kept: unsigned, or checked through the pin
+            *)
+                [ "${sums[$i]:-}" != - ] || { new="$new -"; i=$((i + 1)); continue; }
+                [ -s "$CIG_VAR/sources/$f" ] || fetch "$(src_url "$e")" "$CIG_VAR/sources/$f" \
+                    || die "download failed: $(src_url "$e")"
+                [ "$(sha256sum "$CIG_VAR/sources/$f" | cut -d' ' -f1)" = "${sums[$i]}" ] \
+                    || die "$p: $f does not match its pinned sha256"
+                verify_source "$CIG_VAR/sources/$f" "$sig"
+                check_signer "$p" "$f"
+                info "$p: $f -> $HOW OK (key $SIGNER): pin dropped, the signature decides"
+                new="$new -" ;;
+        esac
+        i=$((i + 1))
+    done
+    new=${new# }
+    sed -i "s|^sha256=.*|sha256=\"$new\"|" "$r"
 }
 
 pkg_pin() {
@@ -510,6 +541,8 @@ pkg_pin() {
                 verify_source "$CIG_VAR/sources/$f" "$sig"
                 check_signer "$p" "$f"
                 info "$p: $f -> $HOW OK (key $SIGNER)"
+                # a detached signature is checked on every device (gpgv): no hash to pin
+                case "$sig" in sums=*|tag=*) ;; *) have=- ;; esac
             else
                 # 3. nothing to verify against
                 warn "$p: $f -> no upstream signature; trusted on first use"
@@ -548,7 +581,7 @@ pkg_sig() {   # pkg_sig <pkg> <signature URL | ->...: check pinned sources again
         if [ "$sig" != - ]; then
             [ -s "$CIG_VAR/sources/$f" ] || fetch "$(src_url "$e")" "$CIG_VAR/sources/$f" \
                 || die "download failed: $(src_url "$e")"
-            [ "$(sha256sum "$CIG_VAR/sources/$f" | cut -d' ' -f1)" = "${sums[$i]}" ] \
+            [ "${sums[$i]}" = - ] || [ "$(sha256sum "$CIG_VAR/sources/$f" | cut -d' ' -f1)" = "${sums[$i]}" ] \
                 || die "$p: $f does not match its pinned sha256"
             verify_source "$CIG_VAR/sources/$f" "$sig"
             check_signer "$p" "$f"

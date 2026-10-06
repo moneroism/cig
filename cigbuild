@@ -14,6 +14,7 @@
 #   cigbuild sig     <pkg> <url|->...  verify pinned sources against upstream signatures, record the URLs
 #   cigbuild keys    <pkg>...   verify pinned sources again, record their signing keys (keys=)
 #   cigbuild trust   <pkg> <fpr>  accept one more signing key (after checking it independently)
+#   cigbuild sigonly <pkg>...   signed sources: verify, then drop the pinned sha256 (gpgv decides)
 #   cigbuild latest  <pkg>...   newest upstream release (track= limits it to a series)
 #   cigbuild info    <pkg>      show what a recipe contains
 #   cigbuild pkgfile <pkg>      path of the package file for the current recipe
@@ -27,7 +28,7 @@ CIG_VAR="${CIG_VAR:-/var/cig}"
 . "$CIG_REPO/lib/common.sh"
 . "$CIG_REPO/lib/styles.sh"
 
-usage() { sed -n '8,22p' "$0" | sed 's/^# \{0,1\}//'; exit 1; }
+usage() { sed -n '8,23p' "$0" | sed 's/^# \{0,1\}//'; exit 1; }
 
 cmd=${1:-}; shift || true
 [ -n "$cmd" ] || usage
@@ -44,6 +45,7 @@ case "$cmd" in
     sig)     [ $# -gt 1 ] || usage; pkg_sig "$@" ;;
     keys)    [ $# -gt 0 ] || usage; for p in "$@"; do pkg_keys "$p"; done ;;
     trust)   [ $# -eq 2 ] || usage; pkg_trust "$1" "$2" ;;
+    sigonly) [ $# -gt 0 ] || usage; for p in "$@"; do pkg_sigonly "$p"; done ;;
     latest)  [ $# -gt 0 ] || usage   # several packages: 8 at a time, lines in any order
              if [ $# -eq 1 ]; then pkg_latest "$1"; else printf '%s\n' "$@" | xargs -P 8 -n 1 "$0" latest; fi ;;
     info)    [ $# -eq 1 ] || usage; pkg_info "$1" ;;
