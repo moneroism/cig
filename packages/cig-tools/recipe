@@ -23,7 +23,7 @@ do_install() {
     cp "$CIG_REPO/VERSION" "$s/"
     cp "$CIG_REPO/cigbuild" "$s/"
     install -m 755 "$WORK/smoke/smoke" "$s/smoke"
-    cp -R "$CIG_REPO/lib" "$CIG_REPO/packages" "$CIG_REPO/src" "$s/"   # src: recipes built from it
+    cp -R "$CIG_REPO/lib" "$CIG_REPO/packages" "$CIG_REPO/src" "$CIG_REPO/assets" "$s/"   # src, assets: used by recipes
     chmod -R u+rwX,go+rX,go-w "$s"          # readable for all, keep execute bits
     chmod 755 "$s/cigbuild" "$s/smoke"
     ln -s ../share/cig/cigbuild "$DEST/usr/bin/cigbuild"

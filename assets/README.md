@@ -4,6 +4,7 @@ ASCII art and static texts, kept apart from the code that uses them.
 
 | File | What | Used by |
 |---|---|---|
+| `logo-cig.txt` | the cigarette logo, plain ASCII | `packages/fastfetch` (`/usr/share/fastfetch/logos/cig.txt`) |
 | `live-issue.txt` | login banner of the install medium (`{VERSION}` is filled in, backslashes escaped) | `packages/cig-live` |
 | `logo-designs.txt` | logo designs: the large braille logo (needs a Unicode font: graphical terminals, e.g. fastfetch), the "cig" lettering, the cigarette logo | (design source) |
 | `live-banner-draft.txt` | the first banner draft | (design source) |
