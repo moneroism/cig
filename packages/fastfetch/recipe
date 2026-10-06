@@ -1,7 +1,7 @@
 # fastfetch - system information
 name=fastfetch
 version=2.69.0
-rel=2
+rel=3
 source="fastfetch-$version.tar.gz::https://github.com/fastfetch-cli/fastfetch/archive/refs/tags/$version.tar.gz"
 sha256="d0e42faf307e39e7b531d632745a56e4eb558a6545f557280099c622562355ee"
 makedepends="cmake make"
@@ -18,6 +18,10 @@ do_install() {
     make -C build DESTDIR="$DEST" install
     install -D -m 644 "$CIG_REPO/assets/logo-cig.txt" "$DEST/usr/share/fastfetch/logos/cig.txt"
     mkdir -p "$DEST/etc/xdg/fastfetch"
-    printf '%s\n' '{' '    "logo": { "type": "file", "source": "/usr/share/fastfetch/logos/cig.txt" }' '}' \
+    # a config file replaces fastfetch's defaults, so the modules are listed too
+    printf '%s\n' '{' \
+        '    "logo": { "type": "file", "source": "/usr/share/fastfetch/logos/cig.txt" },' \
+        '    "modules": ["title", "separator", "os", "kernel", "uptime", "packages", "shell", "wm",' \
+        '                "terminal", "cpu", "gpu", "memory", "swap", "disk", "break", "colors"]' '}' \
         > "$DEST/etc/xdg/fastfetch/config.jsonc"
 }
