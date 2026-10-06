@@ -10,7 +10,7 @@ hardware waits until cig has booted on real hardware.
 | Goal | Meaning |
 |---|---|
 | Minimal attack surface | Small implementations, unused features compiled out, nothing running that isn't needed |
-| Every source verified | GPG signatures checked when a recipe is pinned; SHA256 pinned in every recipe; unsigned sources marked openly |
+| Every source verified | GPG signatures checked with gpgv on every device against the recipe's pinned keys (`keys=`, `keys/`); SHA256 pinned only where there is no detached signature; sources only from forges and projects' own sites (`lib/hosts`); unsigned sources marked openly |
 | Compiled on the machine | Kernel and packages built for the machine they run on; every install gets its own module signing key |
 | Nothing hardcoded | Hardware choices are detected or chosen, every optional component can be deselected |
 | Upstream defaults | No theming; users configure their own system |
@@ -258,10 +258,12 @@ Also in this phase:
 - hardened_malloc
 - sandboxing and privilege separation
 - smoke over the network (see docs/smoke.md): `smoke sync` against a separate recipe
-  repository, `gpgv` on the device (ticked by default; unticking warns), optional signed
+  repository, `gpgv` on the device (done 2026-10-07 for cigbuild: every signed source is
+  checked on the device; ticked by default; unticking warns), optional signed
   prebuilt packages with reproducible builds, no mirrors
 - smoke: `update`, name-file recipes, generated recipe drafts, builds as an unprivileged
-  user, recipe diffs on update, on-device signature checks (gpgv, later minisign/signify),
+  user, recipe diffs on update, on-device signature checks (gpgv: done; signed checksum
+  files and tags through gpgv next; later minisign/signify),
   optional glibc compatibility for prebuilt upstream binaries
 - `sudo` compatibility command that calls doas
 - user power helper (poweroff/reboot without doas)
