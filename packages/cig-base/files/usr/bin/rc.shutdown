@@ -3,6 +3,7 @@
 PATH=/usr/bin:/usr/sbin
 [ -x /etc/rc.local.shutdown ] && /etc/rc.local.shutdown
 killall5 -15; sleep 2; killall5 -9
+command -v alsactl >/dev/null && mkdir -p /var/lib/alsa && alsactl store 2>/dev/null   # mixer state
 hwclock -w -u 2>/dev/null
 sync
 swapoff -a 2>/dev/null

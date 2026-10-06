@@ -37,6 +37,8 @@ on first download (trust on first use), and `smoke add` warns about it on every 
 
 | Package | Source host | Authenticity |
 |---|---|---|
+| alsa-lib | www.alsa-project.org | upstream GPG signature |
+| alsa-utils | www.alsa-project.org | upstream GPG signature |
 | argp-standalone | github.com | **UNVERIFIED** (pinned SHA256 only, trusted on first use) |
 | autoconf | ftp.gnu.org | upstream GPG signature |
 | automake | ftp.gnu.org | upstream GPG signature |
@@ -146,4 +148,4 @@ on first download (trust on first use), and `smoke add` warns about it on every 
 | zlib | github.com | upstream GPG signature |
 | zstd | github.com | upstream GPG signature |
 
-69 sources verified, 39 flagged.
+71 sources verified, 39 flagged.

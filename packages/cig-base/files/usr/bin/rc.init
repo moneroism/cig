@@ -54,6 +54,9 @@ for m in $(find /sys/devices -name modalias -exec cat {} + 2>/dev/null | sort -u
 done
 mdev -s
 
+# sound: the saved mixer state, or ALSA's unmuted defaults the first time
+command -v alsactl >/dev/null && alsactl restore 2>/dev/null
+
 # optional: no further kernel modules until reboot
 [ -f /etc/lock-modules ] && echo 1 > /proc/sys/kernel/modules_disabled
 

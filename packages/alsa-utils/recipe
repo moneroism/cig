@@ -1,0 +1,20 @@
+# alsa-utils - sound tools: alsamixer, amixer, aplay, arecord, speaker-test
+name=alsa-utils
+version=1.2.16
+source="https://www.alsa-project.org/files/pub/utils/alsa-utils-$version.tar.bz2"
+signature="https://www.alsa-project.org/files/pub/utils/alsa-utils-$version.tar.bz2.sig"
+sha256="092399d5e8749a1d5e188e393157521cec4b75693b60ebb79bbce728cff2232c"
+depends="alsa-lib ncurses"
+makedepends="pkgconf"
+style=gnu
+group="sound"
+default=on
+# no bat (needs fftw), alsaconf, alsaloop, nhlt or generated man pages
+configure_args="--disable-bat --disable-alsaconf --disable-alsaloop --disable-nhlt --disable-xmlto
+    --disable-rst2man --with-curses=ncursesw --with-udev-rules-dir=/usr/lib/udev/rules.d
+    --with-systemdsystemunitdir=/usr/lib/systemd/system"
+# cig has no udev or systemd: rc.init and rc.shutdown restore and store the mixer instead
+do_install() {
+    make DESTDIR="$DEST" install
+    rm -rf "$DEST/usr/lib/udev" "$DEST/usr/lib/systemd"
+}
