@@ -1,4 +1,4 @@
-# pixel - terminal animations: rain, stars, smoke (ASCII for the console, -u for Unicode)
+# pixel - terminal animations: plasma, tunnel, fractal zoom, stars (ASCII for the console, -u for 256 colours)
 # Part of cig (src/pixel): built from the repository, like cig-tools.
 name=pixel
 version=$(cat "$CIG_REPO/VERSION")

@@ -8,7 +8,7 @@ LDFLAGS ?= -Wl,-z,relro,-z,now
 LDFLAGS += -pie
 
 pixel: pixel.c
-	$(CC) $(CFLAGS) -o $@ pixel.c $(LDFLAGS)
+	$(CC) $(CFLAGS) -o $@ pixel.c $(LDFLAGS) -lm
 
 clean:
 	rm -f pixel
