@@ -42,6 +42,8 @@ void *xrealloc(void *p, size_t n);
 char *xstrdup(const char *s);
 char *xasprintf(const char *fmt, ...);
 bool starts_with(const char *s, const char *prefix);
+bool valid_name(const char *name);        /* a package name: a-z 0-9 + . _ -, not starting with . */
+bool safe_relpath(const char *path);      /* relative, no .. component: stays inside its folder */
 
 bool is_link(const char *p);       /* the path itself is a symlink */
 bool is_real_dir(const char *p);   /* a directory, not a link to one */

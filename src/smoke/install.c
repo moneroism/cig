@@ -283,6 +283,8 @@ void install_pkg(const char *name, const char *reason_in)
 	struct strv files = { 0 }, deps = { 0 }, done_dirs = { 0 };
 	struct meta m;
 
+	if (!valid_name(name))
+		die("not a package name: %s", name);
 	inv_init();
 	/* "keep": rebuilds keep the current reason (explicit for a new install) */
 	if (!strcmp(reason, "keep")) {
@@ -342,6 +344,9 @@ void install_pkg(const char *name, const char *reason_in)
 		read_lines(p, &files);
 		free(p);
 	}
+	for (size_t i = 0; i < files.n; i++)
+		if (!safe_relpath(files.v[i]))
+			die("%s: unsafe path in the package: %s", f, files.v[i]);
 
 	/* 1. the package folder */
 	rm_rf(Dpart);

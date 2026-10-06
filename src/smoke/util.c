@@ -98,6 +98,26 @@ bool starts_with(const char *s, const char *prefix)
 	return strncmp(s, prefix, strlen(prefix)) == 0;
 }
 
+/* names and paths come from command lines and from inside packages: neither may lead
+ * out of /usr/pkg/<name> or the package's own files */
+bool valid_name(const char *name)
+{
+	return *name && *name != '.' && strlen(name) < 128 &&
+	       strspn(name, "abcdefghijklmnopqrstuvwxyz0123456789+._-") == strlen(name);
+}
+
+bool safe_relpath(const char *path)
+{
+	if (!*path || *path == '/')
+		return false;
+	for (const char *c = path; *c; c = strchr(c, '/') ? strchr(c, '/') + 1 : c + strlen(c)) {
+		size_t n = strcspn(c, "/");
+		if (n == 2 && c[0] == '.' && c[1] == '.')
+			return false;
+	}
+	return true;
+}
+
 void sv_push(struct strv *s, const char *str)
 {
 	if (s->n == s->cap) {
