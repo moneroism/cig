@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-or-later */
 /* Copyright (C) 2026 moneroism */
 /* main.c - settings, commands and the questions smoke add asks */
+#include <dirent.h>
 #include <errno.h>
 #include <limits.h>
 #include <stdio.h>
@@ -17,7 +18,10 @@ static const char usage_text[] =
 	"  smoke add [-c|-p] [-y] <pkg>.. add and install (-c compile here, -p prebuilt, -y no questions)\n"
 	"  smoke remove  <pkg>...         remove, then remove dependencies nothing needs\n"
 	"  smoke autoremove               remove orphaned dependencies\n"
-	"  smoke list                     installed packages, reason, who needs them\n"
+	"  smoke update [-c|-p] [-y] [<pkg>...]\n"
+	"                                 rebuild what its recipe changed, report new upstream releases\n"
+	"  smoke update --check [<pkg>..] only report\n"
+	"  smoke list [-a]                installed packages, reason, who needs them (-a: all available)\n"
 	"  smoke why     <pkg>            why a package is installed\n"
 	"  smoke files   <pkg>            files of a package\n"
 	"  smoke mark    <reason> <pkg>   set reason: explicit | dependency | build\n"
@@ -43,6 +47,65 @@ static char *joined(const struct strv *s)
 }
 
 /* ---------------- queries ---------------- */
+
+/* the value of a recipe's "key=" line (quotes dropped), or "" */
+static char *recipe_var(const char *text, const char *key)
+{
+	size_t kl = strlen(key);
+	for (const char *l = text; l && *l; l = strchr(l, '\n') ? strchr(l, '\n') + 1 : NULL) {
+		if (strncmp(l, key, kl) || l[kl] != '=')
+			continue;
+		const char *v = l + kl + 1;
+		size_t n = strcspn(v, "\n");
+		char *out = xasprintf("%.*s", (int)n, v);
+		if (*out == '"' || *out == '\'') {
+			memmove(out, out + 1, strlen(out));
+			out[strcspn(out, "\"'")] = '\0';
+		}
+		return out;
+	}
+	return xstrdup("");
+}
+
+/* every recipe: name, group, the description from its first line, installed or not */
+static void list_available(void)
+{
+	char *dir = xasprintf("%s/packages", CIG_REPO);
+	struct strv names = { 0 };
+	DIR *d = opendir(dir);
+	struct dirent *de;
+	if (!d)
+		die("cannot read %s: %s", dir, strerror(errno));
+	while ((de = readdir(d)))
+		if (de->d_name[0] != '.')
+			sv_push(&names, de->d_name);
+	closedir(d);
+	sv_sort(&names);
+	printf("  %-22s %-12s %s\n", "NAME", "GROUP", "DESCRIPTION");
+	for (size_t i = 0; i < names.n; i++) {
+		char *p = xasprintf("%s/%s/recipe", dir, names.v[i]), *text = read_file(p);
+		if (text) {
+			char *group = recipe_var(text, "group"), *desc = xstrdup("");
+			if (starts_with(text, "# ")) {   /* "# name - what it is" */
+				const char *dash = strstr(text, " - ");
+				size_t n = strcspn(text, "\n");
+				if (dash && (size_t)(dash - text) < n) {
+					free(desc);
+					desc = xasprintf("%.*s", (int)(n - (size_t)(dash + 3 - text)), dash + 3);
+				}
+			}
+			printf("%c %-22s %-12s %s\n", inv_get(names.v[i]) ? '*' : ' ', names.v[i],
+			       *group ? group : "-", desc);
+			free(group);
+			free(desc);
+		}
+		free(text);
+		free(p);
+	}
+	puts("\n* installed");
+	sv_free(&names);
+	free(dir);
+}
 
 static void list_pkgs(void)
 {
@@ -146,6 +209,17 @@ static char *recipe_signature(const char *name)
 	return sig;
 }
 
+/* a package file from the install media's mirror, when there is one */
+static void prebuilt_from_mirror(const char *f)
+{
+	const char *mirror = getenv("CIG_PKG_MIRROR");
+	const char *base = strrchr(f, '/') ? strrchr(f, '/') + 1 : f;
+	char *m = mirror ? xasprintf("%s/%s", mirror, base) : NULL;
+	if (m && is_file(m) && !is_file(f))
+		copy_file(m, f);
+	free(m);
+}
+
 enum compile { ASK, YES, NO };
 
 static void add_pkg(const char *name, enum compile compile, bool yes)
@@ -177,14 +251,8 @@ static void add_pkg(const char *name, enum compile compile, bool yes)
 		free(q);
 	}
 	f = pkgfile_of(name, false);
-	if (compile == NO && !is_file(f)) {   /* a prebuilt package from the install media */
-		const char *mirror = getenv("CIG_PKG_MIRROR");
-		const char *base = strrchr(f, '/') ? strrchr(f, '/') + 1 : f;
-		char *m = mirror ? xasprintf("%s/%s", mirror, base) : NULL;
-		if (m && is_file(m))
-			copy_file(m, f);
-		free(m);
-	}
+	if (compile == NO)   /* a prebuilt package from the install media */
+		prebuilt_from_mirror(f);
 	if (compile == NO && !is_file(f))
 		die("%s: no prebuilt package on this system; add it with -c to compile", name);
 	/* compiling for this system needs build tools; offer them once */
@@ -235,6 +303,166 @@ static void add_pkg(const char *name, enum compile compile, bool yes)
 		install_pkg(name, "explicit");
 	}
 	free(out); free(version); free(src); free(sig); free(f);
+}
+
+/* ---------------- update ---------------- */
+
+static char *recipe_version(const char *name)   /* version-rel, or NULL */
+{
+	char *argv[] = { (char *)CIGBUILD, "info", (char *)name, NULL }, *out = capture(argv), *v;
+	v = out ? info_field(out, "version") : NULL;
+	free(out);
+	return v;
+}
+
+/* does name need a package that is still waiting for its update? */
+static bool update_waits(const char *name, const struct strv *todo, const struct strv *done)
+{
+	const struct inv_ent *e = inv_get(name);
+	struct strv deps = { 0 };
+	bool wait = false;
+	if (e && strcmp(e->depends, "-")) {
+		char *d = xstrdup(e->depends);
+		for (char *c = d; *c; c++)
+			if (*c == ',')
+				*c = ' ';
+		sv_words(&deps, d);
+		free(d);
+	}
+	for (size_t j = 0; j < deps.n && !wait; j++)
+		wait = strcmp(deps.v[j], name) && sv_has(todo, deps.v[j]) && !sv_has(done, deps.v[j]);
+	sv_free(&deps);
+	return wait;
+}
+
+/*
+ * update: packages whose recipe is newer than the installed build (another version or rel)
+ * are rebuilt, dependencies first, through the same questions as add. Newer upstream
+ * releases are reported: applying one means updating the recipe (pin + signature check),
+ * which smoke cannot do on the device yet.
+ */
+static int update(int argc, char **argv, bool check, enum compile compile, bool yes)
+{
+	struct strv names = { 0 }, todo = { 0 }, from = { 0 }, to = { 0 };
+	for (int i = 0; i < argc; i++) {
+		if (!inv_get(argv[i]))
+			die("%s is not installed", argv[i]);
+		sv_push(&names, argv[i]);
+	}
+	if (!argc)
+		for (size_t i = 0; i < inv_count(); i++)
+			sv_push(&names, inv_at(i)->name);
+
+	/* 1. recipes that changed since the build that is installed */
+	for (size_t i = 0; i < names.n; i++) {
+		char *recipe = xasprintf("%s/packages/%s/recipe", CIG_REPO, names.v[i]), *v;
+		if (is_file(recipe) && (v = recipe_version(names.v[i]))) {
+			if (strcmp(v, inv_get(names.v[i])->version)) {
+				sv_push(&todo, names.v[i]);
+				sv_push(&from, inv_get(names.v[i])->version);
+				sv_push(&to, v);
+			}
+			free(v);
+		}
+		free(recipe);
+	}
+
+	/* 2. upstream: newest stable releases (cigbuild latest checks several at a time) */
+	info("checking upstream releases of %zu package(s)...", names.n);
+	struct strv lines = { 0 };
+	{
+		char **av = xmalloc((names.n + 3) * sizeof(*av));
+		av[0] = (char *)CIGBUILD;
+		av[1] = "latest";
+		for (size_t i = 0; i < names.n; i++)
+			av[i + 2] = names.v[i];
+		av[names.n + 2] = NULL;
+		char *out = capture(av);
+		if (out) {
+			char *save = NULL;
+			for (char *l = strtok_r(out, "\n", &save); l; l = strtok_r(NULL, "\n", &save))
+				sv_push(&lines, l);
+		}
+		free(out);
+		free(av);
+	}
+	sv_sort(&lines);
+	int newer = 0, unknown = 0;
+	for (size_t i = 0; i < lines.n; i++) {
+		char n[128], rv[128], up[128], how[16];
+		if (sscanf(lines.v[i], "%127s %127s %127s %15s", n, rv, up, how) != 4)
+			continue;
+		if (!strcmp(how, "update")) {
+			if (!newer++)
+				puts("New upstream releases (the recipe has to be updated first: pin + signature check):");
+			printf("  %-22s %s -> %s\n", n, rv, up);
+		} else if (!strcmp(how, "unknown")) {
+			unknown++;
+		}
+	}
+	if (!newer)
+		puts("No newer upstream releases found.");
+	if (unknown)
+		printf("(%d package(s) could not be checked: offline, or the recipe needs upstream=)\n", unknown);
+	sv_free(&lines);
+
+	if (!todo.n) {
+		puts("Everything installed matches its recipe.");
+		sv_free(&names); sv_free(&todo); sv_free(&from); sv_free(&to);
+		return 0;
+	}
+	puts("Recipes newer than what is installed:");
+	for (size_t i = 0; i < todo.n; i++)
+		printf("  %-22s %s -> %s\n", todo.v[i], from.v[i], to.v[i]);
+	if (check) {
+		sv_free(&names); sv_free(&todo); sv_free(&from); sv_free(&to);
+		return 0;
+	}
+
+	/* 3. how, and whether */
+	if (compile == ASK)
+		compile = yes || ask_yn("Compile the updates on this device?", true) ? YES : NO;
+	if (compile == YES && !*ROOT && !in_path("cc"))
+		die("compiling needs the build tools: smoke add build-tools");
+	char *q = xasprintf("Update %zu package(s)?", todo.n);
+	bool go = yes || ask_yn(q, false);
+	free(q);
+	if (!go) {
+		puts("  nothing changed");
+		sv_free(&names); sv_free(&todo); sv_free(&from); sv_free(&to);
+		return 0;
+	}
+
+	/* 4. dependencies first: a package waits while something it needs is still pending */
+	struct strv done = { 0 };
+	while (done.n < todo.n) {
+		size_t pick = todo.n, first = todo.n;
+		for (size_t i = 0; i < todo.n && pick == todo.n; i++) {
+			if (sv_has(&done, todo.v[i]))
+				continue;
+			if (first == todo.n)
+				first = i;
+			if (!update_waits(todo.v[i], &todo, &done))
+				pick = i;
+		}
+		if (pick == todo.n) {   /* a dependency cycle: go ahead with the first one */
+			warn("%s: dependency cycle, updating it anyway", todo.v[first]);
+			pick = first;
+		}
+		char *f = pkgfile_of(todo.v[pick], false);
+		if (compile == NO) {
+			prebuilt_from_mirror(f);
+			if (!is_file(f))
+				die("%s: no prebuilt package for %s on this system; update with -c to compile",
+				    todo.v[pick], to.v[pick]);
+		}
+		free(f);
+		install_pkg(todo.v[pick], "keep");
+		sv_push(&done, todo.v[pick]);
+	}
+	info("%zu package(s) updated", done.n);
+	sv_free(&done); sv_free(&names); sv_free(&todo); sv_free(&from); sv_free(&to);
+	return 0;
 }
 
 /* ---------------- hooks ---------------- */
@@ -316,7 +544,8 @@ int main(int argc, char **argv)
 	char **args = argv + 2;
 
 	settings();
-	if (geteuid() != 0 && !*ROOT && strcmp(cmd, "list") && strcmp(cmd, "why") && strcmp(cmd, "files") &&
+	bool check_only = !strcmp(cmd, "update") && n > 0 && (!strcmp(args[0], "--check") || !strcmp(args[0], "-n"));
+	if (geteuid() != 0 && !*ROOT && !check_only && strcmp(cmd, "list") && strcmp(cmd, "why") && strcmp(cmd, "files") &&
 	    strcmp(cmd, "audit") && strcmp(cmd, "installed") && *cmd)
 		die("run as root");
 
@@ -356,8 +585,29 @@ int main(int argc, char **argv)
 		autoremove();
 	} else if (!strcmp(cmd, "autoremove")) {
 		autoremove();
+	} else if (!strcmp(cmd, "update")) {
+		enum compile compile = ASK;
+		bool yes = false, check = false;
+		for (; n > 0 && args[0][0] == '-'; n--, args++) {
+			if (!strcmp(args[0], "-c") || !strcmp(args[0], "--compile"))
+				compile = YES;
+			else if (!strcmp(args[0], "-p") || !strcmp(args[0], "--prebuilt"))
+				compile = NO;
+			else if (!strcmp(args[0], "-y") || !strcmp(args[0], "--yes"))
+				yes = true;
+			else if (!strcmp(args[0], "-n") || !strcmp(args[0], "--check"))
+				check = true;
+			else
+				usage();
+		}
+		return update(n, args, check, compile, yes);
 	} else if (!strcmp(cmd, "list")) {
-		list_pkgs();
+		if (n == 1 && (!strcmp(args[0], "-a") || !strcmp(args[0], "--all")))
+			list_available();
+		else if (n == 0)
+			list_pkgs();
+		else
+			usage();
 	} else if (!strcmp(cmd, "why") && n == 1) {
 		why_pkg(args[0], "");
 	} else if (!strcmp(cmd, "files") && n == 1) {

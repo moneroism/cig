@@ -14,7 +14,7 @@ cd "$REPO/packages"
 
 # recipes without a downloaded source (cig's own, meta packages) have nothing to check
 mapfile -t pkgs < <(for p in *; do grep -q '^source="[^"]' "$p/recipe" 2>/dev/null && echo "$p"; done)
-out=$(printf '%s\n' "${pkgs[@]}" | xargs -P 8 -n 1 "$REPO/cigbuild" latest 2>/dev/null | sort)
+out=$("$REPO/cigbuild" latest "${pkgs[@]}" 2>/dev/null | sort)
 
 echo "| Package | Recipe | Upstream | |"
 echo "|---|---|---|---|"

@@ -40,7 +40,8 @@ case "$cmd" in
     fetch)   [ $# -gt 0 ] || usage; for p in "$@"; do load_recipe "$p"; fetch_sources; done ;;
     pin)     [ $# -gt 0 ] || usage; for p in "$@"; do pkg_pin "$p"; done ;;
     sig)     [ $# -gt 1 ] || usage; pkg_sig "$@" ;;
-    latest)  [ $# -gt 0 ] || usage; for p in "$@"; do pkg_latest "$p"; done ;;
+    latest)  [ $# -gt 0 ] || usage   # several packages: 8 at a time, lines in any order
+             if [ $# -eq 1 ]; then pkg_latest "$1"; else printf '%s\n' "$@" | xargs -P 8 -n 1 "$0" latest; fi ;;
     info)    [ $# -eq 1 ] || usage; pkg_info "$1" ;;
     list)    pkg_list ;;
     *)       usage ;;

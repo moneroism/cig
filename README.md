@@ -162,7 +162,10 @@ smoke add [-c|-p] [-y] <pkg>.. add and install: asks "compile on this device?" (
                                -p use a prebuilt package) and "install?" (-y no questions)
 smoke remove  <pkg>...         remove, then dependencies nothing needs anymore
 smoke autoremove               remove orphaned dependencies
-smoke list                     packages, reason, who needs them
+smoke update [-c|-p] [-y] [<pkg>...]
+                               rebuild packages whose recipe changed (dependencies first),
+                               report newer upstream releases; --check only reports
+smoke list [-a]                packages, reason, who needs them (-a: every available recipe)
 smoke why     <pkg>            why a package is installed
 smoke files   <pkg>            files of a package
 smoke mark    <reason> <pkg>   explicit | dependency | build
@@ -184,6 +187,11 @@ replaced by real files, changed configuration, orphaned dependencies, and a
 hand-edited inventory (smoke then refuses to write until it is resolved).
 `--quick` skips the package checksums. Paths in `/etc/smoke/audit.ignore` are
 skipped.
+
+Upstream releases: `cigbuild latest <pkg>...` finds each recipe's newest stable release
+(git tags, download pages, PyPI); `scripts/check-updates.sh` prints the table for all
+recipes. A recipe may limit it with `track=` (a version series, e.g. the kernel's LTS),
+`stable=` (a pattern) or point it elsewhere with `upstream=` / `upstream_version()`.
 
 ## Installing
 

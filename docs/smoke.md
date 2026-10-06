@@ -27,8 +27,11 @@ smoke add -c <name|url>...    compile on this device without asking    (done)
 smoke add -p <name|url>...    use a prebuilt package without asking    (done)
 smoke add -y ...              no questions (scripts, the installer)    (done)
 smoke remove <pkg>...         remove, then dependencies nothing needs   (done)
-smoke update [<pkg>...]       check upstream for new releases, update   (planned)
-smoke list                    packages, reason, who needs them          (done)
+smoke update [<pkg>...]       rebuild what its recipe changed, report   (done; applying
+                              new upstream releases (--check: report)    upstream releases on
+                                                                         the device: planned)
+smoke list [-a]               packages, reason, who needs them          (done)
+                              (-a: every available recipe)
 smoke why <pkg>               why a package is installed                (done)
 smoke files <pkg>             files of a package                        (done)
 smoke mark <reason> <pkg>     explicit | dependency | build             (done)
@@ -114,8 +117,14 @@ cig's own system packages are recipes in the cig repository.
 
 ## Updates
 
-- **Apps:** `smoke update` checks each app's upstream (release tags) and
-  updates through the same flow as `add`. (planned)
+- **Apps:** `smoke update` rebuilds every package whose recipe is newer than the
+  installed build (version or rel), dependencies first, through the same questions as
+  `add`, and lists newer upstream releases (`cigbuild latest`: git tags, download pages,
+  PyPI; `track=` keeps a recipe in its series). (done)
+- **New upstream releases on the device** (planned): the recipe is updated on the device
+  (new version, pinned SHA256, the signature checked with `gpgv` against the key seen
+  before; a different key is a loud warning, default *no*), then built like any update.
+  Until then, new releases arrive as updated recipes from cig.
 - **cig itself:** recipes and tools come from the cig repository
   (GitHub; Codeberg later), are compiled on the device and verified there.
   The repository's tags are signed by the project key.
