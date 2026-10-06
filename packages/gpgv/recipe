@@ -1,0 +1,24 @@
+# gpgv - checks OpenPGP signatures against a fixed keyring (from GnuPG; nothing else of it)
+# smoke and cigbuild verify upstream sources with it on the device. GnuPG is built with
+# everything optional off and only gpgv is installed: no agent, no key management.
+name=gpgv
+version=2.5.24
+upstream="https://gnupg.org/ftp/gcrypt/gnupg/"
+source="https://gnupg.org/ftp/gcrypt/gnupg/gnupg-$version.tar.bz2"
+signature="https://gnupg.org/ftp/gcrypt/gnupg/gnupg-$version.tar.bz2.sig"
+keys="6DAA6E64A76D2840571B4902528897B826403ADA"
+sha256="bf149d01a2b9fcc0e4589b8ae8697d3d5c557ea48ed95a3fa55dd3b1187e6039"
+wrksrc="gnupg-$version"
+depends="libgcrypt libgpg-error zlib"
+makedepends="libassuan libksba npth pkgconf"
+style=custom
+group="base"
+do_build() {
+    ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
+        --disable-gpgsm --disable-scdaemon --disable-dirmngr --disable-keyboxd --disable-tpm2d \
+        --disable-doc --disable-gpgtar --disable-wks-tools --disable-ldap --disable-sqlite \
+        --disable-ntbtls --disable-gnutls --disable-card-support --disable-ccid-driver \
+        --disable-nls --without-readline --disable-bzip2
+    make
+}
+do_install() { install -D -m 755 g10/gpgv "$DEST/usr/bin/gpgv"; }

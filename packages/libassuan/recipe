@@ -1,0 +1,10 @@
+# libassuan - GnuPG's IPC library (only to build GnuPG; gpgv does not use it)
+name=libassuan
+version=3.0.2
+source="https://gnupg.org/ftp/gcrypt/libassuan/libassuan-$version.tar.bz2"
+signature="https://gnupg.org/ftp/gcrypt/libassuan/libassuan-$version.tar.bz2.sig"
+keys="6DAA6E64A76D2840571B4902528897B826403ADA"
+sha256="d2931cdad266e633510f9970e1a2f346055e351bb19f9b78912475b8074c36f6"
+depends="libgpg-error"
+style=gnu
+configure_args="--disable-doc"
