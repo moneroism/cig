@@ -10,3 +10,5 @@ wrksrc="libisoburn-1.5.8"
 depends="libburn libisofs zlib"
 style=gnu
 configure_args="--disable-libreadline --disable-libedit --disable-xorrecord --disable-launch-frontend"
+# one job for install: parallel install-sh -d runs race on the same folders (BusyBox mkdir)
+do_install() { MAKEFLAGS= make -j1 DESTDIR="$DEST" install; }

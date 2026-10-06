@@ -6,3 +6,5 @@ signature="https://files.libburnia-project.org/releases/libburn-$version.tar.gz.
 keys="44BC9FD0D688EB007C4DD029E9CBDFC0ABC0A854"
 sha256="-"
 style=gnu
+# one job for install: parallel install-sh -d runs race on the same folders (BusyBox mkdir)
+do_install() { MAKEFLAGS= make -j1 DESTDIR="$DEST" install; }
