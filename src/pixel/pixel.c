@@ -183,8 +183,14 @@ static void rain_step(void)
 		}
 		if (head[x] < rows)
 			grid[head[x] * cols + x] = (struct cell){ g[rnd(16)], 7, 1 };   /* the bright head */
-		if (rnd(8) == 0 && head[x] > 0)   /* glyphs in the trail change now and then */
-			grid[(int)rnd((unsigned)head[x]) * cols + x].g = g[rnd(16)];
+		/* glyphs in the trail change now and then; the head keeps falling below the last
+		 * row until the trail has left the screen, so only rows on the screen are picked */
+		int below = head[x] < rows ? head[x] : rows;
+		if (rnd(8) == 0 && below > 0) {
+			struct cell *c = &grid[(int)rnd((unsigned)below) * cols + x];
+			if (c->g)
+				c->g = g[rnd(16)];
+		}
 		if (++head[x] - trail[x] > rows)
 			head[x] = -1;
 	}
