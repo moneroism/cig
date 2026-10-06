@@ -8,7 +8,9 @@ sha256="34f9ea6ff8636f2c9241153b9114eefa9e65674a45318ae1ef95bb5f31c53bb2"
 style=custom
 do_build() {
     cp "$PKGDIR/files/busybox.config" .config
-    make oldconfig < /dev/null
+    # options a new busybox version adds get upstream's default; they are listed in the
+    # build log (grep NEW) to be reviewed and then written into files/busybox.config
+    make oldconfig < <(yes "") | tee oldconfig.log | grep '(NEW)' || true
     make
 }
 do_install() {
