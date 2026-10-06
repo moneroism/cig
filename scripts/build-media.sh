@@ -138,7 +138,7 @@ done
 # the generic install kernel (root=PARTLABEL=cig-root): the all-drivers one from the media
 # build if there is one, otherwise the dev system's test kernel
 for g in "$MEDIA_VAR/generic" "$DEV_VAR/generic"; do
-    [ -d "$g/pkgs" ] || continue
+    ls "$g"/pkgs/linux-[0-9]*.tar.gz >/dev/null 2>&1 || continue   # a folder without a kernel does not count
     mkdir -p "$STAGE"/var/cig/generic/{sources,build,db,logs}
     link "$g/pkgs" "$STAGE/var/cig/generic/"
     break
