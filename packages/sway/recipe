@@ -1,6 +1,7 @@
 # sway - tiling Wayland compositor, i3-compatible (no tray: it needs D-Bus)
 name=sway
 version=1.11
+rel=2
 source="https://github.com/swaywm/sway/releases/download/$version/sway-$version.tar.gz"
 signature="https://github.com/swaywm/sway/releases/download/$version/sway-$version.tar.gz.sig"
 sha256="0e37a55b7c3379230e97e1ad982542b75016a0c7d6676198604e557f9b373dae"
@@ -10,3 +11,15 @@ style=meson
 group="desktop"
 meson_args="-Dwerror=false -Dman-pages=disabled -Dtray=disabled -Dgdk-pixbuf=disabled -Ddefault-wallpaper=false
     -Dfish-completions=false -Dzsh-completions=false -Dbash-completions=false"
+config_files="etc/sway/config etc/sway/config.d/00-local.conf"
+
+# the default config without what is not shipped (the wallpaper: -Ddefault-wallpaper=false), and
+# a config.d with a file in it, so its include finds something
+do_install() {
+    style_install
+    sed -i 's|^output \* bg /usr/share/backgrounds/.*|# (no default wallpaper; set one with "output * bg <file> fill" and swaybg)|' \
+        "$DEST/etc/sway/config"
+    mkdir -p "$DEST/etc/sway/config.d"
+    printf '%s\n' '# Files in /etc/sway/config.d are included by /etc/sway/config.' \
+        '# Put local additions here (or in ~/.config/sway/config).' > "$DEST/etc/sway/config.d/00-local.conf"
+}
