@@ -23,6 +23,7 @@ source="https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-$_kver.tar.xz
 signature="https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-$_kver.tar.sign
     https://github.com/anthraxx/linux-hardened/releases/download/$_tag/linux-hardened-$_tag.patch.sig
     -"
+keys="647F28654894E3BD457199BE38DBBDC86092693E E240B57E2C4630BA768E2F26FC1B547C8D8172C8"
 sha256="9df30b02dd8102bbd0be52556288ef6889ddbe7f1ddb96fbf847d0becf3eacac 78fe6fe4d5e3612206e3753e8aab74fd8080137ff5beb02f9d4491bd99624069 39e09418cd8e0142ac49f1ffe21256e9cd94363bb0a6b05bce312e345a5d51cd"
 wrksrc="linux-$_kver"
 makedepends="elfutils openssl perl bison flex gmp mpfr mpc"

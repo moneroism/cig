@@ -3,6 +3,7 @@ name=fcft
 version=3.3.3
 source="fcft-$version.tar.gz::https://codeberg.org/dnkl/fcft/archive/$version.tar.gz"
 signature="tag=https://codeberg.org/dnkl/fcft.git#$version"
+keys="B19964FBBA09664CC81027ED5BBD4992C116573F"
 sha256="b0c0f4a599f43723736c8565b8b84337c4195077f07f1bb8bb3252bb13a2306a"
 depends="fontconfig freetype pixman"
 makedepends="tllist meson pkgconf"

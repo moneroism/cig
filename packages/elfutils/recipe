@@ -7,6 +7,7 @@ _aports=8f13294206888f3dd44ed74a8eb3dd9934499e81
 source="https://sourceware.org/elfutils/ftp/$version/elfutils-$version.tar.bz2
     musl-macros.patch::https://gitlab.alpinelinux.org/alpine/aports/-/raw/$_aports/main/elfutils/musl-macros.patch"
 signature="https://sourceware.org/elfutils/ftp/$version/elfutils-$version.tar.bz2.sig -"
+keys="6C2B631563B8D330578D3CB474FD3FA2779E7073"
 sha256="fd5cc6b77ad6773cac93cb3f415f9318ac3b3455eecf801f6b4a742c4f6c7209 8e3924f08d4af34a45d0059224ea42b7afdc43837d053243e855cdaf295dde67"
 wrksrc="elfutils-$version"
 depends="zlib musl-fts musl-obstack"

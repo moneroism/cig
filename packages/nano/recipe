@@ -3,6 +3,7 @@ name=nano
 version=9.2
 source="https://www.nano-editor.org/dist/v9/nano-$version.tar.xz"
 signature="https://www.nano-editor.org/dist/v9/nano-$version.tar.xz.asc"
+keys="168E6F4297BFD7A79AFD4496514BBE2EB8E1961F"
 sha256="05ecb99247b782e8a5b3a25ed4101dd034b0236902f7449bc9795b717642f7e9"
 depends="ncurses"
 makedepends="pkgconf"

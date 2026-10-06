@@ -3,6 +3,7 @@ name=strace
 version=7.2
 source="https://github.com/strace/strace/releases/download/v$version/strace-$version.tar.xz"
 signature="https://github.com/strace/strace/releases/download/v$version/strace-$version.tar.xz.asc"
+keys="7BECFE3AF7B280BB52FF77F104BA4521C996DDE1"
 sha256="4bde6246926890dcee824f6e6ac42a06752f47d77e5097d86e3c0d6d4b709fe5"
 style=gnu
 group="development"

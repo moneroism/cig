@@ -2,6 +2,7 @@ name=libdisplay-info
 version=0.4.0
 source="https://gitlab.freedesktop.org/emersion/libdisplay-info/-/releases/$version/downloads/libdisplay-info-$version.tar.xz"
 signature="tag=https://gitlab.freedesktop.org/emersion/libdisplay-info.git#$version"
+keys="34FF9526CFEF0E97A340E2E40FDE7BE0E88F5E48"
 sha256="43b180baa143e2035654759d84e2b2f5ee77d5fe817c423838c7fe59c0d68459"
 makedepends="hwdata meson python pkgconf"
 style=meson

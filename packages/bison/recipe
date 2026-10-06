@@ -3,6 +3,7 @@ name=bison
 version=3.8.2
 source="https://ftp.gnu.org/gnu/bison/bison-$version.tar.xz"
 signature="https://ftp.gnu.org/gnu/bison/bison-$version.tar.xz.sig"
+keys="7DF84374B1EE1F9764BBE25D0DDCAA3278D5264E"
 sha256="9bba0214ccf7f1079c5d59210045227bcf619519840ebfa80cd3849cff5a5bf2"
 style=gnu
 configure_args="--disable-nls"

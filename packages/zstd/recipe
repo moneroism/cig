@@ -3,6 +3,7 @@ name=zstd
 version=1.5.7
 source="https://github.com/facebook/zstd/releases/download/v$version/zstd-$version.tar.gz"
 signature="https://github.com/facebook/zstd/releases/download/v$version/zstd-$version.tar.gz.sig"
+keys="4EF4AC63455FC9F4545D9B7DEF8FE99528B52FFD"
 sha256="eb33e51f49a15e023950cd7825ca74a4a2b43db8354825ac24fc1b7ee09e6fa3"
 depends="zlib xz"
 style=custom

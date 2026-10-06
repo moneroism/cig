@@ -4,6 +4,7 @@ version=710
 source="https://www.greenwoodsoftware.com/less/less-$version.tar.gz"
 upstream="https://www.greenwoodsoftware.com/less/download.html"
 signature="https://www.greenwoodsoftware.com/less/less-$version.sig"
+keys="AE27252BD6846E7D6EAE1DD6F153A7C833235259"
 sha256="d1008fb78dcae1323ddab664bcb352a61f022b1b131bd8018548e021d975ec7a"
 depends="ncurses"
 style=gnu

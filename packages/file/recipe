@@ -3,6 +3,7 @@ name=file
 version=5.48
 source="https://astron.com/pub/file/file-$version.tar.gz"
 signature="https://astron.com/pub/file/file-$version.tar.gz.asc"
+keys="BE04995BA8F90ED0C0C176C471112AB16CB33B3A"
 sha256="ed14656883b23a364b4057c05595d93252da9bc473d30106519519d0da141283"
 depends="zlib"
 style=gnu

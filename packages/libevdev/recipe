@@ -2,6 +2,7 @@ name=libevdev
 version=1.13.7
 source="https://www.freedesktop.org/software/libevdev/libevdev-$version.tar.xz"
 signature="https://www.freedesktop.org/software/libevdev/libevdev-$version.tar.xz.sig"
+keys="3C2C43D9447D5938EF4551EBE23B7E70B467F0BF"
 sha256="0caf824971108f15bb2ad356433bae198d7d3bf1e82d43f63626e069e060bfa6"
 makedepends="meson python"
 style=meson

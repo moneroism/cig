@@ -3,6 +3,7 @@ version=2.9.0
 _tag="R_${version//./_}"
 source="https://github.com/libexpat/libexpat/releases/download/$_tag/expat-$version.tar.xz"
 signature="https://github.com/libexpat/libexpat/releases/download/R_2_9_0/expat-$version.tar.xz.asc"
+keys="3176EF7DB2367F1FCA4F306B1F9B0E909AF37285"
 sha256="1e6371862cc31999b368c3b89b49994f0677e1bab5f1b2b85ae3741f5d803051"
 style=gnu
 configure_args="--without-docbook --without-examples --without-tests"

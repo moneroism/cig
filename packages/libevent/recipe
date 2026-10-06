@@ -3,6 +3,7 @@ name=libevent
 version=2.1.13
 source="https://github.com/libevent/libevent/releases/download/release-$version-stable/libevent-$version-stable.tar.gz"
 signature="https://github.com/libevent/libevent/releases/download/release-$version-stable/libevent-$version-stable.tar.gz.asc"
+keys="2133BC600AB133E1D826D173FE43009C4607B1FB"
 sha256="f7e9383b8c0baa81b687e5b5eecc01beefaf1b19b64151d95ed61647fe7a315c"
 wrksrc="libevent-$version-stable"
 style=gnu

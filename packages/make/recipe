@@ -3,6 +3,7 @@ name=make
 version=4.4.1
 source="https://ftp.gnu.org/gnu/make/make-$version.tar.gz"
 signature="https://ftp.gnu.org/gnu/make/make-$version.tar.gz.sig"
+keys="6D4EEB02AD834703510B117680CB727A20C79BB2"
 sha256="dd16fb1d67bfab79a72f5e8390735c49e3e8e70b4945a15ab1f81ddb78658fb3"
 style=custom
 do_build() {

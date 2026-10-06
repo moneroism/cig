@@ -3,6 +3,7 @@ name=fribidi
 version=1.0.17
 source="fribidi-$version.tar.gz::https://github.com/fribidi/fribidi/archive/refs/tags/v$version.tar.gz"
 signature="tag=https://github.com/fribidi/fribidi.git#v$version"
+keys="0AD041B27CA166DDA1FE3BAEA7B3409C0CA4ED14"
 sha256="ab015bb040b2ff4bf815813c21948947dad1e0186473359e99a8881c79878d5d"
 makedepends="meson pkgconf"
 style=meson

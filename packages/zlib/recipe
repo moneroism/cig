@@ -3,6 +3,7 @@ name=zlib
 version=1.3.2
 source="https://github.com/madler/zlib/releases/download/v$version/zlib-$version.tar.gz"
 signature="https://github.com/madler/zlib/releases/download/v$version/zlib-$version.tar.gz.asc"
+keys="5ED46A6721D365587791E2AA783FCD8E58BCAFBA"
 sha256="bb329a0a2cd0274d05519d61c667c062e06990d72e125ee2dfa8de64f0119d16"
 style=custom
 

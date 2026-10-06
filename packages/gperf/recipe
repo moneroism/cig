@@ -2,5 +2,6 @@ name=gperf
 version=3.3
 source="https://ftp.gnu.org/gnu/gperf/gperf-$version.tar.gz"
 signature="https://ftp.gnu.org/gnu/gperf/gperf-$version.tar.gz.sig"
+keys="E0FFBD975397F77A32AB76ECB6301D9E1BBEAC08"
 sha256="fd87e0aba7e43ae054837afd6cd4db03a3f2693deb3619085e6ed9d8d9604ad8"
 style=gnu

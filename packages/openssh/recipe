@@ -3,6 +3,7 @@ name=openssh
 version=10.5p1
 source="https://cdn.openbsd.org/pub/OpenBSD/OpenSSH/portable/openssh-$version.tar.gz"
 signature="https://cdn.openbsd.org/pub/OpenBSD/OpenSSH/portable/openssh-$version.tar.gz.asc"
+keys="7168B983815A5EEF59A4ADFD2A3F414E736060BA"
 sha256="d44d28a839ea9daf969cc69150fde59910b2b39361dad81a3bd6cbd19218db11"
 depends="openssl zlib"
 style=gnu

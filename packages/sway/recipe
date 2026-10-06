@@ -3,6 +3,7 @@ name=sway
 version=1.12
 source="https://github.com/swaywm/sway/releases/download/$version/sway-$version.tar.gz"
 signature="https://github.com/swaywm/sway/releases/download/$version/sway-$version.tar.gz.sig"
+keys="34FF9526CFEF0E97A340E2E40FDE7BE0E88F5E48"
 sha256="a7b1becc217433c11c6284d36bcea0687b87b77b0ed26a384565292ec321f2b1"
 depends="wlroots json-c pcre2 pango cairo libinput libevdev wayland libxkbcommon seatd swaybg"
 makedepends="meson pkgconf wayland-protocols"

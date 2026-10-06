@@ -3,6 +3,7 @@ name=xz
 version=5.8.4
 source="https://github.com/tukaani-project/xz/releases/download/v$version/xz-$version.tar.gz"
 signature="https://github.com/tukaani-project/xz/releases/download/v$version/xz-$version.tar.gz.sig"
+keys="3690C240CE51B4670D30AD1C38EE757D69184620"
 sha256="0014c7886930454fe8bd4228665b51af55eeae560ea135c9c4cd33f55b2591d9"
 style=gnu
 configure_args="--disable-doc --disable-nls"
