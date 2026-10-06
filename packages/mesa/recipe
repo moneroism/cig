@@ -9,7 +9,7 @@ sha256="bce5f7fbebb934373b86c999a064d52fb5065878dc57f287f95346648ec832e9"
 depends="libdrm expat zlib wayland libudev-zero elfutils vulkan-loader"
 makedepends="meson pkgconf python-mako python-packaging python-pyyaml wayland-protocols bison flex glslang"
 style=meson
-group="desktop"
+group="graphics"
 # Wayland only, no LLVM, no X11; only what the drivers above need
 meson_args="-Dplatforms=wayland -Dgallium-drivers=zink -Dvulkan-drivers=amd -Dllvm=disabled
     -Dglx=disabled -Degl=enabled -Dgbm=enabled -Dgles1=disabled -Dgles2=enabled -Dopengl=true

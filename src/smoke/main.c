@@ -21,7 +21,8 @@ static const char usage_text[] =
 	"  smoke update [-c|-p] [-y] [<pkg>...]\n"
 	"                                 rebuild what its recipe changed, report new upstream releases\n"
 	"  smoke update --check [<pkg>..] only report\n"
-	"  smoke list [-a]                installed packages, reason, who needs them (-a: all available)\n"
+	"  smoke list [-a [<word>]]       installed packages, reason, who needs them\n"
+	"                                 (-a: all available by category; a word searches them)\n"
 	"  smoke why     <pkg>            why a package is installed\n"
 	"  smoke files   <pkg>            files of a package\n"
 	"  smoke mark    <reason> <pkg>   set reason: explicit | dependency | build\n"
@@ -67,11 +68,29 @@ static char *recipe_var(const char *text, const char *key)
 	return xstrdup("");
 }
 
-/* every recipe: name, group, the description from its first line, installed or not */
-static void list_available(void)
+/* the installer's category order; recipes without a group are libraries and helpers */
+static const char *const categories[] = { "desktop", "wayland", "terminal", "fonts", "graphics", "editors",
+                                          "tools", "development", "network", "sound", "build", "base", "" };
+
+/* case-insensitive substring */
+static bool has_word(const char *s, const char *w)
+{
+	size_t n = strlen(w);
+	for (; *s; s++) {
+		size_t i = 0;
+		while (i < n && s[i] && (s[i] | 0x20) == (w[i] | 0x20))
+			i++;
+		if (i == n)
+			return true;
+	}
+	return !n;
+}
+
+/* every recipe under its category: name, description, installed or not; word filters */
+static void list_available(const char *word)
 {
 	char *dir = xasprintf("%s/packages", CIG_REPO);
-	struct strv names = { 0 };
+	struct strv names = { 0 }, groups = { 0 }, descs = { 0 };
 	DIR *d = opendir(dir);
 	struct dirent *de;
 	if (!d)
@@ -81,29 +100,47 @@ static void list_available(void)
 			sv_push(&names, de->d_name);
 	closedir(d);
 	sv_sort(&names);
-	printf("  %-22s %-12s %s\n", "NAME", "GROUP", "DESCRIPTION");
 	for (size_t i = 0; i < names.n; i++) {
 		char *p = xasprintf("%s/%s/recipe", dir, names.v[i]), *text = read_file(p);
-		if (text) {
-			char *group = recipe_var(text, "group"), *desc = xstrdup("");
-			if (starts_with(text, "# ")) {   /* "# name - what it is" */
-				const char *dash = strstr(text, " - ");
-				size_t n = strcspn(text, "\n");
-				if (dash && (size_t)(dash - text) < n) {
-					free(desc);
-					desc = xasprintf("%.*s", (int)(n - (size_t)(dash + 3 - text)), dash + 3);
-				}
+		char *group = text ? recipe_var(text, "group") : xstrdup(""), *desc = xstrdup("");
+		if (text && starts_with(text, "# ")) {   /* "# name - what it is" */
+			const char *dash = strstr(text, " - ");
+			size_t n = strcspn(text, "\n");
+			if (dash && (size_t)(dash - text) < n) {
+				free(desc);
+				desc = xasprintf("%.*s", (int)(n - (size_t)(dash + 3 - text)), dash + 3);
 			}
-			printf("%c %-22s %-12s %s\n", inv_get(names.v[i]) ? '*' : ' ', names.v[i],
-			       *group ? group : "-", desc);
-			free(group);
-			free(desc);
 		}
+		sv_push(&groups, group);
+		sv_push(&descs, desc);
+		free(group);
+		free(desc);
 		free(text);
 		free(p);
 	}
+	size_t ncat = sizeof(categories) / sizeof(*categories);
+	for (size_t c = 0; c <= ncat; c++) {   /* the last round: categories not in the list */
+		bool head = false;
+		for (size_t i = 0; i < names.n; i++) {
+			bool known = false;
+			for (size_t j = 0; j < ncat; j++)
+				known |= !strcmp(groups.v[i], categories[j]);
+			if (c < ncat ? strcmp(groups.v[i], categories[c]) : known)
+				continue;
+			if (!has_word(names.v[i], word) && !has_word(descs.v[i], word) && !has_word(groups.v[i], word))
+				continue;
+			if (!head) {
+				printf("%s%s\n", c ? "\n" : "", c < ncat && !*categories[c] ? "libraries and helpers" :
+				       c < ncat ? categories[c] : groups.v[i]);
+				head = true;
+			}
+			printf(" %c %-22s %s\n", inv_get(names.v[i]) ? '*' : ' ', names.v[i], descs.v[i]);
+		}
+	}
 	puts("\n* installed");
 	sv_free(&names);
+	sv_free(&groups);
+	sv_free(&descs);
 	free(dir);
 }
 
@@ -602,8 +639,8 @@ int main(int argc, char **argv)
 		}
 		return update(n, args, check, compile, yes);
 	} else if (!strcmp(cmd, "list")) {
-		if (n == 1 && (!strcmp(args[0], "-a") || !strcmp(args[0], "--all")))
-			list_available();
+		if (n >= 1 && n <= 2 && (!strcmp(args[0], "-a") || !strcmp(args[0], "--all")))
+			list_available(n == 2 ? args[1] : "");
 		else if (n == 0)
 			list_pkgs();
 		else

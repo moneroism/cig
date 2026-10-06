@@ -24,6 +24,11 @@ int ui_menu(const char *title, const char *text, const char *const *items,
 /* items with [x]/[ ]: Space toggles, Enter is done. */
 void ui_checklist(const char *title, const char *text, const char *const *items, bool *on, int n);
 
+/* a catalog: items under category headings, [x]/[ ] toggled with Space, "/" searches
+ * (name, description and category; Enter keeps the filter, Esc clears it); Enter is done. */
+void ui_catalog(const char *title, const char *text, const char *const *groups,
+                const char *const *names, const char *const *descs, bool *on, int n);
+
 /* a line of text; hidden for passwords. false on Esc (buf unchanged). */
 bool ui_input(const char *title, const char *prompt, char *buf, size_t n, bool hidden);
 

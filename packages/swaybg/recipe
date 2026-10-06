@@ -7,5 +7,5 @@ sha256="a6652a0060a0bea3c3318d9d03b6dddac34f6aeca01b883eef9e58281f5202a1"
 depends="cairo wayland"
 makedepends="meson pkgconf wayland-protocols"
 style=meson
-group="desktop"
+group="wayland"
 meson_args="-Dgdk-pixbuf=disabled -Dman-pages=disabled"

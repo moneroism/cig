@@ -6,7 +6,7 @@ signature="tag=https://github.com/vim/vim.git#v$version"
 sha256="bbcb6489aa995d128a8bf2a275fb5bc3f805ed36f52cb4d8347af425133cb3c4"
 depends="ncurses"
 style=gnu
-group="tools"
+group="editors"
 # terminal editor only: no GUI, X11, sound, network protocols or translations
 configure_args="--with-features=normal --enable-gui=no --without-x --disable-nls --disable-canberra
     --disable-libsodium --disable-netbeans --disable-channel --disable-gpm --disable-sysmouse

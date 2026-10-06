@@ -1,4 +1,4 @@
-# foot - terminal. Upstream defaults; only login-shell is set (functional).
+# foot - fast, small Wayland terminal (upstream defaults; only login-shell is set)
 name=foot
 version=1.28.0
 source="foot-$version.tar.gz::https://codeberg.org/dnkl/foot/archive/$version.tar.gz"
@@ -14,5 +14,5 @@ do_install() {
     mkdir -p "$DEST/etc/xdg/foot"
     printf 'login-shell=yes\n' > "$DEST/etc/xdg/foot/foot.ini"
 }
-group="desktop"
+group="terminal"
 default=on

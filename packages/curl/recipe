@@ -1,4 +1,4 @@
-# curl - downloads. HTTP(S) and FILE only.
+# curl - transfer data from URLs (HTTP(S) and FILE only)
 name=curl
 version=8.22.0
 source="https://curl.se/download/curl-$version.tar.xz"

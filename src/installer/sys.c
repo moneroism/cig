@@ -214,11 +214,13 @@ static void recipe_value(const char *text, const char *key, char *out, size_t n)
 
 static int group_order(const char *g)
 {
-	static const char *order[] = { "desktop", "network", "sound", "tools", "build" };
-	for (int i = 0; i < 5; i++)
+	static const char *order[] = { "desktop", "wayland", "terminal", "fonts", "graphics", "editors",
+	                               "tools", "development", "network", "sound", "build" };
+	int n = (int)(sizeof(order) / sizeof(*order));
+	for (int i = 0; i < n; i++)
 		if (!strcmp(g, order[i]))
 			return i;
-	return 5;
+	return n;   /* categories not listed here come last */
 }
 
 static int cmp_comp(const void *a, const void *b)
@@ -261,9 +263,11 @@ int load_components(const char *share, struct comp **out, char **base)
 			snprintf(c[n].name, sizeof(c[n].name), "%.63s", e->d_name);   /* recipe names are short */
 			snprintf(c[n].group, sizeof(c[n].group), "%s", g);
 			c[n].on = !strcmp(def, "on");
-			/* description: the first comment line of the recipe */
+			/* description: the first comment line of the recipe, "# name - what it is" */
 			if (text[0] == '#') {
-				const char *s = text + 1 + strspn(text + 1, " ");
+				const char *s = text + 1 + strspn(text + 1, " "), *dash = strstr(s, " - ");
+				if (dash && dash < s + strcspn(s, "\n"))
+					s = dash + 3;
 				snprintf(c[n].desc, sizeof(c[n].desc), "%.*s", (int)strcspn(s, "\n"), s);
 			}
 			n++;

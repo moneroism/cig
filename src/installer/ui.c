@@ -194,6 +194,142 @@ void ui_checklist(const char *title, const char *text, const char *const *items,
 	}
 }
 
+/* case-insensitive: does s contain the (lowercase) needle? */
+static bool has_text(const char *s, const char *needle)
+{
+	size_t nl = strlen(needle);
+	for (; *s; s++) {
+		size_t i = 0;
+		while (i < nl && s[i] && (s[i] | 0x20) == needle[i])
+			i++;
+		if (i == nl)
+			return true;
+	}
+	return !nl;
+}
+
+void ui_catalog(const char *title, const char *text, const char *const *groups,
+                const char *const *names, const char *const *descs, bool *on, int n)
+{
+	char filter[48] = "";
+	bool typing = false;
+	int sel = 0, top = 0, wname = 0;
+	int *rows = malloc(((size_t)n * 2 + 1) * sizeof(int));   /* >= 0 an item, < 0 a heading */
+	if (!rows)
+		exit(1);
+	for (int i = 0; i < n; i++)
+		if ((int)strlen(names[i]) > wname)
+			wname = (int)strlen(names[i]);
+	for (;;) {
+		/* the visible rows: matching items, a heading wherever the category changes */
+		int nr = 0, pos = -1, k;
+		const char *last = NULL;
+		for (int i = 0; i < n; i++) {
+			if (!has_text(names[i], filter) && !has_text(descs[i], filter) && !has_text(groups[i], filter))
+				continue;
+			if (!last || strcmp(last, groups[i]))
+				rows[nr++] = -1 - i;
+			last = groups[i];
+			if (i == sel)
+				pos = nr;
+			rows[nr++] = i;
+		}
+		if (pos < 0)   /* the selection was filtered out: the first match */
+			for (int r = 0; r < nr && pos < 0; r++)
+				if (rows[r] >= 0) {
+					pos = r;
+					sel = rows[r];
+				}
+
+		int y = frame(title), height;
+		if (text)
+			y = text_block(y, text) + 1;
+		if (typing || *filter) {
+			mvprintw(y, 2, "Search: %s%s", filter, typing ? "_" : "");
+			y += 2;
+		}
+		height = LINES - 3 - y;
+		if (height < 1)
+			height = 1;
+		if (pos >= 0 && pos - 1 < top)   /* keep the item's heading in view when possible */
+			top = pos > 0 && rows[pos - 1] < 0 ? pos - 1 : pos;
+		if (pos >= top + height)
+			top = pos - height + 1;
+		if (nr == 0)
+			mvprintw(y, 2, "(nothing matches \"%s\")", filter);
+		for (int r = top; r < nr && r < top + height; r++) {
+			if (rows[r] < 0) {
+				attron(COLOR_PAIR(2) | A_BOLD);
+				mvprintw(y + r - top, 2, "%s", groups[-1 - rows[r]]);
+				attroff(COLOR_PAIR(2) | A_BOLD);
+				continue;
+			}
+			int i = rows[r], w = COLS - wname - 14;
+			if (r == pos)
+				attron(COLOR_PAIR(1) | A_BOLD);
+			mvprintw(y + r - top, 3, " [%c] %-*s  %-*.*s", on[i] ? 'x' : ' ', wname, names[i],
+			         w > 0 ? w : 0, w > 0 ? w : 0, descs[i]);
+			if (r == pos)
+				attroff(COLOR_PAIR(1) | A_BOLD);
+		}
+		footer(typing ? "Type to search   Enter keep   Esc clear"
+		              : "Up/Down move   Space toggle   / search   Enter done");
+		refresh();
+		k = key();
+		if (typing) {
+			size_t len = strlen(filter);
+			if (k == '\n') {
+				typing = false;
+			} else if (k == KEY_ESC) {
+				typing = false;
+				filter[0] = '\0';
+			} else if ((k == KEY_BACKSPACE || k == 127 || k == 8) && len) {
+				filter[len - 1] = '\0';
+			} else if (k >= 32 && k < 127 && len + 1 < sizeof(filter)) {
+				filter[len] = (char)(k >= 'A' && k <= 'Z' ? k + 32 : k);
+				filter[len + 1] = '\0';
+			}
+			trace_screen(k);
+			continue;
+		}
+		int step = 0;
+		switch (k) {
+		case KEY_UP: case 'k': step = -1; break;
+		case KEY_DOWN: case 'j': step = 1; break;
+		case KEY_PPAGE: step = -height; break;
+		case KEY_NPAGE: step = height; break;
+		case ' ':
+			if (pos >= 0)
+				on[sel] = !on[sel];
+			break;
+		case '/':
+			typing = true;
+			break;
+		case KEY_ESC:
+			if (*filter) {
+				filter[0] = '\0';
+				break;
+			}
+			/* fall through */
+		case '\n':
+			trace_screen(k);
+			free(rows);
+			return;
+		}
+		/* move over items, skipping headings; stop at the ends */
+		for (int r = pos, left = step < 0 ? -step : step; step && pos >= 0 && left > 0; ) {
+			r += step < 0 ? -1 : 1;
+			if (r < 0 || r >= nr)
+				break;
+			if (rows[r] >= 0) {
+				sel = rows[r];
+				left--;
+			}
+		}
+		trace_screen(k);
+	}
+}
+
 bool ui_input(const char *title, const char *prompt, char *buf, size_t n, bool hidden)
 {
 	char *edit = calloc(n, 1);

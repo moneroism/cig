@@ -1,4 +1,4 @@
-# dwl - dwm for Wayland. Upstream config, unmodified.
+# dwl - dwm for Wayland: a small tiling compositor (upstream config, unmodified)
 # The tarball is unsigned; this checksum matches an independent source
 # (Arch AUR package for 0.9).
 name=dwl

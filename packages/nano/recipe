@@ -7,5 +7,5 @@ sha256="05ecb99247b782e8a5b3a25ed4101dd034b0236902f7449bc9795b717642f7e9"
 depends="ncurses"
 makedepends="pkgconf"
 style=gnu
-group="tools"
+group="editors"
 configure_args="--disable-nls --disable-libmagic"

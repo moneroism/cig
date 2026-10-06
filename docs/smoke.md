@@ -30,8 +30,8 @@ smoke remove <pkg>...         remove, then dependencies nothing needs   (done)
 smoke update [<pkg>...]       rebuild what its recipe changed, report   (done; applying
                               new upstream releases (--check: report)    upstream releases on
                                                                          the device: planned)
-smoke list [-a]               packages, reason, who needs them          (done)
-                              (-a: every available recipe)
+smoke list [-a [<word>]]      packages, reason, who needs them          (done)
+                              (-a: every recipe by category; <word> searches)
 smoke why <pkg>               why a package is installed                (done)
 smoke files <pkg>             files of a package                        (done)
 smoke mark <reason> <pkg>     explicit | dependency | build             (done)

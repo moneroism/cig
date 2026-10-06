@@ -1,4 +1,4 @@
-# wpa_supplicant - WiFi. WPA2/WPA3-Personal only: no WPS, no D-Bus, no EAP.
+# wpa_supplicant - WiFi (WPA2/WPA3-Personal only: no WPS, no D-Bus, no EAP)
 name=wpa_supplicant
 version=2.12
 source="https://w1.fi/releases/wpa_supplicant-$version.tar.gz"

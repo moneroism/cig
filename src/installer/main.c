@@ -93,19 +93,23 @@ static void identity_screen(struct state *s)
 
 static void components_screen(struct state *s)
 {
-	const char **items = xmalloc((size_t)(s->ncomp ? s->ncomp : 1) * sizeof(char *));
-	bool *on = xmalloc((size_t)(s->ncomp ? s->ncomp : 1) * sizeof(bool));
+	size_t m = (size_t)(s->ncomp ? s->ncomp : 1);
+	const char **groups = xmalloc(m * sizeof(char *)), **names = xmalloc(m * sizeof(char *));
+	const char **descs = xmalloc(m * sizeof(char *));
+	bool *on = xmalloc(m * sizeof(bool));
 	for (int i = 0; i < s->ncomp; i++) {
-		items[i] = xasprintf("%-9s %s", s->comps[i].group, *s->comps[i].desc ? s->comps[i].desc : s->comps[i].name);
+		groups[i] = s->comps[i].group;
+		names[i] = s->comps[i].name;
+		descs[i] = s->comps[i].desc;
 		on[i] = s->comps[i].on;
 	}
-	char *text = xasprintf("Always installed: %s\nNot available yet: ALSA sound, PipeWire, Bluetooth, wmenu", s->base);
-	ui_checklist("Components", text, items, on, s->ncomp);
-	for (int i = 0; i < s->ncomp; i++) {
+	char *text = xasprintf("Always installed: %s\nNot available yet: PipeWire, Bluetooth", s->base);
+	ui_catalog("Components", text, groups, names, descs, on, s->ncomp);
+	for (int i = 0; i < s->ncomp; i++)
 		s->comps[i].on = on[i];
-		free((char *)items[i]);
-	}
-	free(items);
+	free(groups);
+	free(names);
+	free(descs);
 	free(on);
 	free(text);
 }
@@ -296,6 +300,10 @@ static void settings(struct state *s)
 	}
 	s->cigbuild = xasprintf("%s/cigbuild", s->share);
 	s->smoke = xasprintf("%s/smoke", s->share);
+	if (access(s->smoke, X_OK)) {   /* in the repository smoke is built in src/smoke */
+		free(s->smoke);
+		s->smoke = xasprintf("%s/src/smoke/smoke", s->share);
+	}
 	char *vp = xasprintf("%s/VERSION", s->share);
 	s->version = read_text(vp);
 	free(vp);
