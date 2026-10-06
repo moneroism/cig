@@ -6,6 +6,8 @@
 #   CIG_KERNEL_EXTRA_MODULES="a b"   always include these modules (local profile)
 #   CIG_KERNEL_CMDLINE_EXTRA="..."   appended to the built-in command line
 #   CIG_ROOT=PARTLABEL=cig-root      root device (default)
+#   CIG_KERNEL_INITRAMFS=<folder>    the install medium only: this initramfs built in, with
+#                                    ISO 9660 and CD drivers (files/media.config)
 #
 # The module signing key is generated during the build and deleted after.
 name=linux
@@ -40,6 +42,11 @@ _cmdline() {
 _cig_settings() {
     scripts/kconfig/merge_config.sh -m .config "$PKGDIR/files/cig.config"
     scripts/config --set-str CMDLINE "$(_cmdline | sed 's/ *$//')"
+    if [ -n "${CIG_KERNEL_INITRAMFS:-}" ]; then   # the install medium (scripts/build-initramfs.sh)
+        [ -x "$CIG_KERNEL_INITRAMFS/init" ] || { echo "no initramfs in $CIG_KERNEL_INITRAMFS" >&2; return 1; }
+        scripts/kconfig/merge_config.sh -m .config "$PKGDIR/files/media.config"
+        scripts/config --set-str INITRAMFS_SOURCE "$CIG_KERNEL_INITRAMFS"
+    fi
     make olddefconfig
 }
 

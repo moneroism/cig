@@ -6,16 +6,19 @@
 
 set -euo pipefail
 
-# CIG_IMG:    disk to boot (default ~/cig.img)
+# CIG_IMG:    disk to boot (default ~/cig.img; none when CIG_CDROM is set)
+# CIG_CDROM:  an ISO in a CD drive, booted first (the install medium)
 # CIG_TARGET: optional second, empty disk, e.g. to test the installer
-IMG="${CIG_IMG:-$HOME/cig.img}"
+CDROM="${CIG_CDROM:-}"
+if [ -n "$CDROM" ]; then IMG="${CIG_IMG:-}"; else IMG="${CIG_IMG:-$HOME/cig.img}"; fi
 TARGET="${CIG_TARGET:-}"
 SYS=/mnt/cig
 VARS="$HOME/cig/ovmf-vars.fd"
 
 die() { echo "!! $*" >&2; exit 1; }
 
-[ -f "$IMG" ] || die "$IMG not found"
+[ -z "$IMG" ] || [ -f "$IMG" ] || die "$IMG not found"
+[ -z "$CDROM" ] || [ -f "$CDROM" ] || die "$CDROM not found"
 [ -z "$TARGET" ] || [ -f "$TARGET" ] || die "$TARGET not found (create it: qemu-img create -f raw $TARGET 40G)"
 mountpoint -q "$SYS" && die "image is still mounted at $SYS. Run: sudo umount -R $SYS"
 
@@ -43,15 +46,15 @@ esac
 ACCEL=()
 [ -w /dev/kvm ] && ACCEL=(-enable-kvm -cpu host) || echo "(no KVM access: running slow. Add yourself to the 'kvm' group.)"
 
-EXTRA=()
-[ -n "$TARGET" ] && EXTRA=(-drive "file=$TARGET,format=raw,if=none,id=target" -device ide-hd,drive=target,bus=ahci.1)
+DISKS=(-device ahci,id=ahci)
+[ -n "$IMG" ] && DISKS+=(-drive "file=$IMG,format=raw,if=none,id=disk" -device ide-hd,drive=disk,bus=ahci.0,bootindex=0)
+[ -n "$TARGET" ] && DISKS+=(-drive "file=$TARGET,format=raw,if=none,id=target" -device ide-hd,drive=target,bus=ahci.1)
+[ -n "$CDROM" ] && DISKS+=(-drive "file=$CDROM,format=raw,if=none,id=cd,media=cdrom,readonly=on" -device ide-cd,drive=cd,bus=ahci.2,bootindex=0)
 
 exec qemu-system-x86_64 \
     -machine q35 "${ACCEL[@]}" -smp 4 -m 4G "${DISP[@]}" \
     "${FW[@]}" \
-    -drive "file=$IMG,format=raw,if=none,id=disk" \
-    -device ahci,id=ahci -device ide-hd,drive=disk,bus=ahci.0,bootindex=0 \
-    "${EXTRA[@]}" \
+    "${DISKS[@]}" \
     -device virtio-vga \
     -device qemu-xhci -device usb-tablet \
     -nic user,model=e1000e \

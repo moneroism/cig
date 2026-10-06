@@ -1,0 +1,44 @@
+#!/usr/bin/busybox sh
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 moneroism
+#
+# init - the install medium's initramfs (built into the medium's kernel only). Finds the ISO
+# by its volume label (CD/DVD drive or a USB stick the ISO was written to), mounts it
+# read-only and starts the live system from it. Installed systems have no initramfs.
+export PATH=/usr/bin
+/usr/bin/busybox --install -s /usr/bin
+mount -t devtmpfs -o nosuid,mode=0755 devtmpfs /dev
+mount -t proc -o nosuid,nodev,noexec proc /proc
+mount -t sysfs -o nosuid,nodev,noexec sysfs /sys
+
+label=$(cat /etc/medium-label)
+rescue() {
+    echo "cig: $*"
+    echo "cig: the install medium (ISO label $label) was not found. A shell follows; 'exit' retries."
+    sh
+    exec /init
+}
+
+# the ISO's primary volume descriptor is sector 16 (2048 bytes each, byte 32768): "CD001"
+# at byte 1, the volume label at byte 40 (32 characters, padded with spaces)
+label_of() {
+    [ "$(dd if="$1" bs=1 skip=32769 count=5 2>/dev/null)" = CD001 ] || return 1
+    dd if="$1" bs=1 skip=32808 count=32 2>/dev/null | tr -d ' '
+}
+
+found= i=0
+echo "cig: looking for the install medium ($label)"
+while [ -z "$found" ] && [ $i -lt 30 ]; do   # USB sticks and drives may take a few seconds
+    for d in /dev/sr* /dev/sd* /dev/vd* /dev/nvme*n* /dev/mmcblk*; do
+        [ -b "$d" ] || continue
+        [ "$(label_of "$d")" = "$label" ] && { found=$d; break; }
+    done
+    [ -n "$found" ] || { sleep 1; i=$((i + 1)); }
+done
+[ -n "$found" ] || rescue "no device carries the label $label"
+mount -t iso9660 -o ro "$found" /mnt/medium || rescue "cannot mount $found"
+echo "cig: install medium on $found"
+
+# the live system keeps /dev, /proc and /sys as they are
+for m in dev proc sys; do mount --move "/$m" "/mnt/medium/$m"; done
+exec switch_root /mnt/medium /usr/bin/sinit

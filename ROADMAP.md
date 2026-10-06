@@ -149,7 +149,8 @@ Work, first block (before the ISO):
   VM test of the partition editor keeping /home, then remove `cig-install-sh` and the shell smoke
 
 Work:
-- xorriso recipe; hybrid ISO bootable from USB and optical media via UEFI
+- ~~xorriso recipe; hybrid ISO bootable from USB and optical media via UEFI~~ (written
+  2026-10-07, to be tested)
 - ~~live mode in `rc.init`: read-only root, `/etc` `/var` `/home` `/root` `/mnt` in RAM~~ (done)
 - `cig-live` (media only, no `group=`): logins `root` / `ciglinux` (for the installer) and
   `cig` / `ciglinux` (doas), created at boot; a login banner (`/etc/issue`) from
@@ -161,9 +162,9 @@ Work:
 - media contents: base system, build tools, cigbuild/smoke/installer, all sources
   (offline compiling), prebuilt generic kernel
 - ~~`scripts/build-media.sh` → `cig-<version>.img`~~ (done 2026-10-05: a bootable USB image,
-  ESP + `cig-media`; installed from it in QEMU, the target boots). Still to come: the real
-  all-drivers generic kernel for the media (an overnight build), and a hybrid ISO9660 for
-  CD/DVD (needs an initramfs)
+  ESP + `cig-media`; installed from it in QEMU, the target boots). Replaced 2026-10-07 by
+  the hybrid ISO (`cig-<version>.iso`: UEFI from CD/DVD and USB, xorriso, an initramfs built
+  into the medium's generic all-drivers kernel only); to verify: boot as CD and as disk
 - ~~installer: compile-by-default, generic-kernel option with warning, builds on the target~~ (done)
 - ~~installer: auto partitioning with optional swap, partition editor~~ (done)
 - ~~smoke: `add` (replaces `install`) with the compile/install questions, `-c`, the

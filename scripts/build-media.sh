@@ -2,17 +2,23 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 moneroism
 #
-# build-media.sh - the install media: a bootable USB image (cig-<version>.img).
-# Run inside cig as root (the dev chroot), after building the media kernel and firmware:
+# build-media.sh - the install medium: a hybrid ISO (cig-<version>.iso) that boots through
+# UEFI from CD/DVD and from a USB stick it was written to (dd). Run inside cig as root (the
+# dev chroot), after building xorriso, the medium's initramfs and kernel, and the firmware:
 #
-#   CIG_VAR=/cig/media-build CIG_SOURCE_MIRROR=/var/cig/sources CIG_ROOT=PARTLABEL=cig-media \
-#       cigbuild build linux
+#   smoke add -c -y xorriso
+#   /cig/scripts/build-initramfs.sh /cig/media-build/initramfs
+#   CIG_VAR=/cig/media-build CIG_SOURCE_MIRROR=/var/cig/sources CIG_KERNEL_PROFILE=generic \
+#       CIG_KERNEL_INITRAMFS=/cig/media-build/initramfs cigbuild build linux
 #   CIG_VAR=/cig/media-build CIG_SOURCE_MIRROR=/var/cig/sources CIG_FIRMWARE=all \
 #       cigbuild build linux-firmware
-#   /cig/scripts/build-media.sh [output.img]      (default: the repository, cig-<version>.img)
+#   /cig/scripts/build-media.sh [output.iso]      (default: the repository, cig-<version>.iso)
 #
-# The image: GPT with an ESP (the media kernel as EFI/BOOT/BOOTX64.EFI) and a root partition
-# named cig-media (the media kernel finds root by that name, never an installed cig-root).
+# The ISO: the live system as ISO 9660 with Rock Ridge (read-only; the volume label
+# CIG_<version> is what the initramfs looks for), and an EFI system partition image with the
+# medium's kernel as EFI/BOOT/BOOTX64.EFI, used for El Torito (CD/DVD) and appended as a GPT
+# partition (USB stick). The kernel's built-in initramfs (scripts/initramfs/init) finds the
+# ISO by its label, mounts it and starts the live system.
 # The live system (cig-live) keeps the medium read-only and works in RAM; its /var/cig holds
 # every source and prebuilt package: the installer's mirror. Logins: root and cig, both with
 # the password ciglinux (only at the keyboard: nothing on the live system listens on the network).
@@ -22,7 +28,8 @@ umask 022
 
 REPO="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
 VERSION=$(cat "$REPO/VERSION")
-OUT=${1:-$REPO/cig-$VERSION.img}
+OUT=${1:-$REPO/cig-$VERSION.iso}
+LABEL="CIG_${VERSION//./_}"       # the ISO's volume label: scripts/build-initramfs.sh uses the same
 DEV_VAR=/var/cig                  # the dev system: its packages and sources
 # media kernel, firmware, the media's own builds and the staging folder: several GB, so by
 # default in the repository (the host's disk in the dev chroot; git-ignored), not in the image
@@ -38,7 +45,7 @@ die()  { echo "!! build-media: $*" >&2; exit 1; }
 step() { echo "==> $*"; }
 
 [ "$(id -u)" -eq 0 ] || die "run as root (inside the dev chroot)"
-for c in mkfs.ext4 mkfs.vfat sfdisk losetup chpasswd adduser; do
+for c in xorriso mkfs.vfat losetup chpasswd adduser; do
     command -v "$c" >/dev/null || die "missing tool: $c"
 done
 for p in linux linux-firmware; do
@@ -133,8 +140,6 @@ chroot "$STAGE" adduser -D -s /bin/bash -h /home/cig cig
 for g in wheel audio video input users; do chroot "$STAGE" addgroup cig "$g"; done
 printf 'root:ciglinux\ncig:ciglinux\n' | chroot "$STAGE" chpasswd -c sha512 > /dev/null
 [ -f "$STAGE/boot/EFI/BOOT/BOOTX64.EFI" ] || die "the kernel did not reach the ESP"
-grep -aq 'root=PARTLABEL=cig-media' "$STAGE/boot/EFI/BOOT/BOOTX64.EFI" \
-    || die "the media kernel does not look for root=PARTLABEL=cig-media"
 cleanup
 
 # the installer's mirror: every source and prebuilt package (hard links, no copies);
@@ -159,22 +164,17 @@ for g in "$MEDIA_VAR/generic" "$DEV_VAR/generic"; do
     break
 done
 
-# ---- the image: GPT, ESP, cig-media (ext4 written straight from the staging folder) ----
-step "Image $OUT"
-root_mb=$(( $(du -sm "$STAGE" | cut -f1) * 115 / 100 + 256 ))   # 15 % + 256 MiB free
-esp_s=$(( ESP_MB * 2048 )) root_s=$(( root_mb * 2048 ))
-total_s=$(( 2048 + esp_s + root_s + 2048 ))
+# ---- the ISO: Rock Ridge (owners, modes, links as they are), the ESP image for El Torito
+# and as an appended GPT partition (the same file: UEFI finds it on a CD and on a USB stick)
+step "ISO $OUT ($LABEL)"
 rm -f "$OUT"
-truncate -s $(( total_s * 512 )) "$OUT"
-sfdisk -q "$OUT" <<EOF
-label: gpt
-start=2048, size=$esp_s, type=uefi, name="ESP"
-start=$(( 2048 + esp_s )), size=$root_s, type=linux, name="cig-media"
-EOF
-dd if="$MEDIA_VAR/esp.img" of="$OUT" bs=1M seek=1 conv=notrunc 2> /dev/null
-mkfs.ext4 -F -q -L cig-media -E offset=$(( (2048 + esp_s) * 512 )) -d "$STAGE" "$OUT" "${root_mb}M"
+xorriso -as mkisofs -o "$OUT" -V "$LABEL" -iso-level 3 -R \
+    -append_partition 2 0xef "$MEDIA_VAR/esp.img" -appended_part_as_gpt \
+    -e --interval:appended_partition_2:all:: -no-emul-boot \
+    "$STAGE" 2> "$MEDIA_VAR/xorriso.log" || { tail -n 20 "$MEDIA_VAR/xorriso.log" >&2; die "xorriso failed"; }
 rm -f "$MEDIA_VAR/esp.img"
 chown "$(stat -c %u:%g "$REPO")" "$OUT"    # QEMU runs as the developer, not as root
 sync
-step "Done: $OUT ($(du -h "$OUT" | cut -f1) on disk, $(( total_s / 2048 )) MiB)"
-echo "    QEMU: CIG_IMG=$OUT scripts/run-vm.sh      USB stick: dd if=... of=/dev/sdX bs=4M conv=fsync"
+step "Done: $OUT ($(du -h "$OUT" | cut -f1))"
+echo "    QEMU as a CD: CIG_CDROM=$OUT scripts/run-vm.sh     as a disk: CIG_IMG=$OUT scripts/run-vm.sh"
+echo "    USB stick: dd if=$OUT of=/dev/<the stick> bs=4M conv=fsync"

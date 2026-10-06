@@ -5,7 +5,7 @@ of GrapheneOS but for the PC: as little code as possible, every source
 verified, nothing running that isn't needed, and nothing hardcoded to one
 machine.
 
-> **Status:** 0.2.1 (beta), on the way to 0.3.0. A bootable install medium (USB image)
+> **Status:** 0.2.1 (beta), on the way to 0.3.0. A bootable install medium (hybrid ISO: CD/DVD or USB stick)
 > runs a live system, and its installer installs a system that boots on its own with
 > its own linux-hardened kernel, signed modules and lockdown, and a Wayland desktop
 > (dwl + foot, or sway): tested in QEMU (UEFI). smoke and the installer are C; everything
@@ -233,18 +233,23 @@ boot menu).
 
 ### The install medium
 
-`scripts/build-media.sh` (in the dev chroot, as root) builds `cig-<version>.img`: a GPT
-with an ESP (the kernel as `EFI/BOOT/BOOTX64.EFI`) and a root partition named `cig-media`.
-It boots as a live system: the medium stays read-only, `/etc`, `/var`, `/home`, `/root`
+`scripts/build-media.sh` (in the dev chroot, as root) builds `cig-<version>.iso`, a hybrid
+ISO that boots through UEFI from CD/DVD and from a USB stick it was written to: the live
+system as ISO 9660 with Rock Ridge, and an EFI system partition (the medium's kernel as
+`EFI/BOOT/BOOTX64.EFI`) used for El Torito and appended as a GPT partition. Only the
+medium's kernel has an initramfs (`scripts/initramfs/init`, built into it): it finds the
+ISO by its volume label `CIG_<version>`, mounts it and starts the live system. It boots as a live system: the medium stays read-only, `/etc`, `/var`, `/home`, `/root`
 and `/mnt` live in RAM, and `/var/cig` on the medium holds every source and prebuilt
 package for the installer. Logins: `root` and `cig`, password `ciglinux` (nothing on the
-live system listens on the network). Write it to a USB stick with `dd`.
+live system listens on the network). Write it to a USB stick with
+`dd if=cig-<version>.iso of=/dev/<the stick> bs=4M conv=fsync`.
 
 ### Testing in QEMU
 
 ```
 qemu-img create -f raw ~/cig-target.img 40G
-CIG_IMG=~/cig/cig-0.2.1.img CIG_TARGET=~/cig-target.img scripts/run-vm.sh
+CIG_CDROM=~/cig/cig-0.2.1.iso CIG_TARGET=~/cig-target.img scripts/run-vm.sh   # the ISO as a CD
+CIG_IMG=~/cig/cig-0.2.1.iso CIG_TARGET=~/cig-target.img scripts/run-vm.sh     # as a disk (like a USB stick)
 # in the VM, as root:  cig-install
 CIG_IMG=~/cig-target.img scripts/run-vm.sh      # boot the installed disk alone
 ```
