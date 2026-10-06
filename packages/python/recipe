@@ -6,7 +6,7 @@ track=3.13
 source="https://www.python.org/ftp/python/$version/Python-$version.tar.xz"
 signature="https://www.python.org/ftp/python/$version/Python-$version.tar.xz.asc"
 keys="7169605F62C751356D054A26A821E680E5FA6305"
-sha256="f4b1bfb3c79b5bb11b8d228a12504163b4c0dab4d679828d8f5f26b6cb6ab35d"
+sha256="-"
 depends="zlib openssl libffi"
 style=custom
 # python finds its library by resolving its own path: install it as a real copy

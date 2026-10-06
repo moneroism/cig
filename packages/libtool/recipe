@@ -4,5 +4,5 @@ version=2.6.2
 source="https://ftp.gnu.org/gnu/libtool/libtool-$version.tar.xz"
 signature="https://ftp.gnu.org/gnu/libtool/libtool-$version.tar.xz.sig"
 keys="FA26CA784BE188927F22B99F6570EA01146F7354"
-sha256="2ef1067c16c97db930fd740cc9bc3d3ba9a583804ae5ac42cc3e8719e49e191e"
+sha256="-"
 style=gnu

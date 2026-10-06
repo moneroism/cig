@@ -5,7 +5,7 @@ version=6.3.0
 source="https://ftp.gnu.org/gnu/gmp/gmp-$version.tar.xz"
 signature="https://ftp.gnu.org/gnu/gmp/gmp-$version.tar.xz.sig"
 keys="343C2FF0FBEE5EC2EDBEF399F3599FF828C67298"
-sha256="a3c2b80201b89e68616f4ad30bc66aee4927c3ce50e33929ca819d5c43538898"
+sha256="-"
 style=custom
 # gmp 6.3.0's configure tests use pre-C23 code; GCC 15+ defaults to C23.
 # --enable-fat: runtime CPU detection instead of tuning for the build machine.

@@ -6,7 +6,7 @@ depends="util-linux"
 source="https://cdn.kernel.org/pub/linux/kernel/people/tytso/e2fsprogs/v$version/e2fsprogs-$version.tar.xz"
 signature="https://cdn.kernel.org/pub/linux/kernel/people/tytso/e2fsprogs/v$version/e2fsprogs-$version.tar.sign"
 keys="3AB057B7E78D945C8C5591FBD36F769BC11804F0"
-sha256="fd5bf388cbdbe006a3d3b318d983b2948382440acc85a87f1e7d108653e8db0b"
+sha256="-"
 style=custom
 do_build() {
     mkdir build && cd build

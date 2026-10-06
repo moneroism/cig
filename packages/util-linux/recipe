@@ -5,7 +5,7 @@ version=2.41.6
 source="https://cdn.kernel.org/pub/linux/utils/util-linux/v${version%.*}/util-linux-$version.tar.xz"
 signature="https://cdn.kernel.org/pub/linux/utils/util-linux/v2.41/util-linux-$version.tar.sign"
 keys="B0C64D14301CC6EFAEDF60E4E4B71D5EEC39C284"
-sha256="e596083744e746be7d2823b62b43f4418dd7bf56303b4dc09e6fe8112fe3d7ed"
+sha256="-"
 
 makedepends="pkgconf"
 style=custom

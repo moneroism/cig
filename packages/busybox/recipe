@@ -6,7 +6,7 @@ rel=2
 source="https://busybox.net/downloads/busybox-$version.tar.bz2"
 signature="https://busybox.net/downloads/busybox-$version.tar.bz2.sig"
 keys="C9E9416F76E610DBD09D040F47B70C55ACC9965B"
-sha256="34f9ea6ff8636f2c9241153b9114eefa9e65674a45318ae1ef95bb5f31c53bb2"
+sha256="-"
 style=custom
 do_build() {
     cp "$PKGDIR/files/busybox.config" .config

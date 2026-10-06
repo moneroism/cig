@@ -4,7 +4,7 @@ version=8.22.0
 source="https://curl.se/download/curl-$version.tar.xz"
 signature="https://curl.se/download/curl-$version.tar.xz.asc"
 keys="27EDEAF22F3ABCEB50DB9A125CC908FDB71E12C2"
-sha256="f7ef3ae8a22e521f289803fe93543eb64c329b58aa73a9e224dfd915a2a5f4f7"
+sha256="-"
 depends="openssl zlib ca-certificates"
 style=gnu
 configure_args="--with-openssl --with-ca-bundle=/etc/ssl/cert.pem

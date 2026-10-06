@@ -4,7 +4,7 @@ version=3.2.0
 source="https://github.com/libjpeg-turbo/libjpeg-turbo/releases/download/$version/libjpeg-turbo-$version.tar.gz"
 signature="https://github.com/libjpeg-turbo/libjpeg-turbo/releases/download/$version/libjpeg-turbo-$version.tar.gz.sig"
 keys="0338C8D8D9FDA62CF9C421BD7EC2DBB6F4DBF434"
-sha256="6f30092cef9fb839779646608f4ee14ae3cbac989c47fa05e841b0841f09878e"
+sha256="-"
 makedepends="cmake make"
 style=custom
 do_build() {

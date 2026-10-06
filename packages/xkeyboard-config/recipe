@@ -4,6 +4,6 @@ version=2.48
 source="https://www.x.org/releases/individual/data/xkeyboard-config/xkeyboard-config-$version.tar.xz"
 signature="https://www.x.org/releases/individual/data/xkeyboard-config/xkeyboard-config-$version.tar.xz.sig"
 keys="FFB4CCD275AAA422F5F9808E0661D98FC933A145"
-sha256="b77041324f0109f77161ee43743fe04baa485866af8460d31e476ad3f7648fd5"
+sha256="-"
 makedepends="meson python"
 style=meson

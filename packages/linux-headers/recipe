@@ -6,7 +6,7 @@ track=6.18
 source="https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-$version.tar.xz"
 signature="https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-$version.tar.sign"
 keys="647F28654894E3BD457199BE38DBBDC86092693E"
-sha256="9df30b02dd8102bbd0be52556288ef6889ddbe7f1ddb96fbf847d0becf3eacac"
+sha256="-"
 style=custom
 do_build() { make headers; }
 do_install() {

@@ -3,6 +3,6 @@ version=1.4.21
 source="https://ftp.gnu.org/gnu/m4/m4-$version.tar.xz"
 signature="https://ftp.gnu.org/gnu/m4/m4-$version.tar.xz.sig"
 keys="71C2CC22B1C4602927D2F3AAA7A16B4A2527436A"
-sha256="f25c6ab51548a73a75558742fb031e0625d6485fe5f9155949d6486a2408ab66"
+sha256="-"
 style=gnu
 configure_args="--disable-nls"

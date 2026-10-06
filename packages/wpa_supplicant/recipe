@@ -4,7 +4,7 @@ version=2.12
 source="https://w1.fi/releases/wpa_supplicant-$version.tar.gz"
 signature="https://w1.fi/releases/wpa_supplicant-$version.tar.gz.asc"
 keys="EC4AA0A991A5F2464582D52D2B6EF432EFC895FA"
-sha256="08e23937e16d0155e55cab2b51f51fbe10d80a1aa91c4e15442645059b737ef6"
+sha256="-"
 depends="libnl openssl"
 style=custom
 do_build() {

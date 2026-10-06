@@ -6,7 +6,7 @@ track=5.3
 source="https://ftp.gnu.org/gnu/gawk/gawk-$version.tar.xz"
 signature="https://ftp.gnu.org/gnu/gawk/gawk-$version.tar.xz.sig"
 keys="D1967C63788713177D861ED7DF597815937EC0D2"
-sha256="f8c3486509de705192138b00ef2c00bbbdd0e84c30d5c07d23fc73a9dc4cc9cc"
+sha256="-"
 style=custom
 pre_build() { sed -i 's/extras//' Makefile.in; }
 do_build()  { ./configure --prefix=/usr --disable-nls; make; }
