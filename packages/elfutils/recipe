@@ -2,7 +2,7 @@
 # Alpine's musl patch is pinned to a fixed aports commit.
 name=elfutils
 version=0.195
-rel=2
+rel=3
 _aports=8f13294206888f3dd44ed74a8eb3dd9934499e81
 source="https://sourceware.org/elfutils/ftp/$version/elfutils-$version.tar.bz2
     musl-macros.patch::https://gitlab.alpinelinux.org/alpine/aports/-/raw/$_aports/main/elfutils/musl-macros.patch"
@@ -20,7 +20,8 @@ do_build() {
     CFLAGS="$CFLAGS -Wno-error" CPPFLAGS="-I/usr/include/musl-compat" ./configure --prefix=/usr --sysconfdir=/etc \
         --program-prefix=eu- --disable-nls \
         --disable-debuginfod --disable-libdebuginfod \
-        --without-bzlib --without-lzma --without-zstd
+        --without-bzlib --without-lzma --without-zstd --disable-demangler
     make
 }
-do_install() { make DESTDIR="$DEST" install; }
+# eu-srcfiles is C++ (libstdc++ belongs to gcc, which installed systems do not have)
+do_install() { make DESTDIR="$DEST" install; rm -f "$DEST/usr/bin/eu-srcfiles"; }

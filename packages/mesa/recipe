@@ -2,6 +2,7 @@
 # through Vulkan (Zink); EGL and GBM for Wayland compositors. softpipe is the software fallback.
 name=mesa
 version=26.2.4
+rel=2
 source="https://archive.mesa3d.org/mesa-$version.tar.xz"
 signature="https://archive.mesa3d.org/mesa-$version.tar.xz.sig"
 sha256="bce5f7fbebb934373b86c999a064d52fb5065878dc57f287f95346648ec832e9"
@@ -10,7 +11,10 @@ makedepends="meson pkgconf python-mako python-packaging python-pyyaml wayland-pr
 style=meson
 group="desktop"
 # Wayland only, no LLVM, no X11; only what the drivers above need
-meson_args="-Dplatforms=wayland -Dgallium-drivers=zink,softpipe -Dvulkan-drivers=amd -Dllvm=disabled
+# the C++ runtime (libstdc++, libgcc_s) belongs to gcc, which installed systems do not have:
+# link it in statically
+meson_args="-Dc_link_args=-static-libgcc -Dcpp_link_args=-static-libgcc,-static-libstdc++
+    -Dplatforms=wayland -Dgallium-drivers=zink,softpipe -Dvulkan-drivers=amd -Dllvm=disabled
     -Dglx=disabled -Degl=enabled -Dgbm=enabled -Dgles1=disabled -Dgles2=enabled -Dopengl=true
     -Dvalgrind=disabled -Dlibunwind=disabled -Dzstd=disabled -Dlmsensors=disabled
     -Dvideo-codecs= -Dvulkan-layers= -Dtools= -Dbuild-tests=false -Dmicrosoft-clc=disabled
