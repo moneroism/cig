@@ -367,6 +367,12 @@ static void preflight(struct state *s)
 {
 	static const char *tools[] = { "sfdisk", "blkid", "mkfs.vfat", "mkfs.ext4", "mkswap", "chpasswd",
 	                               "adduser", "chroot", "tar", NULL };
+	/* only from the install medium: on an installed system it could wipe the machine's other
+	 * disks. CIG_INSTALL_FROM_SYSTEM=1 is for development (the dev VM image) */
+	if (!file_exists("/etc/cig/live") && !getenv("CIG_INSTALL_DEMO") && !getenv("CIG_INSTALL_FROM_SYSTEM")) {
+		fputs("cig-install: runs only on the install medium (this is an installed system)\n", stderr);
+		exit(1);
+	}
 	if (geteuid() != 0 && !getenv("CIG_INSTALL_DEMO")) {
 		fputs("cig-install: run as root\n", stderr);
 		exit(1);
