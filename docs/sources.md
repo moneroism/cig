@@ -12,6 +12,11 @@ upstream project's own cryptographic statement:
 | signed checksum file | `sums=<url>` | a GPG-signed list of checksums (inline, or with `<url>.asc`) that names the file |
 | signed git tag | `tag=<git url>#<tag>` | the tag's GPG signature (`git verify-tag`), and the archive holds exactly the tag's tree, file for file |
 
+Where sources may come from at all is listed in `lib/hosts` (decided 2026-10-07): the forges
+(GitHub, GitLab, Codeberg, sourcehut) and each project's own official release site, named
+there. cigbuild refuses any other host, plain HTTP, SourceForge, generic download sites and
+third-party mirrors.
+
 In every method the signer must be one of the recipe's `keys=` (primary key fingerprints).
 A keyserver returns whatever key carries the signature's key ID, so a valid signature alone
 does not say who signed: `pin` records the keys on first use and refuses any other key

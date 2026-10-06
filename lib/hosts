@@ -1,0 +1,56 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 moneroism
+#
+# hosts - where cigbuild may download sources, signatures and signed tags from.
+# One host per line, then what it is. Anything else is refused.
+#
+# Allowed: the big open source forges, and a project's OWN official release site. Never
+# SourceForge, generic download sites or third-party mirrors. A host is never what makes a
+# file authentic (that is the signature or the pinned checksum); this list decides where
+# cig is willing to fetch from at all. Add an official site only with its project named.
+#
+# Forges redirect downloads to their own CDNs (codeload.github.com, ...): the check applies
+# to the URL in the recipe.
+
+# forges
+github.com                  forge
+gitlab.com                  forge
+codeberg.org                forge
+git.sr.ht                   forge
+gitlab.freedesktop.org      forge (freedesktop.org)
+gitlab.alpinelinux.org      forge (Alpine Linux: aports files used by linux, elfutils)
+
+# official release sites, by project
+cdn.kernel.org              Linux (kernel.org)
+ftp.gnu.org                 GNU
+download.savannah.gnu.org   GNU Savannah (freetype)
+sourceware.org              sourceware (elfutils)
+busybox.net                 BusyBox
+musl.libc.org               musl
+nlnetlabs.nl                unbound
+cdn.openbsd.org             OpenSSH (OpenBSD)
+curl.se                     curl, ca-certificates
+www.python.org              Python
+files.pythonhosted.org      PyPI (Python libraries: their official release channel)
+www.cpan.org                Perl
+www.x.org                   X.Org (xkeyboard-config, xorg macros)
+www.freedesktop.org         freedesktop.org (libevdev)
+dri.freedesktop.org         Mesa DRI (libdrm)
+archive.mesa3d.org          Mesa
+download.gnome.org          GNOME (glib, pango)
+cairographics.org           cairo
+www.alsa-project.org        ALSA
+download.samba.org          rsync (samba.org)
+w1.fi                       wpa_supplicant (hostap)
+www.nano-editor.org         nano
+www.mpfr.org                MPFR
+www.lua.org                 Lua
+www.greenwoodsoftware.com   less
+mandoc.bsd.lv               mandoc
+dl.suckless.org             suckless (sinit)
+distfiles.ariadne.space     pkgconf
+bitmath.org                 mtdev
+astron.com                  file
+oldmanprogrammer.net        tree
+gnupg.org                   GnuPG
+www.gnupg.org               GnuPG

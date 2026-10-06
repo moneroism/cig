@@ -57,24 +57,26 @@ src_url()  { case "$1" in *::*) echo "${1#*::}" ;; *) echo "$1" ;; esac; }
 
 # ---------------- fetch + verify ----------------
 
-# fetch <url> <file>: an HTTPS download, whole or not at all (a broken download never
-# leaves a file that a later run would checksum). GNU sources fall back to a GNU mirror
-# when ftp.gnu.org does not answer: only the transport changes, the file is still checked
-# against its GPG signature and pinned SHA256 (a host is never the authority).
+# host_ok <url>: dies unless the URL is HTTPS on a host in lib/hosts (forges and projects'
+# own official release sites; never SourceForge, generic download sites or mirrors)
+host_ok() {
+    local url=$1 host
+    case "$url" in https://*) ;; *) die "not an HTTPS URL: $url" ;; esac
+    host=${url#https://}; host=${host%%/*}; host=${host%%:*}
+    awk -v h="$host" '!/^#/ && $1 == h { found = 1 } END { exit !found }' "$CIG_REPO/lib/hosts" \
+        || die "$host is not an allowed source host (lib/hosts: forges and projects' own release sites): $url"
+}
+
+# fetch <url> <file>: an HTTPS download from an allowed host, whole or not at all (a broken
+# download never leaves a file that a later run would checksum)
 fetch() {
-    local url=$1 out=$2 u
-    local -a urls=("$url")
-    case "$url" in
-        https://ftp.gnu.org/gnu/*) urls+=("https://mirrors.kernel.org/gnu/${url#https://ftp.gnu.org/gnu/}") ;;
-    esac
-    for u in "${urls[@]}"; do
-        [ "$u" = "$url" ] || info "trying the GNU mirror: $u"
-        if curl -fL --proto '=https' --tlsv1.2 --connect-timeout 30 -o "$out.part" "$u"; then
-            mv "$out.part" "$out"
-            return 0
-        fi
-        rm -f "$out.part"
-    done
+    local url=$1 out=$2
+    host_ok "$url"
+    if curl -fL --proto '=https' --proto-redir '=https' --tlsv1.2 --connect-timeout 30 -o "$out.part" "$url"; then
+        mv "$out.part" "$out"
+        return 0
+    fi
+    rm -f "$out.part"
     return 1
 }
 
@@ -310,6 +312,7 @@ verify_source() {
     case "$e" in
         sums=*)
             url=${e#sums=}; sumf="$CIG_VAR/sources/$(basename "$url")"
+            host_ok "$url"
             curl -fsL --proto '=https' --tlsv1.2 -o "$sumf" "$url" || die "checksum file download failed: $url"
             gpg_init
             if curl -fsL --proto '=https' --tlsv1.2 -o "$sumf.asc" "$url.asc" 2>/dev/null; then
@@ -330,6 +333,7 @@ verify_source() {
         tag=*)
             url=${e#tag=}; tag=${url##*#}; url=${url%#*}
             command -v git >/dev/null || die "git not found (needed to check a signed tag)"
+            host_ok "$url"
             gpg_init
             t=$(mktemp -d)
             git -c advice.detachedHead=false clone -q --depth 1 --branch "$tag" "$url" "$t/repo" \
