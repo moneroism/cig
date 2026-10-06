@@ -57,6 +57,27 @@ src_url()  { case "$1" in *::*) echo "${1#*::}" ;; *) echo "$1" ;; esac; }
 
 # ---------------- fetch + verify ----------------
 
+# fetch <url> <file>: an HTTPS download, whole or not at all (a broken download never
+# leaves a file that a later run would checksum). GNU sources fall back to a GNU mirror
+# when ftp.gnu.org does not answer: only the transport changes, the file is still checked
+# against its GPG signature and pinned SHA256 (a host is never the authority).
+fetch() {
+    local url=$1 out=$2 u
+    local -a urls=("$url")
+    case "$url" in
+        https://ftp.gnu.org/gnu/*) urls+=("https://mirrors.kernel.org/gnu/${url#https://ftp.gnu.org/gnu/}") ;;
+    esac
+    for u in "${urls[@]}"; do
+        [ "$u" = "$url" ] || info "trying the GNU mirror: $u"
+        if curl -fL --proto '=https' --tlsv1.2 --connect-timeout 30 -o "$out.part" "$u"; then
+            mv "$out.part" "$out"
+            return 0
+        fi
+        rm -f "$out.part"
+    done
+    return 1
+}
+
 fetch_sources() {
     local i=0 e f url want have
     local -a sums; read -r -a sums <<< "$(echo $sha256)"
@@ -72,9 +93,7 @@ fetch_sources() {
         done
         if [ ! -s "$CIG_VAR/sources/$f" ]; then
             info "$name: downloading $f"
-            curl -fL --proto '=https' --tlsv1.2 -o "$CIG_VAR/sources/$f.part" "$url" \
-                || { rm -f "$CIG_VAR/sources/$f.part"; die "download failed: $url"; }
-            mv "$CIG_VAR/sources/$f.part" "$CIG_VAR/sources/$f"
+            fetch "$url" "$CIG_VAR/sources/$f" || die "download failed: $url"
         fi
         want=${sums[$i]:-}
         have=$(sha256sum "$CIG_VAR/sources/$f" | cut -d' ' -f1)
@@ -327,7 +346,7 @@ verify_source() {
             HOW="signed git tag $tag" ;;
         *)
             sumf="$CIG_VAR/sources/$(basename "$e")"
-            curl -fsL --proto '=https' --tlsv1.2 -o "$sumf" "$e" || die "signature download failed: $e"
+            fetch "$e" "$sumf" 2>/dev/null || die "signature download failed: $e"
             verify_sig "$f" "$sumf"
             HOW="GPG signature" ;;
     esac
@@ -347,8 +366,8 @@ pkg_pin() {
         if [ -n "$known" ]; then
             have=$known; info "$p: $f -> verified by the bootstrap record"
         else
-            [ -s "$CIG_VAR/sources/$f" ] || curl -fL --proto '=https' --tlsv1.2 \
-                -o "$CIG_VAR/sources/$f" "$(src_url "$e")" || die "download failed: $(src_url "$e")"
+            [ -s "$CIG_VAR/sources/$f" ] || fetch "$(src_url "$e")" "$CIG_VAR/sources/$f" \
+                || die "download failed: $(src_url "$e")"
             have=$(sha256sum "$CIG_VAR/sources/$f" | cut -d' ' -f1)
             sig=${sigs[$i]:--}
             if [ "$sig" != "-" ]; then
@@ -389,8 +408,8 @@ pkg_sig() {   # pkg_sig <pkg> <signature URL | ->...: check pinned sources again
         f=$(src_name "$e"); sig=${sigs[$i]}
         [ -n "${sums[$i]:-}" ] || die "$p: $f is not pinned yet (cigbuild pin $p)"
         if [ "$sig" != - ]; then
-            [ -s "$CIG_VAR/sources/$f" ] || curl -fL --proto '=https' --tlsv1.2 \
-                -o "$CIG_VAR/sources/$f" "$(src_url "$e")" || die "download failed: $(src_url "$e")"
+            [ -s "$CIG_VAR/sources/$f" ] || fetch "$(src_url "$e")" "$CIG_VAR/sources/$f" \
+                || die "download failed: $(src_url "$e")"
             [ "$(sha256sum "$CIG_VAR/sources/$f" | cut -d' ' -f1)" = "${sums[$i]}" ] \
                 || die "$p: $f does not match its pinned sha256"
             verify_source "$CIG_VAR/sources/$f" "$sig"
