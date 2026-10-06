@@ -170,7 +170,8 @@ Work:
   build-tools prompt, the unsigned warning~~ (done); name-file lookup (local file first)
 - unbound recipe; DNS choice in the installer
 - day-one usability (so cig can be used for a full day on the PC), all optional:
-  sound (ALSA), clipboard (wl-clipboard), screenshots (grim). No browser yet (see Phase 6)
+  sound (ALSA), ~~clipboard (wl-clipboard), screenshots (grim, slurp)~~ (done). No browser
+  yet (see Phase 6)
 - install on the development PC's SATA SSD; verify boot, WiFi, display, input, poweroff
 
 **Exit criteria:** cig installed from the ISO on the PC and usable for a full day;
@@ -185,6 +186,10 @@ top of Vulkan; wlroots renders through Vulkan. GPU drivers follow the detected h
 mako/PyYAML (build-only). Tested on the PC's RX570 (the VM has no AMD GPU).
 Optional in the installer; the RAM target must still hold.
 
+Status (2026-10-06): the recipes are done (Mesa 26.2 with RADV and Zink, no LLVM, no
+softpipe; Vulkan loader; glslang); wlroots gets its GLES2/Vulkan renderers when an AMD GPU
+is detected, and everything else renders with pixman. Not yet tested on the RX570.
+
 
 
 ### Phase 4 – Optional components (0.4.0)
@@ -195,6 +200,7 @@ Optional in the installer; the RAM target must still hold.
   on installed systems. Categories come from the recipes. **Wayland only** (decided
   2026-10-05): sway, labwc, wayfire and friends instead of X11 window managers; X11 may come
   later as an optional recipe. First wave of easy recipes: sway, labwc, nano, vim, htop
+  (done except labwc, plus tmux, tree, jq, rsync, strace, fastfetch, pixel)
 
 - components as recipes, offered in the installer:
   PipeWire (optional), Bluetooth = BlueZ + D-Bus (optional),

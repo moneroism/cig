@@ -8,9 +8,11 @@ machine.
 > **Status:** 0.2.1 (beta), on the way to 0.3.0. A bootable install medium (USB image)
 > runs a live system, and its installer installs a system that boots on its own with
 > its own linux-hardened kernel, signed modules and lockdown, and a Wayland desktop
-> (dwl + foot): tested in QEMU (UEFI). smoke and the installer are C; everything is built
-> from recipes with `cigbuild`. Next: the first install on real hardware, a kernel with
-> all drivers for the medium. Not for daily use. See [`ROADMAP.md`](ROADMAP.md).
+> (dwl + foot, or sway): tested in QEMU (UEFI). smoke and the installer are C; everything
+> is built from recipes with `cigbuild`, and every source's authenticity is audited
+> ([`docs/sources.md`](docs/sources.md)). Mesa without LLVM (RADV + Zink) is built for AMD
+> GPUs but not yet tested on the hardware. Next: the first install on real hardware, a
+> kernel with all drivers for the medium. Not for daily use. See [`ROADMAP.md`](ROADMAP.md).
 
 ## Principles
 
@@ -72,7 +74,9 @@ lib/                cigbuild's shared code (recipes, build styles, hardware dete
 src/smoke/          smoke, the package manager (C; package cig-tools)
 src/installer/      cig-install, the installer (C, ncurses; package cig-installer, media only);
                     test/run.sh checks the partition logic against reference results
+src/pixel/          pixel, terminal animations (C; package pixel)
 packages/<name>/    one recipe per package (+ files/ for extra files)
+assets/             logos and banners (ASCII and braille), with their size and colour rules
 scripts/            bootstrap, the install media (build-media.sh) and VM helpers
 VERSION             the cig release (X.0.0 stable, 0.X.0 beta, x.y.Z fixes)
 docs/               design documents: smoke, sources (how every source is authenticated)
@@ -272,8 +276,9 @@ See [`ROADMAP.md`](ROADMAP.md). In short:
 - [x] Phase 0 – Foundation: toolchain, userland, init, desktop, cigbuild, kernel, firmware
 - [x] Phase 1 – smoke: symlink farm, inventory with install reasons, autoremove, audit
 - [x] Phase 2 – Installer (shell TUI), tested in QEMU (0.2.0)
-- [ ] Phase 3 – Install media (ISO), first bare-metal install, day-one usability (ALSA, clipboard, screenshots, DNS)
-- [ ] 0.3.x – GPU acceleration: Mesa without LLVM (RADV + Zink)
+- [ ] Phase 3 – Install media (ISO), first bare-metal install, day-one usability (ALSA, clipboard, screenshots, DNS);
+  the medium, clipboard and screenshots are done
+- [ ] 0.3.x – GPU acceleration: Mesa without LLVM (RADV + Zink); built, not yet tested on an AMD GPU
 - [ ] Phase 4 – Optional components (PipeWire, Bluetooth, wmenu), UEFI boot entries, libre-meter
 - [ ] Phase 5 – Security layers (allowlisting), read-only root, own kernel base config
 - [ ] Phase 6 – Browser, hardened_malloc, sandboxing, smoke updates
