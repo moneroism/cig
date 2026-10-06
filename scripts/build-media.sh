@@ -46,6 +46,21 @@ for p in linux linux-firmware; do
     [ -f "$f" ] || die "no media $p package ($f): build it first (see the top of this script)"
 done
 
+# the installer's prebuilt packages must match the recipes: a component (group=), or any
+# package built before, whose current version-rel has no package is built now (smoke
+# update only rebuilds what the dev system has installed; fastfetch was missed once)
+stale=
+for r in "$REPO"/packages/*/recipe; do
+    p=${r%/recipe}; p=${p##*/}
+    case " linux linux-firmware cig-base cig-tools cig-installer cig-live pixel " in *" $p "*) continue ;; esac
+    if ! grep -q '^group=' "$r" && ! ls "$DEV_VAR/pkgs/$p"-[0-9]*.tar.gz >/dev/null 2>&1; then continue; fi
+    [ -f "$("$CIGBUILD" pkgfile "$p")" ] || stale="$stale $p"
+done
+if [ -n "$stale" ]; then
+    step "Building prebuilt packages that are missing or older than their recipe:$stale"
+    for p in $stale; do "$CIGBUILD" build "$p"; done
+fi
+
 cleanup() {
     for m in boot dev/pts dev proc sys run; do
         mountpoint -q "$STAGE/$m" 2>/dev/null && umount "$STAGE/$m" || true
