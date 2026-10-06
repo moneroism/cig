@@ -506,6 +506,20 @@ versions_list() {
     done < <(printf '%s' "$html" | grep -oE "$re" | sort -u)
 }
 
+# ver_sort: version lines, oldest first, the same with GNU and BusyBox (their sort -V differ:
+# BusyBox put 6.18.hardened1 after 6.18.54.hardened1). Numbers compare as numbers and sort
+# above words, so the base release v6.18-hardened1 is older than 6.18.54.hardened1.
+ver_sort() {
+    awk '{ k = ""; s = $0
+           while (s != "") {
+               if (match(s, /^[0-9]+/)) k = k "1" sprintf("%012d", substr(s, 1, RLENGTH) + 0)
+               else if (match(s, /^[a-z]+/)) k = k "0" substr(s, 1, RLENGTH)
+               else { k = k substr(s, 1, 1); RLENGTH = 1 }
+               s = substr(s, RLENGTH + 1)
+           }
+           print k "\t" $0 }' | LC_ALL=C sort | cut -f2
+}
+
 # pkg_latest <pkg>: "<name> <recipe version> <newest upstream> <how>"; how = current, update,
 # unknown (nothing found: set upstream= in the recipe: a git repository, or a page that names
 # the release files). track=X limits it to the X series, stable=<ERE> to versions that match;
@@ -530,7 +544,7 @@ pkg_latest() {
     # dated snapshot tags (20021030) are not releases: the first number may not be much longer
     local n=${version%%[!0-9]*}; n=$(( ${#n} > 3 ? ${#n} : 3 ))
     cand=$(echo "$cand" | grep -E "^[0-9]{1,$n}([.]|[a-z]|p|\$)" || true)
-    best=$( (echo "$cand"; echo "$version") | grep -v '^$' | sort -V | tail -1)
+    best=$( (echo "$cand"; echo "$version") | grep -v '^$' | ver_sort | tail -1)
     if [ -z "$cand" ]; then echo "$name $version ? unknown"
     elif [ "$best" = "$version" ]; then echo "$name $version $version current"
     else echo "$name $version $best update"; fi
