@@ -224,72 +224,109 @@ static void tunnel_step(void)
 		}
 }
 
-/* fractal: zooms into the Mandelbrot set's edge; when the view runs out of detail (or of
- * floating-point precision) it steers to the busiest edge in view, or starts over elsewhere */
-static double fx = -0.743643887037151, fy = 0.131825904205330, fscale = 3.0;
-static int *iters;
+/* fractal: a smooth zoom into the Mandelbrot set's edge. The view drifts towards a target
+ * point; every few frames it looks ~5 seconds ahead, and if the view there would be empty (one
+ * colour), it picks the busiest edge near the middle of the current view as the new target.
+ * At the end of floating-point precision it zooms back out and starts somewhere else. */
+static double fx = -0.743643887037151, fy = 0.131825904205330;   /* the centre of the view */
+static double tx = -0.743643887037151, ty = 0.131825904205330;   /* where it drifts to */
+static double fscale = 3.0;
+static int zoom_out;
+static int *iters;   /* iteration counts of the current view */
 
-static void fractal_retarget(int maxit)
+static int mandel(double cr, double ci, int maxit)
 {
-	static const double spots[][2] = {
-		{ -0.743643887037151, 0.131825904205330 }, { -0.7453, 0.1127 }, { 0.2501, 0.0000016 },
-		{ -1.25066, 0.02012 }, { -0.16070135, 1.0375665 }, { 0.360240443437, -0.641313061064 },
-	};
+	double zr = 0, zi = 0, zr2 = 0, zi2 = 0;
+	int i = 0;
+	while (i < maxit && zr2 + zi2 < 4.0) {
+		zi = 2 * zr * zi + ci;
+		zr = zr2 - zi2 + cr;
+		zr2 = zr * zr;
+		zi2 = zi * zi;
+		i++;
+	}
+	return i;
+}
+
+static int fractal_maxit(double scale)
+{
+	int m = 48 + (int)(28.0 * log2(3.0 / scale));
+	return m > 2000 ? 2000 : m < 48 ? 48 : m;
+}
+
+/* will the view around (x, y) at this scale still show edges? (a coarse 24x12 sample) */
+static int busy_ahead(double x, double y, double scale)
+{
+	int maxit = fractal_maxit(scale), prev = -1, changes = 0;
+	for (int j = 0; j < 12; j++)
+		for (int i = 0; i < 24; i++) {
+			int it = mandel(x + (i - 12) * scale / 24, y + (j - 6) * scale / 24, maxit);
+			changes += prev >= 0 && it != prev;
+			prev = it;
+		}
+	return changes >= 24;
+}
+
+static void fractal_new_target(int maxit)
+{
 	int best = -1, bestscore = 0;
-	for (int y = 1; y < rows - 1; y++)   /* the busiest edge: iteration counts differ most */
+	for (int y = 1; y < rows - 1; y++)   /* the busiest edge, preferring the middle */
 		for (int x = 1; x < cols - 1; x++) {
 			int i = iters[y * cols + x];
 			if (i >= maxit)
 				continue;
-			int s = abs(i - iters[y * cols + x - 1]) + abs(i - iters[y * cols + x + 1]) +
-			        abs(i - iters[(y - 1) * cols + x]) + abs(i - iters[(y + 1) * cols + x]);
-			s -= (abs(x - cols / 2) + abs(y - rows / 2) * 2) / 4;   /* prefer the middle */
-			if (s > bestscore) {
-				bestscore = s;
+			int sc = abs(i - iters[y * cols + x - 1]) + abs(i - iters[y * cols + x + 1]) +
+			         abs(i - iters[(y - 1) * cols + x]) + abs(i - iters[(y + 1) * cols + x]);
+			sc -= (abs(x - cols / 2) + abs(y - rows / 2) * 2) / 3;
+			if (sc > bestscore) {
+				bestscore = sc;
 				best = y * cols + x;
 			}
 		}
-	if (best >= 0 && fscale > 1e-12) {
-		fx += ((best % cols) - cols / 2.0) * fscale / cols;
-		fy += ((best / cols) - rows / 2.0) * 2.0 * fscale / cols;
-	} else {   /* nothing left to see, or at the end of double precision: somewhere new */
-		int s = (int)rnd(sizeof(spots) / sizeof(*spots));
-		fx = spots[s][0];
-		fy = spots[s][1];
-		fscale = 3.0;
+	if (best >= 0) {
+		tx = fx + ((best % cols) - cols / 2.0) * fscale / cols;
+		ty = fy + ((best / cols) - rows / 2.0) * 2.0 * fscale / cols;
 	}
 }
 
 static void fractal_step(void)
 {
+	static const double spots[][2] = {
+		{ -0.743643887037151, 0.131825904205330 }, { -0.7453, 0.1127 }, { 0.2501, 0.0000016 },
+		{ -1.25066, 0.02012 }, { -0.16070135, 1.0375665 }, { 0.360240443437, -0.641313061064 },
+	};
 	static int frame;
-	int maxit = 48 + (int)(28.0 * log2(3.0 / fscale)), edges = 0;
-	if (maxit > 2000)
-		maxit = 2000;
+	int maxit = fractal_maxit(fscale);
 	for (int y = 0; y < rows; y++)
 		for (int x = 0; x < cols; x++) {
-			double cr = fx + (x - cols / 2.0) * fscale / cols, ci = fy + (y - rows / 2.0) * 2.0 * fscale / cols;
-			double zr = 0, zi = 0, zr2 = 0, zi2 = 0;
-			int i = 0;
-			while (i < maxit && zr2 + zi2 < 4.0) {
-				zi = 2 * zr * zi + ci;
-				zr = zr2 - zi2 + cr;
-				zr2 = zr * zr;
-				zi2 = zi * zi;
-				i++;
-			}
+			int i = mandel(fx + (x - cols / 2.0) * fscale / cols,
+			               fy + (y - rows / 2.0) * 2.0 * fscale / cols, maxit);
 			iters[y * cols + x] = i;
-			if (x && i != iters[y * cols + x - 1])
-				edges++;
 			if (i >= maxit)
 				grid[y * cols + x].g = NULL;   /* inside the set */
 			else
 				shade(&grid[y * cols + x], 0.3 + 0.7 * fmod(i / 24.0, 1.0), i / 64.0);
 		}
-	fscale *= 0.965;
-	/* steer: too little edge in view, or every 40 frames towards the busiest edge */
-	if (edges < rows * cols / 40 || fscale < 1e-12 || ++frame % 40 == 0)
-		fractal_retarget(maxit);
+
+	if (zoom_out) {   /* back out to the whole set, then somewhere new */
+		fscale /= 0.95;
+		if (fscale >= 2.5) {
+			int sp = (int)rnd(sizeof(spots) / sizeof(*spots));
+			tx = spots[sp][0];
+			ty = spots[sp][1];
+			zoom_out = 0;
+		}
+	} else {
+		fscale *= 0.985;
+		if (fscale < 1e-12)   /* the end of double precision */
+			zoom_out = 1;
+		/* every 10 frames: is the view ~5 s ahead (~100 frames) still worth zooming into? */
+		else if (++frame % 10 == 0 && !busy_ahead(tx, ty, fscale * pow(0.985, 100)))
+			fractal_new_target(maxit);
+	}
+	/* drift: a little of the remaining way each frame, never a jump */
+	fx += (tx - fx) * 0.04;
+	fy += (ty - fy) * 0.04;
 }
 
 /* stars: points flying outward from the centre, faster and brighter as they come close */
