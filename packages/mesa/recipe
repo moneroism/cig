@@ -11,12 +11,13 @@ makedepends="meson pkgconf python-mako python-packaging python-pyyaml wayland-pr
 style=meson
 group="desktop"
 # Wayland only, no LLVM, no X11; only what the drivers above need
-# the C++ runtime (libstdc++, libgcc_s) belongs to gcc, which installed systems do not have:
-# link it in statically
-meson_args="-Dc_link_args=-static-libgcc -Dcpp_link_args=-static-libgcc,-static-libstdc++
-    -Dplatforms=wayland -Dgallium-drivers=zink,softpipe -Dvulkan-drivers=amd -Dllvm=disabled
+meson_args="-Dplatforms=wayland -Dgallium-drivers=zink,softpipe -Dvulkan-drivers=amd -Dllvm=disabled
     -Dglx=disabled -Degl=enabled -Dgbm=enabled -Dgles1=disabled -Dgles2=enabled -Dopengl=true
     -Dvalgrind=disabled -Dlibunwind=disabled -Dzstd=disabled -Dlmsensors=disabled
     -Dvideo-codecs= -Dvulkan-layers= -Dtools= -Dbuild-tests=false -Dmicrosoft-clc=disabled
     -Dandroid-libbacktrace=disabled -Dgallium-va=disabled -Dgallium-vdpau=disabled
     -Dgallium-extra-hud=false -Dvulkan-beta=false"
+
+# the C++ runtime (libstdc++, libgcc_s) belongs to gcc, which installed systems do not have:
+# link it in statically (this build only: pre_build runs in the package's build process)
+pre_build() { export LDFLAGS="$LDFLAGS -static-libgcc -static-libstdc++"; }
