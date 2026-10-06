@@ -1,0 +1,16 @@
+# vulkan-loader - finds the Vulkan drivers (Mesa's RADV) for programs and Zink; Wayland only
+name=vulkan-loader
+version=1.4.365
+source="vulkan-loader-$version.tar.gz::https://github.com/KhronosGroup/Vulkan-Loader/archive/refs/tags/v$version.tar.gz"
+sha256="df0358f57c1936e4abd262a7327ba1f80ffb424dbbdcbcb01bb9288511f31eef"
+makedepends="cmake make vulkan-headers python pkgconf wayland"
+depends="wayland"
+style=custom
+do_build() {
+    cmake -B build -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_INSTALL_LIBDIR=lib -DCMAKE_BUILD_TYPE=Release \
+        -DBUILD_WSI_XCB_SUPPORT=OFF -DBUILD_WSI_XLIB_SUPPORT=OFF -DBUILD_WSI_XLIB_XRANDR_SUPPORT=OFF \
+        -DBUILD_WSI_WAYLAND_SUPPORT=ON -DBUILD_WSI_DIRECTFB_SUPPORT=OFF -DBUILD_TESTS=OFF \
+        -DUPDATE_DEPS=OFF -DSYSCONFDIR=/etc
+    make -C build
+}
+do_install() { make -C build DESTDIR="$DEST" install; }

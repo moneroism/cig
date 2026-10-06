@@ -1,11 +1,19 @@
-# wlroots - compositor library. CPU rendering (pixman) only, no X11/Xwayland.
+# wlroots - compositor library, no X11/Xwayland. With a GPU Mesa drives (AMD for now: RADV + Zink),
+# also the GLES2 and Vulkan renderers; pixman (CPU) always, as the fallback wlroots picks itself.
 name=wlroots
 version=0.19.3
 source="https://gitlab.freedesktop.org/wlroots/wlroots/-/releases/$version/downloads/wlroots-$version.tar.gz"
 signature="https://gitlab.freedesktop.org/wlroots/wlroots/-/releases/$version/downloads/wlroots-$version.tar.gz.sig"
 sha256="5d02693175e5afd9af5f10e3e4976d6e9249dc39a90eb17d23fa5f54b125ccc5"
+rel=2
 depends="wayland libdrm pixman libxkbcommon libinput seatd libdisplay-info libudev-zero"
 makedepends="wayland-protocols hwdata meson pkgconf"
 style=meson
 meson_args="-Dxwayland=disabled -Dbackends=drm,libinput -Drenderers=[] -Dallocators=[]
     -Dsession=enabled -Dcolor-management=disabled -Dlibliftoff=disabled -Dexamples=false"
+if has_gpu amd; then   # hardware-dependent (lib/hardware.sh; CIG_PROFILE=generic: all)
+    depends="$depends mesa vulkan-loader"
+    makedepends="$makedepends glslang vulkan-headers"
+    meson_args="-Dxwayland=disabled -Dbackends=drm,libinput -Drenderers=gles2,vulkan -Dallocators=gbm
+        -Dsession=enabled -Dcolor-management=disabled -Dlibliftoff=disabled -Dexamples=false"
+fi
