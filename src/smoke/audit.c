@@ -2,6 +2,7 @@
 /* Copyright (C) 2026 moneroism */
 /* audit.c - check the system against the inventory */
 #include <dirent.h>
+#include <elf.h>
 #include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -140,6 +141,85 @@ static char *clean_path(const char *p)
 	sv_free(&parts);
 	free(copy);
 	return out;
+}
+
+/* does an absolute path exist inside $ROOT? Links are followed inside $ROOT (absolute
+ * targets mean $ROOT/...), max 16 hops */
+static bool root_exists(const char *abs)
+{
+	char *p = xstrdup(abs);
+	bool ok = false;
+	for (int hop = 0; hop < 16; hop++) {
+		char *full = xasprintf("%s%s", ROOT, p), *t = read_link(full);
+		if (!t) {
+			ok = exists(full);
+			free(full);
+			break;
+		}
+		free(full);
+		char *d = dir_name(p), *n = t[0] == '/' ? xstrdup(t) : xasprintf("%s/%s", d, t);
+		free(p);
+		p = clean_path(n);
+		free(n);
+		free(d);
+		free(t);
+	}
+	free(p);
+	return ok;
+}
+
+/* the libraries an ELF file needs (DT_NEEDED), read from its dynamic section; 64-bit
+ * little-endian only (what cig builds); anything else is skipped */
+static void elf_needed(const char *path, struct strv *out)
+{
+	Elf64_Ehdr eh;
+	Elf64_Phdr ph[64];
+	FILE *f = fopen(path, "rb");
+	uint64_t dynoff = 0, dynsz = 0, strtab = 0, strsz = 0, stroff = 0;
+	uint64_t need[256];
+	int nneed = 0;
+	char *str = NULL;
+
+	if (!f)
+		return;
+	if (fread(&eh, 1, sizeof(eh), f) != sizeof(eh) || memcmp(eh.e_ident, ELFMAG, SELFMAG) ||
+	    eh.e_ident[EI_CLASS] != ELFCLASS64 || eh.e_ident[EI_DATA] != ELFDATA2LSB ||
+	    eh.e_phentsize != sizeof(Elf64_Phdr) || eh.e_phnum == 0 || eh.e_phnum > 64 ||
+	    fseek(f, (long)eh.e_phoff, SEEK_SET) != 0 || fread(ph, sizeof(*ph), eh.e_phnum, f) != eh.e_phnum)
+		goto done;
+	for (int i = 0; i < eh.e_phnum; i++)
+		if (ph[i].p_type == PT_DYNAMIC) {
+			dynoff = ph[i].p_offset;
+			dynsz = ph[i].p_filesz;
+		}
+	if (!dynsz || fseek(f, (long)dynoff, SEEK_SET) != 0)
+		goto done;
+	for (uint64_t n = 0; n < dynsz / sizeof(Elf64_Dyn); n++) {
+		Elf64_Dyn d;
+		if (fread(&d, sizeof(d), 1, f) != 1 || d.d_tag == DT_NULL)
+			break;
+		if (d.d_tag == DT_NEEDED && nneed < 256)
+			need[nneed++] = d.d_un.d_val;
+		else if (d.d_tag == DT_STRTAB)
+			strtab = d.d_un.d_ptr;
+		else if (d.d_tag == DT_STRSZ)
+			strsz = d.d_un.d_val;
+	}
+	for (int i = 0; i < eh.e_phnum; i++)   /* the string table's address -> file offset */
+		if (ph[i].p_type == PT_LOAD && strtab >= ph[i].p_vaddr && strtab < ph[i].p_vaddr + ph[i].p_filesz)
+			stroff = strtab - ph[i].p_vaddr + ph[i].p_offset;
+	if (!nneed || !stroff || !strsz || strsz > (1u << 20) || fseek(f, (long)stroff, SEEK_SET) != 0)
+		goto done;
+	str = xmalloc(strsz + 1);
+	if (fread(str, 1, strsz, f) != strsz)
+		goto done;
+	str[strsz] = '\0';
+	for (int i = 0; i < nneed; i++)
+		if (need[i] < strsz)
+			sv_push(out, str + need[i]);
+done:
+	free(str);
+	fclose(f);
 }
 
 int audit(bool quick)
@@ -294,6 +374,32 @@ int audit(bool quick)
 				flag("%s: real file where %s installs a link (replaced?)", p, n);
 		}
 		free(full);
+	}
+
+	/* every program and library must find the libraries it needs on this system
+	 * (e.g. a library built against gcc's libstdc++ on a system without gcc) */
+	puts("-- libraries");
+	for (size_t i = 0; i < inv_count(); i++) {
+		const struct inv_ent *e = inv_at(i);
+		char *D = xasprintf("%s/%s/%s", PKGROOT, e->name, e->folder), *meta = xasprintf("%s/.meta", D);
+		struct strv files = { 0 };
+		walk(D, meta, &files, true);
+		for (size_t j = 0; j < files.n; j++) {
+			struct strv need = { 0 };
+			char *full = xasprintf("%s%s", ROOT, files.v[j]);
+			elf_needed(full, &need);
+			for (size_t k = 0; k < need.n; k++) {
+				char *lib = xasprintf("/usr/lib/%s", need.v[k]);
+				if (!root_exists(lib))
+					flag("%s needs %s, which no installed package provides", files.v[j], need.v[k]);
+				free(lib);
+			}
+			sv_free(&need);
+			free(full);
+		}
+		sv_free(&files);
+		free(meta);
+		free(D);
 	}
 
 	puts("-- /etc (changed configuration, for information)");
