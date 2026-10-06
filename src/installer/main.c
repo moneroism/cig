@@ -114,6 +114,42 @@ static void components_screen(struct state *s)
 	free(text);
 }
 
+bool comp_on(const struct state *s, const char *name)
+{
+	for (int i = 0; i < s->ncomp; i++)
+		if (!strcmp(s->comps[i].name, name))
+			return s->comps[i].on;
+	return false;
+}
+
+const char *dns_value(const struct state *s)
+{
+	if (!comp_on(s, "unbound"))
+		return "the network's (unbound not selected)";
+	return s->dns == DNS_TLS ? "encrypted (Quad9, Cloudflare)" : s->dns == DNS_RECURSIVE ? "own resolver" : "the network's";
+}
+
+/* DNS: unbound answers on 127.0.0.1 and either forwards over TLS (default) or asks the
+ * root servers itself; or the DHCP server's DNS is used as it is */
+static void dns_screen(struct state *s)
+{
+	static const char *const items[] = {
+		"encrypted: DNS over TLS to Quad9 and Cloudflare (default)",
+		"own resolver: asks the root servers directly, no third party (slower, unencrypted)",
+		"the network's DNS server from DHCP (unencrypted, seen by the network)" };
+	if (!comp_on(s, "unbound")) {
+		ui_msg("Network: DNS", "unbound is not selected (Components), so the network's DNS server from DHCP is used.");
+		return;
+	}
+	int sel = (int)s->dns;
+	int c = ui_menu("Network: DNS",
+	                "unbound checks DNSSEC in the first two. Encrypted needs the clock to be right (TLS); "
+	                "the servers are listed in /etc/unbound/unbound.conf.d/forward-tls.conf.",
+	                items, NULL, 3, &sel);
+	if (c >= 0)
+		s->dns = (enum dns)c;
+}
+
 static void hardware_screen(struct state *s)
 {
 	if (s->ndrv) {
@@ -155,6 +191,7 @@ static void hardware_screen(struct state *s)
 	} else if (!file_exists("/sys/class/net/wlan0")) {
 		ui_msg("Hardware", s->ndrv ? "No WiFi device found." : "No driver of this machine requests firmware.\nNo WiFi device found.");
 	}
+	dns_screen(s);
 }
 
 /* the root= built into the media's generic kernel (in <CIG_VAR>/generic, apart from the
@@ -373,13 +410,14 @@ int main(void)
 		v[1] = *s.user ? xasprintf("host %s, user %s, root %s", s.host, s.user, s.root_lock ? "locked" : "with password")
 		               : xstrdup("not set");
 		v[2] = pk;
-		v[3] = xasprintf("firmware: %s; WiFi: %s", *fw ? fw : "none", *s.ssid ? s.ssid : "not set");
+		v[3] = xasprintf("firmware: %s; WiFi: %s; DNS: %s", *fw ? fw : "none", *s.ssid ? s.ssid : "not set",
+		                 dns_value(&s));
 		v[4] = xstrdup("defaults (optional layers not available yet)");
 		v[5] = xasprintf("packages %s, kernel %s", s.compile_pkgs ? "compiled here" : "prebuilt",
 		                 s.generic_kernel ? "generic" : "compiled for this machine");
 		v[6] = xstrdup("");
 		v[7] = xstrdup("");
-		static const char *const items[] = { "Disk", "Identity", "Components", "Hardware", "Security",
+		static const char *const items[] = { "Disk", "Identity", "Components", "Hardware, network", "Security",
 		                                     "Build", "Install", "Quit without changes" };
 		char *title = xasprintf("cig %s - choose a section, Install when everything is set", s.version);
 		int c = ui_menu(title, NULL, items, (const char *const *)v, 8, &sel);

@@ -586,7 +586,25 @@ void do_install(struct state *s)
 
 	step("Network");
 	mkdirs(TARGET "/etc/service");
-	if (target_has("/usr/sbin/unbound")) {   /* the local validating resolver answers all DNS */
+	if (s->dns != DNS_DHCP && target_has("/usr/sbin/unbound")) {   /* the local validating resolver answers all DNS */
+		if (s->dns == DNS_TLS) {   /* unbound.conf includes every unbound.conf.d file; without one it recurses */
+			mkdirs(TARGET "/etc/unbound/unbound.conf.d");
+			put_file(TARGET "/etc/unbound/unbound.conf.d/forward-tls.conf",
+			         "# DNS over TLS (written by cig-install): unbound forwards every query, encrypted, to\n"
+			         "# these servers and still checks DNSSEC itself. Remove this file (and restart unbound:\n"
+			         "# sv restart unbound) to have unbound ask the root servers directly instead.\n"
+			         "server:\n"
+			         "    tls-cert-bundle: \"/etc/ssl/certs/ca-certificates.crt\"\n"
+			         "forward-zone:\n"
+			         "    name: \".\"\n"
+			         "    forward-tls-upstream: yes\n"
+			         "    forward-addr: 9.9.9.9@853#dns.quad9.net\n"
+			         "    forward-addr: 149.112.112.112@853#dns.quad9.net\n"
+			         "    forward-addr: 2620:fe::fe@853#dns.quad9.net\n"
+			         "    forward-addr: 1.1.1.1@853#cloudflare-dns.com\n"
+			         "    forward-addr: 1.0.0.1@853#cloudflare-dns.com\n"
+			         "    forward-addr: 2606:4700:4700::1111@853#cloudflare-dns.com\n", 0644);
+		}
 		RUN("ln", "-sfn", "/etc/sv/unbound", TARGET "/etc/service/unbound");
 		put_file(TARGET "/etc/resolv.conf.static", "nameserver 127.0.0.1\nnameserver ::1\n", 0644);
 		put_file(TARGET "/etc/resolv.conf", "nameserver 127.0.0.1\nnameserver ::1\n", 0644);

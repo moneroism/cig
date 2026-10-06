@@ -1,10 +1,12 @@
-# unbound - a local validating DNS resolver: asks the root servers directly, checks DNSSEC
+# unbound - local DNS resolver with DNSSEC: DNS over TLS (default) or asks the root servers
+# (the installer's choice: forward-tls.conf in /etc/unbound/unbound.conf.d, written by it)
 name=unbound
 version=1.26.1
+rel=2
 source="https://nlnetlabs.nl/downloads/unbound/unbound-$version.tar.gz"
 signature="https://nlnetlabs.nl/downloads/unbound/unbound-$version.tar.gz.asc"
 sha256="35a6dc0e425a9282c3426d9a3043144011bf0534aed4b73ab62c52aee0af1503"
-depends="openssl expat"
+depends="openssl expat ca-certificates"
 style=gnu
 group="network"
 default=on
@@ -21,4 +23,5 @@ post_install() {
     grep -q '^unbound:' /etc/group || addgroup -S unbound
     grep -q '^unbound:' /etc/passwd || adduser -S -D -H -h /var/lib/unbound -s /bin/false -G unbound unbound
     install -d -m 750 /var/log/unbound
+    install -d -m 755 /etc/unbound/unbound.conf.d
 }

@@ -33,11 +33,16 @@ struct state {
 	struct drv *drvs;
 	int ndrv;
 	char ssid[64], psk[128];
+	enum dns { DNS_TLS, DNS_RECURSIVE, DNS_DHCP } dns;   /* DNS_TLS (0) is the default */
 
 	bool compile_pkgs;        /* compile everything (default) or prebuilt */
 	char warnings[1024];      /* optional steps that did not work (shown at the end) */
 	bool generic_kernel;      /* only if the media kernel finds root by name */
 };
+
+/* the DNS choice as a short value for the menu */
+const char *dns_value(const struct state *s);
+bool comp_on(const struct state *s, const char *name);
 
 void do_install(struct state *s);   /* returns only on success */
 void disk_screen(struct state *s);
