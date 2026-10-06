@@ -120,7 +120,9 @@ cig's own system packages are recipes in the cig repository.
 - **Apps:** `smoke update` rebuilds every package whose recipe is newer than the
   installed build (version or rel), dependencies first, through the same questions as
   `add`, and lists newer upstream releases (`cigbuild latest`: git tags, download pages,
-  PyPI; `track=` keeps a recipe in its series). (done)
+  PyPI; `track=` keeps a recipe in its series). It ends with audit's library check: a
+  package that was not rebuilt but needs a library version the update replaced fails the
+  update (fix: declare the dependency in its recipe, bump its rel). (done)
 - **New upstream releases on the device** (planned): the recipe is updated on the device
   (new version, pinned SHA256, the signature checked with `gpgv` against the key seen
   before; a different key is a loud warning, default *no*), then built like any update.

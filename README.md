@@ -164,7 +164,8 @@ smoke remove  <pkg>...         remove, then dependencies nothing needs anymore
 smoke autoremove               remove orphaned dependencies
 smoke update [-c|-p] [-y] [<pkg>...]
                                rebuild packages whose recipe changed (dependencies first),
-                               report newer upstream releases; --check only reports
+                               report newer upstream releases, then check that every
+                               program still finds its libraries; --check only reports
 smoke list [-a [<word>]]       packages, reason, who needs them (-a: every available recipe
                                by category; a word searches name, description and category)
 smoke why     <pkg>            why a package is installed

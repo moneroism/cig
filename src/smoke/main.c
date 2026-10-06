@@ -499,6 +499,15 @@ static int update(int argc, char **argv, bool check, enum compile compile, bool 
 	}
 	info("%zu package(s) updated", done.n);
 	sv_free(&done); sv_free(&names); sv_free(&todo); sv_free(&from); sv_free(&to);
+	/* a package that was not rebuilt may still need a library version an update replaced
+	 * (mesa needed libdisplay-info.so.2 after 0.4 brought .so.3): show it here, not at
+	 * install time. Fix: declare the dependency in its recipe and bump its rel */
+	puts("-- libraries");
+	int bad = audit_libraries();
+	if (bad) {
+		fprintf(stderr, "!! smoke update: %d program(s) need a library that is no longer installed (above)\n", bad);
+		return 1;
+	}
 	return 0;
 }
 

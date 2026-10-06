@@ -95,5 +95,6 @@ void autoremove(void);
 
 /* audit.c */
 int audit(bool quick);
+int audit_libraries(void);   /* the library part of audit: problems found */
 
 #endif

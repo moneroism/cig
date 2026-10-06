@@ -222,6 +222,37 @@ done:
 	fclose(f);
 }
 
+/* every program and library must find the libraries it needs on this system
+ * (e.g. a library built against gcc's libstdc++ on a system without gcc, or one still
+ * linked to a library version an update replaced); returns the number of problems */
+int audit_libraries(void)
+{
+	int before = problems;
+	for (size_t i = 0; i < inv_count(); i++) {
+		const struct inv_ent *e = inv_at(i);
+		char *D = xasprintf("%s/%s/%s", PKGROOT, e->name, e->folder), *meta = xasprintf("%s/.meta", D);
+		struct strv files = { 0 };
+		walk(D, meta, &files, true);
+		for (size_t j = 0; j < files.n; j++) {
+			struct strv need = { 0 };
+			char *full = xasprintf("%s%s", ROOT, files.v[j]);
+			elf_needed(full, &need);
+			for (size_t k = 0; k < need.n; k++) {
+				char *lib = xasprintf("/usr/lib/%s", need.v[k]);
+				if (!root_exists(lib))
+					flag("%s needs %s, which no installed package provides", files.v[j], need.v[k]);
+				free(lib);
+			}
+			sv_free(&need);
+			free(full);
+		}
+		sv_free(&files);
+		free(meta);
+		free(D);
+	}
+	return problems - before;
+}
+
 int audit(bool quick)
 {
 	struct map owner = { 0 }, copypat = { 0 }, folder = { 0 };
@@ -376,31 +407,8 @@ int audit(bool quick)
 		free(full);
 	}
 
-	/* every program and library must find the libraries it needs on this system
-	 * (e.g. a library built against gcc's libstdc++ on a system without gcc) */
 	puts("-- libraries");
-	for (size_t i = 0; i < inv_count(); i++) {
-		const struct inv_ent *e = inv_at(i);
-		char *D = xasprintf("%s/%s/%s", PKGROOT, e->name, e->folder), *meta = xasprintf("%s/.meta", D);
-		struct strv files = { 0 };
-		walk(D, meta, &files, true);
-		for (size_t j = 0; j < files.n; j++) {
-			struct strv need = { 0 };
-			char *full = xasprintf("%s%s", ROOT, files.v[j]);
-			elf_needed(full, &need);
-			for (size_t k = 0; k < need.n; k++) {
-				char *lib = xasprintf("/usr/lib/%s", need.v[k]);
-				if (!root_exists(lib))
-					flag("%s needs %s, which no installed package provides", files.v[j], need.v[k]);
-				free(lib);
-			}
-			sv_free(&need);
-			free(full);
-		}
-		sv_free(&files);
-		free(meta);
-		free(D);
-	}
+	audit_libraries();
 
 	puts("-- /etc (changed configuration, for information)");
 	for (size_t i = 0; i < inv_count(); i++) {
