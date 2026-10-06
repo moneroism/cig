@@ -1,0 +1,16 @@
+# pixel - terminal animations: rain, stars, smoke (ASCII for the console, -u for Unicode)
+# Part of cig (src/pixel): built from the repository, like cig-tools.
+name=pixel
+version=$(cat "$CIG_REPO/VERSION")
+source=""
+sha256=""
+makedepends="make"
+style=custom
+group="tools"
+do_build() {
+    rm -rf "$WORK/pixel"
+    cp -R "$CIG_REPO/src/pixel" "$WORK/pixel"
+    make -C "$WORK/pixel" clean    # copied from the checkout: drop any host build first
+    make -C "$WORK/pixel" pixel
+}
+do_install() { install -D -m 755 "$WORK/pixel/pixel" "$DEST/usr/bin/pixel"; }
