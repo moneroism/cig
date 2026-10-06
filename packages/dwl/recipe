@@ -1,10 +1,10 @@
 # dwl - dwm for Wayland. Upstream config, unmodified.
 # The tarball is unsigned; this checksum matches an independent source
-# (Arch AUR package for 0.8).
+# (Arch AUR package for 0.9).
 name=dwl
-version=0.8
+version=0.9
 source="https://codeberg.org/dwl/dwl/releases/download/v$version/dwl-v$version.tar.gz"
-sha256="ccc8bbb3fb66a7e6f0392693533ac9c8bd4e6283dd1f66992e68ec4d4a9cdee7"
+sha256="51ed5da49942ca3272b6f2c4f1d7641b0b947a6eb1c264dce8a65b4d245596af"
 depends="wlroots libinput libxkbcommon wayland"
 makedepends="wayland-protocols pkgconf"
 style=make

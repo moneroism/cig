@@ -1,8 +1,8 @@
 # samurai - ninja-compatible build runner, in C
 name=samurai
-version=1.2
+version=1.3
 source="https://github.com/michaelforney/samurai/releases/download/$version/samurai-$version.tar.gz"
-sha256="3b8cf51548dfc49b7efe035e191ff5e1963ebc4fe8f6064a5eefc5343eaf78a5"
+sha256="1bc020a9e133432df51911ac71cc34322f828934d9a2282ba2916d88c15976af"
 style=custom
 do_build()   { make CC=cc; }
 do_install() { make CC=cc PREFIX=/usr DESTDIR="$DEST" install; ln -sf samu "$DEST/usr/bin/ninja"; }

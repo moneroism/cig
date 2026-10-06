@@ -1,11 +1,10 @@
 # util-linux - only sfdisk (GPT partitioning for the installer) and its libraries.
 # Also provides libuuid and libblkid (used by e2fsprogs).
 name=util-linux
-version=2.41.2
-rel=2
+version=2.41.6
 source="https://cdn.kernel.org/pub/linux/utils/util-linux/v${version%.*}/util-linux-$version.tar.xz"
-signature="https://cdn.kernel.org/pub/linux/utils/util-linux/v${version%.*}/util-linux-$version.tar.sign"
-sha256="6062a1d89b571a61932e6fc0211f36060c4183568b81ee866cf363bce9f6583e"
+signature="https://cdn.kernel.org/pub/linux/utils/util-linux/v2.41/util-linux-$version.tar.sign"
+sha256="e596083744e746be7d2823b62b43f4418dd7bf56303b4dc09e6fe8112fe3d7ed"
 
 makedepends="pkgconf"
 style=custom

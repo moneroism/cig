@@ -1,9 +1,9 @@
 # wpa_supplicant - WiFi. WPA2/WPA3-Personal only: no WPS, no D-Bus, no EAP.
 name=wpa_supplicant
-version=2.11
+version=2.12
 source="https://w1.fi/releases/wpa_supplicant-$version.tar.gz"
 signature="https://w1.fi/releases/wpa_supplicant-$version.tar.gz.asc"
-sha256="912ea06f74e30a8e36fbb68064d6cdff218d8d591db0fc5d75dee6c81ac7fc0a"
+sha256="08e23937e16d0155e55cab2b51f51fbe10d80a1aa91c4e15442645059b737ef6"
 depends="libnl openssl"
 style=custom
 do_build() {

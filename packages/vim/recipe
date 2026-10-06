@@ -1,9 +1,9 @@
 # vim - the Vi IMproved text editor (terminal only)
 name=vim
-version=9.2.1164
+version=9.2.1167
 source="vim-$version.tar.gz::https://github.com/vim/vim/archive/refs/tags/v$version.tar.gz"
 signature="tag=https://github.com/vim/vim.git#v$version"
-sha256="38d61152e0ab48f0f8b2ce387119310469c2bf50e486adcc648750f85ba5af7c"
+sha256="bbcb6489aa995d128a8bf2a275fb5bc3f805ed36f52cb4d8347af425133cb3c4"
 depends="ncurses"
 style=gnu
 group="tools"
