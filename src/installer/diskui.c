@@ -320,10 +320,17 @@ void disk_screen(struct state *s)
 		bool sk = false;
 		for (size_t i = 0; i < sizeof(skip) / sizeof(*skip); i++)
 			sk |= !strncmp(nm, skip[i], strlen(skip[i]));
+		/* eMMC hardware partitions (mmcblk0boot0, mmcblk0rpmb) are firmware areas, not disks */
+		sk |= !strncmp(nm, "mmcblk", 6) && (strstr(nm, "boot") || strstr(nm, "rpmb"));
 		unsigned long long bytes = sectors_of(nm) * sect_of(nm);
 		if (sk || !bytes)
 			continue;
 		char *mp = xasprintf("/sys/block/%s/device/model", nm), *model = read_text(mp), *sz = size_h(bytes);
+		if (!model) {   /* eMMC and SD cards name themselves in device/name */
+			free(mp);
+			mp = xasprintf("/sys/block/%s/device/name", nm);
+			model = read_text(mp);
+		}
 		char *rp = xasprintf("/sys/block/%s/removable", nm);
 		bool removable = sysnum(rp) == 1;
 		if (model)
