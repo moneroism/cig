@@ -1,0 +1,15 @@
+# dosfstools - mkfs.fat: the install ISO's FAT16 EFI boot image (BusyBox makes FAT32 only, and
+# El Torito allows at most 32 MiB, too small for a proper FAT32). A build tool for the media;
+# only mkfs.fat is installed (BusyBox keeps mkfs.vfat).
+name=dosfstools
+version=4.2
+source="https://github.com/dosfstools/dosfstools/releases/download/v$version/dosfstools-$version.tar.gz"
+signature="https://github.com/dosfstools/dosfstools/releases/download/v$version/dosfstools-$version.tar.gz.sig"
+keys="25714AECDBFDACEE1CE95FE77F6022516E869F64"
+sha256="-"
+style=custom
+do_build() {
+    CFLAGS="$CFLAGS -std=gnu17" ./configure --prefix=/usr --without-iconv --disable-compat-symlinks
+    make
+}
+do_install() { install -D -m 755 src/mkfs.fat "$DEST/usr/sbin/mkfs.fat"; }

@@ -10,6 +10,7 @@ export PATH=/usr/bin
 mount -t devtmpfs -o nosuid,mode=0755 devtmpfs /dev
 mount -t proc -o nosuid,nodev,noexec proc /proc
 mount -t sysfs -o nosuid,nodev,noexec sysfs /sys
+exec < /dev/console > /dev/console 2>&1   # the screen, whatever the kernel gave us
 
 label=$(cat /etc/medium-label)
 rescue() {

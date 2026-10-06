@@ -6,7 +6,7 @@
 # UEFI from CD/DVD and from a USB stick it was written to (dd). Run inside cig as root (the
 # dev chroot), after building xorriso, the medium's initramfs and kernel, and the firmware:
 #
-#   smoke add -c -y xorriso
+#   smoke add -c -y xorriso dosfstools
 #   /cig/scripts/build-initramfs.sh /cig/media-build/initramfs
 #   CIG_VAR=/cig/media-build CIG_SOURCE_MIRROR=/var/cig/sources CIG_KERNEL_PROFILE=generic \
 #       CIG_KERNEL_INITRAMFS=/cig/media-build/initramfs cigbuild build linux
@@ -35,7 +35,7 @@ DEV_VAR=/var/cig                  # the dev system: its packages and sources
 # default in the repository (the host's disk in the dev chroot; git-ignored), not in the image
 MEDIA_VAR=${CIG_MEDIA_VAR:-$REPO/media-build}
 STAGE=$MEDIA_VAR/stage            # the live system, before it becomes a filesystem
-ESP_MB=128
+ESP_MB=30       # El Torito records the boot image size in 512-byte sectors (16 bits): at most 32 MiB
 CIGBUILD="$REPO/cigbuild"
 # the C smoke (cig-tools) with this repository's recipes; file names may contain spaces
 SMOKE="${SMOKE:-/usr/share/cig/smoke}"
@@ -45,7 +45,7 @@ die()  { echo "!! build-media: $*" >&2; exit 1; }
 step() { echo "==> $*"; }
 
 [ "$(id -u)" -eq 0 ] || die "run as root (inside the dev chroot)"
-for c in xorriso mkfs.vfat losetup chpasswd adduser; do
+for c in xorriso mkfs.fat losetup chpasswd adduser; do
     command -v "$c" >/dev/null || die "missing tool: $c"
 done
 for p in linux linux-firmware; do
@@ -129,7 +129,7 @@ unset CIG_VAR CIG_PKG_MIRROR CIG_SOURCE_MIRROR
 # the ESP: a small FAT image, mounted while the kernel hook deploys the kernel
 step "EFI system partition"
 truncate -s "${ESP_MB}M" "$MEDIA_VAR/esp.img"
-mkfs.vfat -F 32 -n ESP "$MEDIA_VAR/esp.img" > /dev/null
+mkfs.fat -F 16 -n ESP "$MEDIA_VAR/esp.img" > /dev/null   # FAT16 (UEFI reads it; dosfstools)
 mount -o loop "$MEDIA_VAR/esp.img" "$STAGE/boot"
 
 step "Package setup and live logins"
@@ -140,6 +140,8 @@ chroot "$STAGE" adduser -D -s /bin/bash -h /home/cig cig
 for g in wheel audio video input users; do chroot "$STAGE" addgroup cig "$g"; done
 printf 'root:ciglinux\ncig:ciglinux\n' | chroot "$STAGE" chpasswd -c sha512 > /dev/null
 [ -f "$STAGE/boot/EFI/BOOT/BOOTX64.EFI" ] || die "the kernel did not reach the ESP"
+[ "$(df -k "$STAGE/boot" | awk 'NR == 2 { print $4 }')" -gt 1024 ] \
+    || die "the ESP image ($ESP_MB MiB, the El Torito limit) is full: the kernel is too large for it"
 cleanup
 
 # the installer's mirror: every source and prebuilt package (hard links, no copies);
