@@ -2,6 +2,7 @@
 # Alpine's musl patch is pinned to a fixed aports commit.
 name=elfutils
 version=0.196
+rel=2
 _aports=8f13294206888f3dd44ed74a8eb3dd9934499e81
 source="https://sourceware.org/elfutils/ftp/$version/elfutils-$version.tar.bz2
     musl-macros.patch::https://gitlab.alpinelinux.org/alpine/aports/-/raw/$_aports/main/elfutils/musl-macros.patch"
@@ -12,15 +13,18 @@ depends="zlib musl-fts musl-obstack"
 makedepends="argp-standalone musl-compat bison flex pkgconf"
 style=custom
 pre_build() {
-    patch -p1 < "$WORK/src/musl-macros.patch"
+    # Alpine's patch is for 0.195: its elfcompress.c hunk no longer applies (no fuzz in
+    # BusyBox patch), so that part comes from files/ instead
+    awk '/^diff /{skip=($0 ~ /src\/elfcompress\.c/)} !skip' "$WORK/src/musl-macros.patch" | patch -p1
+    patch -p1 < "$PKGDIR/files/elfcompress-musl.patch"
 }
 do_build() {
     # elfutils builds with -Werror; a newer GCC must not fail on new warnings
     CFLAGS="$CFLAGS -Wno-error" CPPFLAGS="-I/usr/include/musl-compat" ./configure --prefix=/usr --sysconfdir=/etc \
         --program-prefix=eu- --disable-nls \
         --disable-debuginfod --disable-libdebuginfod \
-        --without-bzlib --without-lzma --without-zstd --disable-demangler
+        --without-bzlib --without-lzma --without-zstd --disable-demangler --disable-stackprof
     make
 }
-# eu-srcfiles is C++ (libstdc++ belongs to gcc, which installed systems do not have)
+# eu-srcfiles is C++ (eu-stackprof too: disabled above) (libstdc++ belongs to gcc, which installed systems do not have)
 do_install() { make DESTDIR="$DEST" install; rm -f "$DEST/usr/bin/eu-srcfiles"; }
