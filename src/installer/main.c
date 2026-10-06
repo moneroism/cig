@@ -125,8 +125,8 @@ bool comp_on(const struct state *s, const char *name)
 const char *dns_value(const struct state *s)
 {
 	if (!comp_on(s, "unbound"))
-		return "the network's (unbound not selected)";
-	return s->dns == DNS_TLS ? "encrypted (Quad9, Cloudflare)" : s->dns == DNS_RECURSIVE ? "own resolver" : "the network's";
+		return "network's";
+	return s->dns == DNS_TLS ? "encrypted" : s->dns == DNS_RECURSIVE ? "own resolver" : "network's";
 }
 
 /* DNS: unbound answers on 127.0.0.1 and either forwards over TLS (default) or asks the
@@ -135,8 +135,8 @@ static void dns_screen(struct state *s)
 {
 	static const char *const items[] = {
 		"encrypted: DNS over TLS to Quad9 and Cloudflare (default)",
-		"own resolver: asks the root servers directly, no third party (slower, unencrypted)",
-		"the network's DNS server from DHCP (unencrypted, seen by the network)" };
+		"own resolver: asks the root servers itself, no third party (unencrypted)",
+		"the network's DNS server from DHCP (unencrypted)" };
 	if (!comp_on(s, "unbound")) {
 		ui_msg("Network: DNS", "unbound is not selected (Components), so the network's DNS server from DHCP is used.");
 		return;
