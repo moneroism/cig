@@ -1,7 +1,7 @@
 # fastfetch - system information
 name=fastfetch
 version=2.69.0
-rel=4
+rel=5
 source="fastfetch-$version.tar.gz::https://github.com/fastfetch-cli/fastfetch/archive/refs/tags/$version.tar.gz"
 sha256="d0e42faf307e39e7b531d632745a56e4eb558a6545f557280099c622562355ee"
 makedepends="cmake make"
@@ -19,14 +19,21 @@ do_install() {
     make -C build DESTDIR="$DEST" install
     mkdir -p "$DEST/usr/share/fastfetch/logos/cig" "$DEST/etc/xdg/fastfetch" "$DEST/etc/profile.d"
     install -m 644 "$CIG_REPO"/assets/logos/*.txt "$DEST/usr/share/fastfetch/logos/cig/"
-    # a config file replaces fastfetch's defaults, so the modules are listed too
-    printf '%s\n' '{' \
-        '    "logo": { "type": "file", "source": "/usr/share/fastfetch/logos/cig/cig.txt",' \
-        '              "color": { "1": "38;5;255", "2": "38;5;202", "3": "38;5;245",' \
-        '                         "4": "38;5;180", "5": "38;5;240", "6": "38;5;220" } },' \
-        '    "modules": ["title", "separator", "os", "kernel", "uptime", "packages", "shell", "wm",' \
-        '                "terminal", "cpu", "gpu", "memory", "swap", "disk", "break", "colors"]' '}' \
-        > "$DEST/etc/xdg/fastfetch/config.jsonc"
+    # a config file replaces fastfetch's defaults, so the modules are listed too. Memory is
+    # shown as free(1) counts it (what the <= 100 MB goal is measured with): fastfetch's own
+    # module counts MemTotal - MemAvailable, which includes the kernel's reserves
+    cat > "$DEST/etc/xdg/fastfetch/config.jsonc" <<'EOF'
+{
+    "logo": { "type": "file", "source": "/usr/share/fastfetch/logos/cig/cig.txt",
+              "color": { "1": "38;5;255", "2": "38;5;202", "3": "38;5;245",
+                         "4": "38;5;180", "5": "38;5;240", "6": "38;5;220" } },
+    "modules": ["title", "separator", "os", "kernel", "uptime", "packages", "shell", "wm",
+                "terminal", "cpu", "gpu",
+                { "type": "command", "key": "Memory",
+                  "text": "free -m | awk '/^Mem:/ { printf \"%d MiB / %d MiB (%d%%)\", $3, $2, $3 * 100 / $2 }'" },
+                "swap", "disk", "break", "colors"]
+}
+EOF
     printf '%s\n' '# the Linux console has no braille: show the ASCII logo there' \
         'if [ "$TERM" = linux ]; then' \
         '    alias fastfetch="fastfetch --logo-type file --logo /usr/share/fastfetch/logos/cig/cig-ascii.txt"' 'fi' \
