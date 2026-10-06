@@ -1,0 +1,6 @@
+#!/bin/sh
+# the trust anchor: unbound-anchor falls back to its built-in root key when offline
+install -d -o unbound -g unbound -m 750 /var/lib/unbound
+unbound-anchor -a /var/lib/unbound/root.key   # exit 1 means "updated": not an error
+chown unbound:unbound /var/lib/unbound/root.key
+exec unbound -d -p -c /etc/unbound/unbound.conf 2>&1

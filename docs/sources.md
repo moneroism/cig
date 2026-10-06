@@ -133,6 +133,7 @@ on first download (trust on first use), and `smoke add` warns about it on every 
 | tllist | codeberg.org | **UNVERIFIED** (pinned SHA256 only, trusted on first use) |
 | tmux | github.com | **UNVERIFIED** (pinned SHA256 only, trusted on first use) |
 | tree | oldmanprogrammer.net | **UNVERIFIED** (pinned SHA256 only, trusted on first use) |
+| unbound | nlnetlabs.nl | upstream GPG signature |
 | util-linux | cdn.kernel.org | upstream GPG signature |
 | vim | github.com | signed git tag (archive = tag tree) |
 | vulkan-headers | github.com | **UNVERIFIED** (pinned SHA256 only, trusted on first use) |
@@ -148,4 +149,4 @@ on first download (trust on first use), and `smoke add` warns about it on every 
 | zlib | github.com | upstream GPG signature |
 | zstd | github.com | upstream GPG signature |
 
-71 sources verified, 39 flagged.
+72 sources verified, 39 flagged.

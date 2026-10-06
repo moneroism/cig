@@ -1,0 +1,24 @@
+# unbound - a local validating DNS resolver: asks the root servers directly, checks DNSSEC
+name=unbound
+version=1.26.1
+source="https://nlnetlabs.nl/downloads/unbound/unbound-$version.tar.gz"
+signature="https://nlnetlabs.nl/downloads/unbound/unbound-$version.tar.gz.asc"
+sha256="35a6dc0e425a9282c3426d9a3043144011bf0534aed4b73ab62c52aee0af1503"
+depends="openssl expat"
+style=gnu
+group="network"
+default=on
+configure_args="--sysconfdir=/etc --with-username=unbound
+    --with-rootkey-file=/var/lib/unbound/root.key --with-ssl=/usr --with-libexpat=/usr
+    --without-pythonmodule --without-pyunbound --disable-static"
+config_files="etc/unbound/unbound.conf"
+# cig's own short unbound.conf instead of the example file; the service runs it in the foreground
+do_install() {
+    make DESTDIR="$DEST" install
+    cp -R "$PKGDIR/files/etc" "$DEST/"
+}
+post_install() {
+    grep -q '^unbound:' /etc/group || addgroup -S unbound
+    grep -q '^unbound:' /etc/passwd || adduser -S -D -H -h /var/lib/unbound -s /bin/false -G unbound unbound
+    install -d -m 750 /var/log/unbound
+}

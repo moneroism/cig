@@ -560,6 +560,11 @@ void do_install(struct state *s)
 
 	step("Network");
 	mkdirs(TARGET "/etc/service");
+	if (file_exists(TARGET "/usr/sbin/unbound")) {   /* the local validating resolver answers all DNS */
+		RUN("ln", "-sfn", "/etc/sv/unbound", TARGET "/etc/service/unbound");
+		put_file(TARGET "/etc/resolv.conf.static", "nameserver 127.0.0.1\nnameserver ::1\n", 0644);
+		put_file(TARGET "/etc/resolv.conf", "nameserver 127.0.0.1\nnameserver ::1\n", 0644);
+	}
 	if (file_exists("/sys/class/net/eth0") && file_exists(TARGET "/etc/sv/udhcpc-eth0"))
 		RUN("ln", "-sfn", "/etc/sv/udhcpc-eth0", TARGET "/etc/service/udhcpc-eth0");
 	if (file_exists("/sys/class/net/wlan0") && file_exists(TARGET "/usr/sbin/wpa_supplicant")) {
