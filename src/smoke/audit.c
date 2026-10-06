@@ -170,14 +170,16 @@ static bool root_exists(const char *abs)
 
 /* the libraries an ELF file needs (DT_NEEDED), read from its dynamic section; 64-bit
  * little-endian only (what cig builds); anything else is skipped */
-static void elf_needed(const char *path, struct strv *out)
+/* the libraries an ELF file needs (DT_NEEDED), and where else it looks for them
+ * (DT_RUNPATH, DT_RPATH: perl finds libperl.so in its CORE folder that way) */
+static void elf_needed(const char *path, struct strv *out, struct strv *runpath)
 {
 	Elf64_Ehdr eh;
 	Elf64_Phdr ph[64];
 	FILE *f = fopen(path, "rb");
 	uint64_t dynoff = 0, dynsz = 0, strtab = 0, strsz = 0, stroff = 0;
-	uint64_t need[256];
-	int nneed = 0;
+	uint64_t need[256], rp[8];
+	int nneed = 0, nrp = 0;
 	char *str = NULL;
 
 	if (!f)
@@ -200,6 +202,8 @@ static void elf_needed(const char *path, struct strv *out)
 			break;
 		if (d.d_tag == DT_NEEDED && nneed < 256)
 			need[nneed++] = d.d_un.d_val;
+		else if ((d.d_tag == DT_RUNPATH || d.d_tag == DT_RPATH) && nrp < 8)
+			rp[nrp++] = d.d_un.d_val;
 		else if (d.d_tag == DT_STRTAB)
 			strtab = d.d_un.d_ptr;
 		else if (d.d_tag == DT_STRSZ)
@@ -217,6 +221,14 @@ static void elf_needed(const char *path, struct strv *out)
 	for (int i = 0; i < nneed; i++)
 		if (need[i] < strsz)
 			sv_push(out, str + need[i]);
+	for (int i = 0; i < nrp; i++) {   /* colon-separated folders */
+		if (rp[i] >= strsz)
+			continue;
+		char *list = xstrdup(str + rp[i]), *sv = NULL;
+		for (char *d = strtok_r(list, ":", &sv); d; d = strtok_r(NULL, ":", &sv))
+			sv_push(runpath, d);
+		free(list);
+	}
 done:
 	free(str);
 	fclose(f);
@@ -234,16 +246,29 @@ int audit_libraries(void)
 		struct strv files = { 0 };
 		walk(D, meta, &files, true);
 		for (size_t j = 0; j < files.n; j++) {
-			struct strv need = { 0 };
+			struct strv need = { 0 }, runpath = { 0 };
 			char *full = xasprintf("%s%s", ROOT, files.v[j]);
-			elf_needed(full, &need);
+			elf_needed(full, &need, &runpath);
 			for (size_t k = 0; k < need.n; k++) {
 				char *lib = xasprintf("/usr/lib/%s", need.v[k]);
-				if (!root_exists(lib))
+				bool found = root_exists(lib);
+				for (size_t r = 0; r < runpath.n && !found; r++) {
+					/* $ORIGIN: the folder of the file inside its package */
+					char *dir = starts_with(runpath.v[r], "$ORIGIN")
+					            ? xasprintf("%.*s%s", (int)(strrchr(files.v[j], '/') - files.v[j]), files.v[j],
+					                        runpath.v[r] + strlen("$ORIGIN"))
+					            : xstrdup(runpath.v[r]);
+					char *in = xasprintf("%s/%s", dir, need.v[k]);
+					found = *dir == '/' && root_exists(in);
+					free(in);
+					free(dir);
+				}
+				if (!found)
 					flag("%s needs %s, which no installed package provides", files.v[j], need.v[k]);
 				free(lib);
 			}
 			sv_free(&need);
+			sv_free(&runpath);
 			free(full);
 		}
 		sv_free(&files);
