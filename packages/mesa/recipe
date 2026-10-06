@@ -15,7 +15,7 @@ meson_args="-Dplatforms=wayland -Dgallium-drivers=zink -Dvulkan-drivers=amd -Dll
     -Dglx=disabled -Degl=enabled -Dgbm=enabled -Dgles1=disabled -Dgles2=enabled -Dopengl=true
     -Dvalgrind=disabled -Dlibunwind=disabled -Dzstd=disabled -Dlmsensors=disabled
     -Dvideo-codecs= -Dvulkan-layers= -Dtools= -Dbuild-tests=false -Dmicrosoft-clc=disabled
-    -Dandroid-libbacktrace=disabled -Dgallium-va=disabled -Dgallium-vdpau=disabled
+    -Dandroid-libbacktrace=disabled -Dgallium-va=disabled
     -Dgallium-extra-hud=false -Dvulkan-beta=false"
 
 # the C++ runtime (libstdc++, libgcc_s) belongs to gcc, which installed systems do not have:
