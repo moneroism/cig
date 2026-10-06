@@ -26,7 +26,7 @@ ASCII one for the Linux console. Colours are fastfetch placeholders, the same in
 
 | File | Size | Drawing |
 |---|---|---|
-| `cig-small.txt` | small | a squashed butt, lying flat |
+| `cig-small.txt` | small | the mascot: a hermit crab (minimal: carries only what it needs; hardened: lives in a hard shell; swaps it for a better one when it outgrows it) |
 | `cig.txt` | normal | a cigarette being smoked (the default) |
 | `cig-butt.txt` | normal | a butt stubbed out in the ashtray |
 | `cig-ascii.txt` | normal | the cigarette in plain ASCII (console) |
