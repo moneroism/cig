@@ -8,5 +8,5 @@ depends="wlroots json-c pcre2 pango cairo libinput libevdev wayland libxkbcommon
 makedepends="meson pkgconf wayland-protocols"
 style=meson
 group="desktop"
-meson_args="-Dman-pages=disabled -Dtray=disabled -Dgdk-pixbuf=disabled -Ddefault-wallpaper=false
+meson_args="-Dwerror=false -Dman-pages=disabled -Dtray=disabled -Dgdk-pixbuf=disabled -Ddefault-wallpaper=false
     -Dfish-completions=false -Dzsh-completions=false -Dbash-completions=false"
