@@ -43,9 +43,9 @@ _cig_settings() {
     scripts/kconfig/merge_config.sh -m .config "$PKGDIR/files/cig.config"
     scripts/config --set-str CMDLINE "$(_cmdline | sed 's/ *$//')"
     if [ -n "${CIG_KERNEL_INITRAMFS:-}" ]; then   # the install medium (scripts/build-initramfs.sh)
-        [ -x "$CIG_KERNEL_INITRAMFS/init" ] || { echo "no initramfs in $CIG_KERNEL_INITRAMFS" >&2; return 1; }
+        [ -s "$CIG_KERNEL_INITRAMFS/initramfs.list" ] || { echo "no initramfs.list in $CIG_KERNEL_INITRAMFS" >&2; return 1; }
         scripts/kconfig/merge_config.sh -m .config "$PKGDIR/files/media.config"
-        scripts/config --set-str INITRAMFS_SOURCE "$CIG_KERNEL_INITRAMFS"
+        scripts/config --set-str INITRAMFS_SOURCE "$CIG_KERNEL_INITRAMFS/initramfs.list"
     fi
     make olddefconfig
 }
@@ -68,6 +68,11 @@ do_build() {
     fi
 
     make bzImage modules
+    if [ -n "${CIG_KERNEL_INITRAMFS:-}" ]; then   # an empty initramfs once slipped through
+        local n; n=$(wc -c < usr/initramfs_data.cpio)
+        [ "$n" -gt 100000 ] || { echo "the built-in initramfs is empty ($n bytes)" >&2; return 1; }
+        echo "built-in initramfs: $n bytes"
+    fi
 }
 
 do_install() {

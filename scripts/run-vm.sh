@@ -41,8 +41,9 @@ case "${1:-}" in
     sdl) DISP=(-display sdl) ;;
     gtk) DISP=(-display gtk) ;;
     vnc) DISP=(-display vnc=127.0.0.1:0); echo "VNC on 127.0.0.1:5900 (connect with a VNC viewer)" ;;
+    none) DISP=(-display none) ;;   # headless: screenshots through CIG_VM_MONITOR
     "")  ;;
-    *)   die "usage: run-vm.sh [sdl|gtk|vnc]" ;;
+    *)   die "usage: run-vm.sh [sdl|gtk|vnc|none]" ;;
 esac
 
 ACCEL=()
