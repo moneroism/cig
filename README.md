@@ -164,8 +164,9 @@ Installs, removes and audits packages.
 ```
 
 ```
-smoke add [-c|-p] [-y] <pkg>.. add and install: asks "compile on this device?" (-c yes,
-                               -p use a prebuilt package) and "install?" (-y no questions)
+smoke add [-c|-p] [-y] <pkg>.. add and install: asks "compile on this device?" (-c yes, also
+                               every missing dependency; -p use prebuilt packages) and
+                               "install?" (-y no questions)
 smoke remove  <pkg>...         remove, then dependencies nothing needs anymore
 smoke autoremove               remove orphaned dependencies
 smoke update [-c|-p] [-y] [<pkg>...]
@@ -225,8 +226,9 @@ installs the packages with smoke, compiles the kernel for the detected hardware
 (root found by PARTUUID, its own module signing key), runs the package setup,
 creates the users, and enables networking. An optional component that fails to build is
 skipped and listed at the end (a base package stops the install). The medium's prebuilt package of every recipe stays on the new system in
-`/var/cig/pkgs` (not installed, about 300 MiB), so `smoke add` can install anything later,
-including the build tools needed to compile. It ends with `smoke audit` against the new
+`/var/cig/prebuilt` (not installed, about 300 MiB), so `smoke add -p` can install anything
+later, including the build tools needed to compile; `smoke add -c` never uses them (the build
+tools themselves excepted, on a system without a compiler). It ends with `smoke audit` against the new
 system: it must contain exactly what was chosen. Sources and prebuilt packages come
 from the medium only when a chosen package needs them. Log: `/var/log/cig-install.log`.
 

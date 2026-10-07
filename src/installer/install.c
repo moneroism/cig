@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-or-later */
 /* Copyright (C) 2026 moneroism */
 /* install.c - partition, format, build and install the chosen packages, users, network */
+#include <ctype.h>
 #include <errno.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -88,6 +89,38 @@ static _Noreturn void fail(const char *why)
 			fail("command failed: " #__VA_ARGS__); \
 	} while (0)
 
+/* is dev the disk itself or one of its partitions? (sda: sda, sda1, not sdab; nvme0n1:
+ * nvme0n1, nvme0n1p1, not nvme0n12) */
+static bool on_disk(const char *dev, const char *disk)
+{
+	size_t n = strlen(disk);
+	const char *r;
+	if (strncmp(dev, "/dev/", 5) || strncmp(dev + 5, disk, n))
+		return false;
+	r = dev + 5 + n;
+	if (!*r)
+		return true;
+	if (n && isdigit((unsigned char)disk[n - 1])) {
+		if (*r != 'p')
+			return false;
+		r++;
+	}
+	return *r && strspn(r, "0123456789") == strlen(r);
+}
+
+/* does a line of /proc/mounts or /proc/swaps (first field: the device) name the disk? */
+static bool disk_in_use(const char *table, const char *disk)
+{
+	char *t = read_text(table), *save = NULL;
+	bool used = false;
+	for (char *l = t ? strtok_r(t, "\n", &save) : NULL; l && !used; l = strtok_r(NULL, "\n", &save)) {
+		l[strcspn(l, " \t")] = '\0';
+		used = on_disk(l, disk);
+	}
+	free(t);
+	return used;
+}
+
 /* a path inside the new system: its /usr links are absolute (/usr/pkg/...) and only
  * resolve there, never from the install media */
 static bool target_has(const char *path)
@@ -163,6 +196,13 @@ static void put32(unsigned char **p, unsigned long v) { for (int i = 0; i < 4; i
 static void put64(unsigned char **p, unsigned long long v) { for (int i = 0; i < 8; i++) *(*p)++ = (v >> (8 * i)) & 0xff; }
 static void put_ucs2(unsigned char **p, const char *s) { do put16(p, (unsigned char)*s); while (*s++); }
 
+/* the GUID as text (lower case), from the 16 bytes as stored */
+static void guid_text(const unsigned char b[16], char out[37])
+{
+	snprintf(out, 37, "%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x",
+	         b[3], b[2], b[1], b[0], b[5], b[4], b[7], b[6], b[8], b[9], b[10], b[11], b[12], b[13], b[14], b[15]);
+}
+
 /* "EE32C236-4DA2-..." -> the 16 bytes as stored (first three fields little-endian) */
 static bool guid_bytes(const char *g, unsigned char out[16])
 {
@@ -196,6 +236,48 @@ static bool write_var(const char *name, const unsigned char *data, size_t len)
 	return ok;
 }
 
+static bool was_dropped(int num, const int *dropped, int n)
+{
+	for (int i = 0; i < n; i++)
+		if (dropped[i] == num)
+			return true;
+	return false;
+}
+
+/* entries an earlier cig install made ("cig", HD(...)/File(...)) that point at this ESP (a
+ * reinstall) or at a partition that no longer exists (a disk repartitioned since): every
+ * reinstall added one more. Entries of other systems, and cig entries for partitions that
+ * still exist (another cig disk), stay. */
+static void drop_old_entries(const unsigned char esp_guid[16], int *dropped, int *ndropped)
+{
+	static const unsigned char desc[] = { 'c', 0, 'i', 0, 'g', 0, 0, 0 };
+	char *argv[] = { "blkid", NULL }, *known = capture(argv);
+	bool have_list = known && strstr(known, "PARTUUID=");   /* util-linux blkid lists them */
+	for (char *c = known; c && *c; c++)
+		*c = (char)tolower((unsigned char)*c);
+	for (int i = 0; i < 0x1000 && *ndropped < 64; i++) {
+		char *v = xasprintf(EFIVARS "/Boot%04X-" EFI_GLOBAL, i), g[37];
+		unsigned char buf[512];
+		FILE *f = fopen(v, "rb");
+		size_t n = f ? fread(buf, 1, sizeof(buf), f) : 0;
+		if (f)
+			fclose(f);
+		/* efivarfs attributes (4), load option attributes (4), path length (2), description,
+		 * then the first device path node: hard drive (type 4, subtype 1), GUID at +24 */
+		if (n >= 10 + sizeof(desc) + 42 && !memcmp(buf + 10, desc, sizeof(desc)) &&
+		    buf[18] == 4 && buf[19] == 1) {
+			guid_text(buf + 18 + 24, g);
+			bool mine = !memcmp(buf + 18 + 24, esp_guid, 16), gone = have_list && !strstr(known, g);
+			if ((mine || gone) && unlink(v) == 0) {
+				dropped[(*ndropped)++] = i;
+				logf_("removed the old boot entry Boot%04X (%s)\n", i, mine ? "this ESP" : "its partition is gone");
+			}
+		}
+		free(v);
+	}
+	free(known);
+}
+
 static void efi_boot_entry(struct state *s, const struct part *esp)
 {
 	unsigned char guid[16], buf[512], *p = buf, *fpl, order[256];
@@ -220,6 +302,8 @@ static void efi_boot_entry(struct state *s, const struct part *esp)
 		return;
 	}
 	free(uuid);
+	int dropped[64], ndropped = 0;
+	drop_old_entries(guid, dropped, &ndropped);
 	for (int i = 0; i < 0x1000 && num < 0; i++) {   /* a free Boot#### */
 		char *v = xasprintf(EFIVARS "/Boot%04X-" EFI_GLOBAL, i);
 		if (!file_exists(v))
@@ -267,7 +351,7 @@ static void efi_boot_entry(struct state *s, const struct part *esp)
 	put32(&q, 7);
 	put16(&q, (unsigned)num);
 	for (size_t i = 4; i + 1 < olen && q - nb < (long)sizeof(nb) - 2; i += 2)
-		if ((order[i] | order[i + 1] << 8) != num) {
+		if ((order[i] | order[i + 1] << 8) != num && !was_dropped(order[i] | order[i + 1] << 8, dropped, ndropped)) {
 			*q++ = order[i];
 			*q++ = order[i + 1];
 		}
@@ -290,17 +374,10 @@ void do_install(struct state *s)
 	/* ---- partitioning ---- */
 	step("Partitioning /dev/%s", s->disk);
 	cleanup_mounts();
-	{
-		char *m = read_text("/proc/mounts"), *pat = xasprintf("/dev/%s", s->disk);
-		bool busy = false;
-		for (char *l = m; l && *l; l = strchr(l, '\n') ? strchr(l, '\n') + 1 : l + strlen(l))
-			if (!strncmp(l, pat, strlen(pat)))
-				busy = true;
-		free(m);
-		free(pat);
-		if (busy)
-			fail("the disk has mounted partitions; unmount them first");
-	}
+	if (disk_in_use("/proc/mounts", s->disk))
+		fail("the disk has mounted partitions; unmount them first");
+	if (disk_in_use("/proc/swaps", s->disk))
+		fail("the disk has a swap partition in use; swapoff it first");
 	if (layout_place(&s->lay))
 		fail("the partition layout does not fit the disk");
 	{
@@ -520,20 +597,23 @@ void do_install(struct state *s)
 	unsetenv("CIG_SOURCE_MIRROR");
 	unsetenv("CIG_PKG_MIRROR");
 
-	/* the medium's prebuilt package of every recipe stays on the new system (in /var/cig/pkgs,
-	 * not installed; about 300 MiB): without them it could add nothing later, not even the
-	 * build tools needed to compile (there is no package server). Packages compiled for this
-	 * machine above are never replaced. The media-only installer and live system stay out. */
+	/* the medium's prebuilt package of every recipe stays on the new system (in
+	 * /var/cig/prebuilt, not installed; about 300 MiB): without them it could add nothing later,
+	 * not even the build tools needed to compile (there is no package server). Apart from
+	 * /var/cig/pkgs, so smoke uses them only when prebuilt is chosen (smoke add -c compiles every
+	 * missing dependency). Packages compiled for this machine above are not duplicated. The
+	 * media-only installer and live system stay out. */
 	step("Prebuilt packages for later (smoke add)");
 	{
 		char *argv[] = { "sh", "-c",
 			"for r in \"$0\"/packages/*/recipe; do p=${r%/recipe}; p=${p##*/};"
 			" case $p in linux|linux-firmware|cig-installer|cig-live) continue ;; esac;"
 			" f=$(CIG_VAR=\"$1\" \"$0\"/cigbuild pkgfile \"$p\" 2>/dev/null) && [ -f \"$f\" ] || continue;"
-			" b=\"$2/${f##*/}\"; [ -e \"$b\" ] || cp \"$f\" \"$b\" || exit 1;"
+			" [ ! -e \"$3/${f##*/}\" ] || continue; b=\"$2/${f##*/}\"; [ -e \"$b\" ] || cp \"$f\" \"$b\" || exit 1;"
 			" [ ! -f \"$f.sha256\" ] || [ -e \"$b.sha256\" ] || cp \"$f.sha256\" \"$b.sha256\" || exit 1;"
 			" done",
-			s->share, (char *)media_var, TARGET "/var/cig/pkgs", NULL };
+			s->share, (char *)media_var, TARGET "/var/cig/prebuilt", TARGET "/var/cig/pkgs", NULL };
+		mkdirs(TARGET "/var/cig/prebuilt");
 		if (run(argv) != 0) {
 			logf_("    ! not every prebuilt package could be kept\n");
 			snprintf(s->warnings + strlen(s->warnings), sizeof(s->warnings) - strlen(s->warnings),
