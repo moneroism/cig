@@ -1,4 +1,4 @@
-# libassuan - GnuPG's IPC library (only to build GnuPG; gpgv does not use it)
+# libassuan - GnuPG's IPC library (gpgv links it)
 name=libassuan
 version=3.0.2
 source="https://gnupg.org/ftp/gcrypt/libassuan/libassuan-$version.tar.bz2"

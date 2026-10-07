@@ -1,4 +1,4 @@
-# npth - GnuPG's thread library (only to build GnuPG; gpgv does not use it)
+# npth - GnuPG's thread library (gpgv links it)
 name=npth
 version=1.8
 source="https://gnupg.org/ftp/gcrypt/npth/npth-$version.tar.bz2"

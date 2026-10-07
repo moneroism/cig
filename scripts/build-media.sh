@@ -140,6 +140,10 @@ SMOKE_ROOT=$STAGE "$SMOKE" hooks --all
 chroot "$STAGE" adduser -D -s /bin/bash -h /home/cig cig
 for g in wheel audio video input users; do chroot "$STAGE" addgroup cig "$g"; done
 printf 'root:ciglinux\ncig:ciglinux\n' | chroot "$STAGE" chpasswd -c sha512 > /dev/null
+# every program on the live system must find its libraries (gpgv once linked libassuan and
+# npth, which only the dev system had as build tools)
+libs=$(SMOKE_ROOT=$STAGE "$SMOKE" audit --quick 2>&1 | grep ' needs ' || true)
+[ -z "$libs" ] || { echo "$libs" >&2; die "programs on the live system miss libraries (above)"; }
 [ -f "$STAGE/boot/EFI/BOOT/BOOTX64.EFI" ] || die "the kernel did not reach the ESP"
 [ "$(df -k "$STAGE/boot" | awk 'NR == 2 { print $4 }')" -gt 1024 ] \
     || die "the ESP image ($ESP_MB MiB, the El Torito limit) is full: the kernel is too large for it"

@@ -3,14 +3,15 @@
 # everything optional off and only gpgv is installed: no agent, no key management.
 name=gpgv
 version=2.5.24
+rel=2
 upstream="https://gnupg.org/ftp/gcrypt/gnupg/"
 source="https://gnupg.org/ftp/gcrypt/gnupg/gnupg-$version.tar.bz2"
 signature="https://gnupg.org/ftp/gcrypt/gnupg/gnupg-$version.tar.bz2.sig"
 keys="6DAA6E64A76D2840571B4902528897B826403ADA"
 sha256="-"
 wrksrc="gnupg-$version"
-depends="libgcrypt libgpg-error zlib"
-makedepends="libassuan libksba npth pkgconf"
+depends="libgcrypt libgpg-error libassuan npth zlib"   # gpgv links libassuan and npth too
+makedepends="libksba pkgconf"
 style=custom
 group="base"
 do_build() {
