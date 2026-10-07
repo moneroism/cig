@@ -607,6 +607,9 @@ pkg_info() {
     echo "depends:  ${depends:--}"
     echo "builds with: ${makedepends:--}"
     echo "source:   $source"
+    local e sig=-   # the first upstream signature, expanded ("-": none)
+    for e in $signature; do [ "$e" = - ] || { sig=$e; break; }; done
+    echo "signature: $sig"
     if is_installed "$1"; then echo "installed: yes (smoke why $1)"; else echo "installed: no"; fi
 }
 

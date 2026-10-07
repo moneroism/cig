@@ -227,25 +227,6 @@ static char *info_field(const char *info_out, const char *key)
 	return val;
 }
 
-/* the first signature URL of a recipe, or NULL */
-static char *recipe_signature(const char *name)
-{
-	char *p = xasprintf("%s/packages/%s/recipe", CIG_REPO, name), *text = read_file(p), *sig = NULL;
-	char *save = NULL;
-	for (char *l = text ? strtok_r(text, "\n", &save) : NULL; l && !sig; l = strtok_r(NULL, "\n", &save)) {
-		if (!starts_with(l, "signature="))
-			continue;
-		l += strlen("signature=");
-		l += *l == '"';
-		l[strcspn(l, "\" \t")] = '\0';
-		if (*l && strcmp(l, "-"))
-			sig = xstrdup(l);
-	}
-	free(text);
-	free(p);
-	return sig;
-}
-
 /* a package file from the install media's mirror, when there is one */
 static void prebuilt_from_mirror(const char *f)
 {
@@ -309,7 +290,11 @@ static void add_pkg(const char *name, enum compile compile, bool yes)
 	}
 	version = info_field(out, "version");
 	src = info_field(out, "source");
-	sig = recipe_signature(name);
+	sig = info_field(out, "signature");   /* expanded by cigbuild ($version filled in) */
+	if (sig && (!*sig || !strcmp(sig, "-"))) {
+		free(sig);
+		sig = NULL;
+	}
 	printf("  %s %s\n", name, version ? version : "?");
 	if (src && *src) {
 		char *s = src, *colons;

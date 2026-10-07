@@ -259,14 +259,19 @@ static void build_screen(struct state *s)
 /* the chosen components (base packages are always installed) */
 static char *selected(const struct state *s)
 {
-	char *out = xstrdup("base");
+	int n = 0;
+	char *out = xstrdup("");
 	for (int i = 0; i < s->ncomp; i++)
 		if (s->comps[i].on) {
-			char *n = xasprintf("%s %s", out, s->comps[i].name);
+			char *t = xasprintf("%s %s", out, s->comps[i].name);
 			free(out);
-			out = n;
+			out = t;
+			n++;
 		}
-	return out;
+	/* the count first: a long list is cut at the screen's edge */
+	char *t = xasprintf("%d of %d + base:%s", n, s->ncomp, out);
+	free(out);
+	return t;
 }
 
 static char *disk_value(struct state *s)

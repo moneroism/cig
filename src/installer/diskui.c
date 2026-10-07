@@ -280,8 +280,14 @@ static bool auto_layout(struct state *s)
 	char buf[16];
 	unsigned long long size_g = sectors_of(s->disk) * sect_of(s->disk) >> 30;
 	s->sep_home = ui_yesno("Auto layout", "Separate /home partition?", s->sep_home);
+	if (s->sep_home && size_g < 21) {
+		ui_msg("Auto layout", "The disk is too small for a separate /home (the system needs at least 20G).");
+		s->sep_home = false;
+	}
 	if (s->sep_home) {
-		snprintf(buf, sizeof(buf), "%u", s->root_g);
+		/* the suggestion must fit: the default 40G on a 40G disk left nothing for /home */
+		unsigned sugg = s->root_g < size_g ? s->root_g : (unsigned)(size_g / 2 > 20 ? size_g / 2 : 20);
+		snprintf(buf, sizeof(buf), "%u", sugg);
 		char *q = xasprintf("Size of the system partition in G (rest goes to /home), 20 to %llu:", size_g - 1);
 		bool ok = ui_input("Auto layout", q, buf, sizeof(buf), false);
 		free(q);
