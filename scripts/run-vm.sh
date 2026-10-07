@@ -22,7 +22,8 @@ die() { echo "!! $*" >&2; exit 1; }
 [ -z "$IMG" ] || [ -f "$IMG" ] || die "$IMG not found"
 [ -z "$CDROM" ] || [ -f "$CDROM" ] || die "$CDROM not found"
 [ -z "$TARGET" ] || [ -f "$TARGET" ] || die "$TARGET not found (create it: qemu-img create -f raw $TARGET 40G)"
-mountpoint -q "$SYS" && die "image is still mounted at $SYS. Run: sudo umount -R $SYS"
+# the dev image must not be used by the chroot and the VM at once (an ISO or a target may)
+[ "$IMG" != "$HOME/cig.img" ] || ! mountpoint -q "$SYS" || die "image is still mounted at $SYS. Run: sudo umount -R $SYS"
 
 CODE=$(find /usr/share -name 'OVMF_CODE*.fd' 2>/dev/null | grep -v -i secboot | head -n1 || true)
 VTPL=$(find /usr/share -name 'OVMF_VARS*.fd' 2>/dev/null | head -n1 || true)
