@@ -9,7 +9,8 @@
 #   smoke add -c -y xorriso dosfstools
 #   /cig/scripts/build-initramfs.sh /cig/media-build/initramfs
 #   CIG_VAR=/cig/media-build CIG_SOURCE_MIRROR=/var/cig/sources CIG_KERNEL_PROFILE=generic \
-#       CIG_KERNEL_INITRAMFS=/cig/media-build/initramfs cigbuild build linux
+#       CIG_KERNEL_INITRAMFS=/cig/media-build/initramfs \
+#       CIG_KERNEL_CMDLINE_EXTRA="console=ttyS0,115200 console=tty0" cigbuild build linux
 #   CIG_VAR=/cig/media-build CIG_SOURCE_MIRROR=/var/cig/sources CIG_FIRMWARE=all \
 #       cigbuild build linux-firmware
 #   /cig/scripts/build-media.sh [output.iso]      (default: the repository, cig-<version>.iso)
@@ -143,6 +144,18 @@ printf 'root:ciglinux\ncig:ciglinux\n' | chroot "$STAGE" chpasswd -c sha512 > /d
 [ "$(df -k "$STAGE/boot" | awk 'NR == 2 { print $4 }')" -gt 1024 ] \
     || die "the ESP image ($ESP_MB MiB, the El Torito limit) is full: the kernel is too large for it"
 cleanup
+
+# every signed source's signature next to it, so an install can compile offline and still
+# check each source with gpgv (the dev system has signatures only for what it built since
+# gpgv came). Not fatal: a host that does not answer only costs the offline check there.
+step "Signatures for the installer mirror"
+miss=
+for r in "$REPO"/packages/*/recipe; do
+    p=${r%/recipe}; p=${p##*/}
+    grep -q '^signature="[^-]' "$r" || continue
+    CIG_VAR=$DEV_VAR "$CIGBUILD" fetch "$p" > /dev/null 2>&1 || miss="$miss $p"
+done
+[ -z "$miss" ] || echo "    not fetched (an offline compile of these needs the network):$miss"
 
 # the installer's mirror: every source and prebuilt package (hard links, no copies);
 # target kernels are always built per machine, and the generic one has its own place
