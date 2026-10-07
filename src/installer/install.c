@@ -2,6 +2,7 @@
 /* Copyright (C) 2026 moneroism */
 /* install.c - partition, format, build and install the chosen packages, users, network */
 #include <ctype.h>
+#include <dirent.h>
 #include <errno.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -247,13 +248,32 @@ static bool was_dropped(int num, const int *dropped, int n)
 /* entries an earlier cig install made ("cig", HD(...)/File(...)) that point at this ESP (a
  * reinstall) or at a partition that no longer exists (a disk repartitioned since): every
  * reinstall added one more. Entries of other systems, and cig entries for partitions that
- * still exist (another cig disk), stay. */
+ * still exist (another cig disk), stay; so do all of them when no partition list can be read. */
 static void drop_old_entries(const unsigned char esp_guid[16], int *dropped, int *ndropped)
 {
 	static const unsigned char desc[] = { 'c', 0, 'i', 0, 'g', 0, 0, 0 };
-	char *argv[] = { "blkid", NULL }, *known = capture(argv);
-	bool have_list = known && strstr(known, "PARTUUID=");   /* util-linux blkid lists them */
-	for (char *c = known; c && *c; c++)
+	/* the partition GUIDs of every disk (sfdisk -d: uuid=...); BusyBox blkid shows none */
+	char *known = xstrdup("");
+	DIR *d = opendir("/sys/block");
+	struct dirent *de;
+	while (d && (de = readdir(d))) {
+		if (de->d_name[0] == '.' || !strncmp(de->d_name, "loop", 4) || !strncmp(de->d_name, "ram", 3) ||
+		    !strncmp(de->d_name, "zram", 4) || !strncmp(de->d_name, "sr", 2))
+			continue;
+		char *dev = xasprintf("/dev/%s", de->d_name), *argv[] = { "sfdisk", "-d", dev, NULL };
+		char *dump = capture(argv);
+		if (dump) {
+			char *n = xasprintf("%s%s\n", known, dump);
+			free(known);
+			known = n;
+			free(dump);
+		}
+		free(dev);
+	}
+	if (d)
+		closedir(d);
+	bool have_list = strstr(known, "uuid=") != NULL;
+	for (char *c = known; *c; c++)
 		*c = (char)tolower((unsigned char)*c);
 	for (int i = 0; i < 0x1000 && *ndropped < 64; i++) {
 		char *v = xasprintf(EFIVARS "/Boot%04X-" EFI_GLOBAL, i), g[37];

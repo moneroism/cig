@@ -3,7 +3,7 @@
 # The installer is C with ncurses (src/installer), compiled in the build folder.
 name=cig-installer
 version=$(cat "$CIG_REPO/VERSION")
-rel=4
+rel=5
 source=""
 sha256=""
 depends="cig-tools util-linux e2fsprogs ncurses"
