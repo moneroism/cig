@@ -246,6 +246,8 @@ static void add_pkg(const char *name, enum compile compile, bool yes)
 	const struct inv_ent *e;
 	char hex[65];
 
+	if (!valid_name(name))   /* a path in the name would make cigbuild source any file */
+		die("not a package name: %s", name);
 	if (!is_file(recipe))
 		die("unknown package: %s (name lookup and links come later; see docs/smoke.md)", name);
 	free(recipe);

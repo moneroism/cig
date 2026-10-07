@@ -78,6 +78,9 @@ static void read_meta(const char *dir, struct meta *m)
 	parse_assignments(text, m, &rel);
 	if (!m->name || !m->version || !rel)
 		die("%s: incomplete .PKGINFO", p);
+	/* the version names the package folder and is an INVENTORY field */
+	if (!valid_name(m->version) || !valid_name(rel))
+		die("%s: invalid version %s-%s", p, m->version, rel);
 	char *v = xasprintf("%s-%s", m->version, rel);
 	free(m->version);
 	m->version = v;

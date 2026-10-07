@@ -158,6 +158,7 @@ void inv_put(const char *name, const char *version, const char *reason,
              const char *depends, const char *sha, const char *folder)
 {
 	char *line = xasprintf("%s %s %s %s %s %s", name, version, reason, depends, sha, folder);
+	unload();   /* from disk: another smoke (cigbuild installing build dependencies) may have written it */
 	load();
 	save(name, line);
 	free(line);
@@ -165,6 +166,7 @@ void inv_put(const char *name, const char *version, const char *reason,
 
 void inv_del(const char *name)
 {
+	unload();
 	load();
 	save(name, NULL);
 }
