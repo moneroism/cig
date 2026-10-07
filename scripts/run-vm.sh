@@ -9,6 +9,7 @@ set -euo pipefail
 # CIG_IMG:    disk to boot (default ~/cig.img; none when CIG_CDROM is set)
 # CIG_CDROM:  an ISO in a CD drive, booted first (the install medium)
 # CIG_TARGET: optional second, empty disk, e.g. to test the installer
+# CIG_VM_EXTRA:  more QEMU options, e.g. "-rtc base=2024-03-01T12:00:00" (a wrong clock)
 # CIG_VM_MONITOR: a QEMU monitor on this unix socket (screendump, sendkey: tests without a
 #             person at the VM window)
 CDROM="${CIG_CDROM:-}"
@@ -61,7 +62,7 @@ DISKS=(-device ahci,id=ahci)
 exec qemu-system-x86_64 \
     -machine q35 "${ACCEL[@]}" -smp 4 -m 4G "${DISP[@]}" \
     "${FW[@]}" \
-    "${DISKS[@]}" "${MON[@]}" \
+    "${DISKS[@]}" "${MON[@]}" ${CIG_VM_EXTRA:-} \
     -device virtio-vga \
     -device qemu-xhci -device usb-tablet \
     -nic user,model=e1000e \
