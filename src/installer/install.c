@@ -441,7 +441,8 @@ void do_install(struct state *s)
 	/* Everything is built on the target disk, in the new system's own /var/cig. Nothing
 	 * is copied in bulk: cigbuild takes a source (or, for prebuilt, a package) from the
 	 * install media only when a chosen package needs it (checked by smoke audit below). */
-	const char *media_var = getenv("CIG_VAR") ? getenv("CIG_VAR") : "/var/cig";
+	/* a copy: CIG_VAR is set to the target below */
+	const char *media_var = xstrdup(getenv("CIG_VAR") ? getenv("CIG_VAR") : "/var/cig");
 	char *media_sources = xasprintf("%s/sources", media_var), *media_pkgs = xasprintf("%s/pkgs", media_var);
 	char *media_generic = xasprintf("%s/generic", media_var);
 	setenv("CIG_VAR", TARGET "/var/cig", 1);
@@ -518,6 +519,27 @@ void do_install(struct state *s)
 	unsetenv("SMOKE_ROOT");
 	unsetenv("CIG_SOURCE_MIRROR");
 	unsetenv("CIG_PKG_MIRROR");
+
+	/* the medium's prebuilt package of every recipe stays on the new system (in /var/cig/pkgs,
+	 * not installed; about 300 MiB): without them it could add nothing later, not even the
+	 * build tools needed to compile (there is no package server). Packages compiled for this
+	 * machine above are never replaced. The media-only installer and live system stay out. */
+	step("Prebuilt packages for later (smoke add)");
+	{
+		char *argv[] = { "sh", "-c",
+			"for r in \"$0\"/packages/*/recipe; do p=${r%/recipe}; p=${p##*/};"
+			" case $p in linux|linux-firmware|cig-installer|cig-live) continue ;; esac;"
+			" f=$(CIG_VAR=\"$1\" \"$0\"/cigbuild pkgfile \"$p\" 2>/dev/null) && [ -f \"$f\" ] || continue;"
+			" b=\"$2/${f##*/}\"; [ -e \"$b\" ] || cp \"$f\" \"$b\" || exit 1;"
+			" [ ! -f \"$f.sha256\" ] || [ -e \"$b.sha256\" ] || cp \"$f.sha256\" \"$b.sha256\" || exit 1;"
+			" done",
+			s->share, (char *)media_var, TARGET "/var/cig/pkgs", NULL };
+		if (run(argv) != 0) {
+			logf_("    ! not every prebuilt package could be kept\n");
+			snprintf(s->warnings + strlen(s->warnings), sizeof(s->warnings) - strlen(s->warnings),
+			         "Not every prebuilt package could be kept for later (see the log).\n");
+		}
+	}
 	RUN("sh", "-c", "rm -rf " TARGET "/var/cig/build/*");
 
 	step("Running package setup inside the new system");

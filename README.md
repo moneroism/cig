@@ -224,7 +224,9 @@ another system's ESP can stay), formats, writes fstab by UUID,
 installs the packages with smoke, compiles the kernel for the detected hardware
 (root found by PARTUUID, its own module signing key), runs the package setup,
 creates the users, and enables networking. An optional component that fails to build is
-skipped and listed at the end (a base package stops the install). It ends with `smoke audit` against the new
+skipped and listed at the end (a base package stops the install). The medium's prebuilt package of every recipe stays on the new system in
+`/var/cig/pkgs` (not installed, about 300 MiB), so `smoke add` can install anything later,
+including the build tools needed to compile. It ends with `smoke audit` against the new
 system: it must contain exactly what was chosen. Sources and prebuilt packages come
 from the medium only when a chosen package needs them. Log: `/var/log/cig-install.log`.
 

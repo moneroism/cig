@@ -1,14 +1,14 @@
 # python - build tool only (meson, some build scripts). 3.13: GPG-signed releases.
 name=python
 version=3.13.16
-rel=2
+rel=3
 # track 3.13: the last series with GPG-signed releases (README)
 track=3.13
 source="https://www.python.org/ftp/python/$version/Python-$version.tar.xz"
 signature="https://www.python.org/ftp/python/$version/Python-$version.tar.xz.asc"
 keys="7169605F62C751356D054A26A821E680E5FA6305"
 sha256="-"
-depends="zlib openssl libffi util-linux"
+depends="zlib openssl libffi util-linux xz ncurses"
 style=custom
 # python finds its library by resolving its own path: install it as a real copy
 copy_files="usr/bin/python3.[0-9]*"
