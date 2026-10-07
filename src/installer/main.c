@@ -13,6 +13,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <time.h>
 #include <unistd.h>
 
 #include "state.h"
@@ -368,6 +369,40 @@ static void settings(struct state *s)
 	s->root_g = 40;
 }
 
+/* a clock behind the medium's build time (a flat clock battery, a firmware reset: one laptop
+ * said March 2024) makes signatures look made in the future and TLS certificates not yet
+ * valid. rc.init moved it forward to the build time; ask for the real time, also for the
+ * new system (the hardware clock is written too). */
+static void clock_screen(void)
+{
+	struct stat st;
+	time_t now = time(NULL);
+	bool behind = file_exists("/run/cig/clock-was-behind") ||
+	              (stat("/usr/pkg/INVENTORY", &st) == 0 && now < st.st_mtime);
+	if (!behind)
+		return;
+	char buf[32];
+	struct tm tm;
+	gmtime_r(&now, &tm);
+	strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M", &tm);
+	char *q = xasprintf("This machine's clock was behind (a flat clock battery or a firmware reset); it was "
+	                    "set to %s UTC, when this medium was built. Signature checks, TLS and DNSSEC need the "
+	                    "right time.\n\nThe current date and time in UTC (YYYY-MM-DD HH:MM):", buf);
+	bool ok = ui_input("Clock", q, buf, sizeof(buf), false);
+	free(q);
+	int y, mo, d, h, mi;
+	if (!ok)
+		return;
+	if (sscanf(buf, "%d-%d-%d %d:%d", &y, &mo, &d, &h, &mi) != 5 || y < 2026 || mo < 1 || mo > 12 ||
+	    d < 1 || d > 31 || h < 0 || h > 23 || mi < 0 || mi > 59) {
+		ui_msg("Clock", "Not a date in the form YYYY-MM-DD HH:MM (2026 or later); the clock stays as it is.");
+		return;
+	}
+	char *argv[] = { "date", "-u", "-s", buf, NULL }, *hw[] = { "hwclock", "-w", "-u", NULL };
+	if (run(argv) != 0 || run(hw) != 0)
+		ui_msg("Clock", "The clock could not be set.");
+}
+
 static void preflight(struct state *s)
 {
 	static const char *tools[] = { "sfdisk", "blkid", "mkfs.vfat", "mkfs.ext4", "mkswap", "chpasswd",
@@ -414,6 +449,8 @@ int main(void)
 	s.ncomp = load_components(s.share, &s.comps, &s.base);
 	s.ndrv = detect_hardware(&s.drvs, WORKDIR "/lsmod");
 	ui_init();
+	if (!getenv("CIG_INSTALL_DEMO"))
+		clock_screen();
 
 	int sel = 0;
 	for (;;) {

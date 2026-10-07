@@ -43,6 +43,14 @@ swapon -a 2>/dev/null
 
 [ -s /etc/hostname ] && hostname -F /etc/hostname
 hwclock -s -u 2>/dev/null
+# the clock never starts earlier than the last time this system ran (rc.shutdown) or was
+# installed or built (the inventory): a flat clock battery or a firmware reset sets it back
+# years, and TLS, DNSSEC and signature checks then fail. The installer asks for the real time.
+last=$(stat -c %Y /var/lib/cig/clock /usr/pkg/INVENTORY 2>/dev/null | sort -n | tail -n 1)
+if [ -n "$last" ] && [ "$(date +%s)" -lt "$last" ]; then
+    date -u -s "@$last" >/dev/null && hwclock -w -u 2>/dev/null
+    mkdir -p /run/cig && echo "$last" > /run/cig/clock-was-behind
+fi
 ip link set lo up
 [ -f /etc/sysctl.conf ] && sysctl -q -p /etc/sysctl.conf
 for f in /etc/sysctl.d/*.conf; do [ -f "$f" ] && sysctl -q -p "$f"; done
