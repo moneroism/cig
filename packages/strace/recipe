@@ -1,10 +1,12 @@
 # strace - trace system calls
 name=strace
 version=7.2
+rel=2
 source="https://github.com/strace/strace/releases/download/v$version/strace-$version.tar.xz"
 signature="https://github.com/strace/strace/releases/download/v$version/strace-$version.tar.xz.asc"
 keys="7BECFE3AF7B280BB52FF77F104BA4521C996DDE1"
 sha256="-"
+depends="elfutils"
 style=gnu
 group="development"
 configure_args="--enable-mpers=no"

@@ -1,8 +1,10 @@
 # glslang - GLSL/HLSL shader compiler (a build tool: Mesa compiles RADV's shaders with it)
 name=glslang
 version=16.6.0
+rel=2
 source="glslang-$version.tar.gz::https://github.com/KhronosGroup/glslang/archive/refs/tags/$version.tar.gz"
 sha256="9c09b901149c729df745057dafa815278aaa101b84d2b6e14f16a42de52f97f2"
+depends="gcc"
 makedepends="cmake make python"
 style=custom
 # no SPIRV-Tools optimizer, no tests: the validator binary is what Mesa needs

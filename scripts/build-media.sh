@@ -116,6 +116,21 @@ for p in $REPO_PKGS; do
     CIG_VAR=$MEDIA_VAR CIG_SOURCE_MIRROR=$DEV_VAR/sources "$CIGBUILD" build "$p"
 done
 
+# every package the installer can install must declare the libraries it links (an
+# undeclared one breaks installs with another selection: file/liblzma, mesa/libdisplay-info)
+step "Declared dependencies of every package"
+set --
+for r in "$REPO"/packages/*/recipe; do
+    p=${r%/recipe}; p=${p##*/}
+    case " linux linux-firmware " in *" $p "*) continue ;; esac
+    case " $REPO_PKGS " in
+        *" $p "*) f=$(CIG_VAR=$MEDIA_VAR "$CIGBUILD" pkgfile "$p") ;;
+        *)        f=$("$CIGBUILD" pkgfile "$p") ;;
+    esac
+    [ ! -f "$f" ] || set -- "$@" "$f"
+done
+"$REPO/scripts/check-deps.sh" "$@" || die "packages link libraries they do not declare (above)"
+
 # everything the dev system has (the media may be heavy: compilers, so installs can
 # compile on the device) plus the installer and the live system; kernel and firmware
 # are the media's own builds

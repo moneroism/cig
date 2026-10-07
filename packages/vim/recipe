@@ -1,11 +1,12 @@
 # vim - the Vi IMproved text editor (terminal only)
 name=vim
 version=9.2.1167
+rel=2
 source="vim-$version.tar.gz::https://github.com/vim/vim/archive/refs/tags/v$version.tar.gz"
 signature="tag=https://github.com/vim/vim.git#v$version"
 keys="4F19708816918E19AAE19DEEF3F92DA383FDDE09"
 sha256="bbcb6489aa995d128a8bf2a275fb5bc3f805ed36f52cb4d8347af425133cb3c4"
-depends="ncurses"
+depends="ncurses wayland"
 style=gnu
 group="editors"
 # terminal editor only: no GUI, X11, sound, network protocols or translations

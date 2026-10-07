@@ -1,10 +1,12 @@
 # cmake - build system generator (a build tool; built with its own bundled libraries)
 name=cmake
 version=4.4.4
+rel=2
 source="https://github.com/Kitware/CMake/releases/download/v$version/cmake-$version.tar.gz"
 signature="sums=https://github.com/Kitware/CMake/releases/download/v$version/cmake-$version-SHA-256.txt"
 keys="CBA23971357C2E6590D9EFD3EC8FEF3A7BFB4EDA"
 sha256="bd24c30d80a7744ae84b845ff080cc8453b06c622ef01066564108e9cefc44cf"
+depends="gcc"
 makedepends="make"
 style=custom
 do_build() {
