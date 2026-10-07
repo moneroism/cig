@@ -181,7 +181,9 @@ done
 step "Installer mirror (sources, packages)"
 # hard links where the staging folder is on the same filesystem, copies otherwise
 link() { cp -al "$@" 2>/dev/null || cp -a "$@"; }
-mkdir -p "$STAGE/var/cig/sources" "$STAGE/var/cig/pkgs"
+# build, db, logs: cigbuild creates them when it starts, and on the read-only medium it could
+# not (the installer's cigbuild pkgfile calls failed: only installed packages were kept)
+mkdir -p "$STAGE"/var/cig/{sources,pkgs,build,db,logs}
 link "$DEV_VAR/sources/." "$STAGE/var/cig/sources/"
 for f in "$DEV_VAR"/pkgs/*.tar.gz $(for p in $REPO_PKGS; do echo "$MEDIA_VAR/pkgs/$p-[0-9]*.tar.gz"; done); do
     [ -f "$f" ] || continue
