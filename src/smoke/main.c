@@ -227,7 +227,22 @@ static char *info_field(const char *info_out, const char *key)
 	return val;
 }
 
-/* a package file from the install media's mirror, when there is one */
+/* prebuilt packages: the install media's (CIG_PKG_MIRROR), or the ones the installer kept on
+ * this system ($CIG_VAR/prebuilt). cigbuild takes a package from CIG_PKG_MIRROR only while it
+ * is set, so compiling unsets it: every missing dependency is then compiled too */
+static void use_prebuilt(bool yes)
+{
+	if (!yes) {
+		unsetenv("CIG_PKG_MIRROR");
+	} else if (!getenv("CIG_PKG_MIRROR")) {
+		char *m = xasprintf("%s/prebuilt", CIG_VAR);
+		if (setenv("CIG_PKG_MIRROR", m, 1) != 0)
+			die("setenv: %s", strerror(errno));
+		free(m);
+	}
+}
+
+/* a package file from the prebuilt packages, when there is one */
 static void prebuilt_from_mirror(const char *f)
 {
 	const char *mirror = getenv("CIG_PKG_MIRROR");
@@ -270,6 +285,7 @@ static void add_pkg(const char *name, enum compile compile, bool yes)
 		compile = yes || ask_yn(q, true) ? YES : NO;
 		free(q);
 	}
+	use_prebuilt(compile == NO);
 	f = pkgfile_of(name, false);
 	if (compile == NO)   /* a prebuilt package from the install media */
 		prebuilt_from_mirror(f);
@@ -278,9 +294,11 @@ static void add_pkg(const char *name, enum compile compile, bool yes)
 	/* compiling for this system needs build tools; offer them once */
 	if (compile == YES && !*ROOT && !in_path("cc")) {
 		puts("Build tools (compiler, make, ...) are not installed; they are needed to compile.");
-		if (yes || ask_yn("Install build tools now?", false))
+		if (yes || ask_yn("Install build tools now?", false)) {
+			use_prebuilt(true);   /* nothing can compile them yet */
 			install_pkg("build-tools", "explicit");
-		else
+			use_prebuilt(false);
+		} else
 			die("%s: not compiled (no build tools)", name);
 	}
 
@@ -309,7 +327,8 @@ static void add_pkg(const char *name, enum compile compile, bool yes)
 		printf("  warning: %s has no upstream signature recorded (source checked against its pinned SHA256 only)\n", name);
 	else
 		printf("  signed upstream: %s\n", sig);
-	printf("  build: %s\n", compile == YES ? "compile on this device" : "prebuilt package");
+	printf("  build: %s\n", compile == YES ? "compile on this device (missing dependencies too)"
+	                                        : "prebuilt package");
 
 	/* 3. install? */
 	char *q = xasprintf("Install %s?", name);
@@ -447,7 +466,8 @@ static int update(int argc, char **argv, bool check, enum compile compile, bool 
 	if (compile == ASK)
 		compile = yes || ask_yn("Compile the updates on this device?", true) ? YES : NO;
 	if (compile == YES && !*ROOT && !in_path("cc"))
-		die("compiling needs the build tools: smoke add build-tools");
+		die("compiling needs the build tools: smoke add -p build-tools");
+	use_prebuilt(compile == NO);
 	char *q = xasprintf("Update %zu package(s)?", todo.n);
 	bool go = yes || ask_yn(q, false);
 	free(q);

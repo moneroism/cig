@@ -73,6 +73,17 @@ static void map_put(struct map *m, const char *k, const char *v)
 	m->v[j] = xstrdup(v);
 }
 
+static void map_free(struct map *m)
+{
+	for (size_t i = 0; i < m->cap; i++) {
+		free(m->k[i]);
+		free(m->v[i]);
+	}
+	free(m->k);
+	free(m->v);
+	memset(m, 0, sizeof(*m));
+}
+
 static const char *map_get(const struct map *m, const char *k)
 {
 	if (!m->cap)
@@ -373,6 +384,28 @@ int audit(bool quick)
 				free(full);
 			}
 			free(sf);
+			/* nothing in the package folder that the package does not list (FILES); link_dirs
+			 * folders are exempt: the system writes there (depmod: modules.dep.bb) */
+			char *ld = layout ? strstr(layout, "link_dirs=\"") : NULL, *ldirs;
+			ldirs = ld ? xasprintf("%.*s", (int)strcspn(ld + 11, "\""), ld + 11) : xstrdup("");
+			struct map mine = { 0 };
+			struct strv found = { 0 };
+			char *meta = xasprintf("%s/.meta", D);
+			size_t pre = strlen(D) - strlen(ROOT) + 1;   /* "/usr/pkg/<name>/<folder>/" */
+			for (size_t j = 0; j < files.n; j++)
+				if (starts_with(files.v[j], "usr/"))
+					map_put(&mine, files.v[j] + 4, "");
+			walk(D, meta, &found, false);
+			for (size_t j = 0; j < found.n; j++) {
+				char *u = xasprintf("usr/%s", found.v[j] + pre);
+				if (!map_get(&mine, found.v[j] + pre) && !(*ldirs && matches_any(u, ldirs)))
+					flag("%s: file not in the package: %s", e->name, found.v[j] + pre);
+				free(u);
+			}
+			free(ldirs);
+			map_free(&mine);
+			sv_free(&found);
+			free(meta);
 		}
 		sv_free(&files); sv_free(&sums);
 		free(ff); free(lp); free(layout); free(D);
@@ -395,6 +428,16 @@ int audit(bool quick)
 			continue;
 		}
 		if (is_link(full)) {
+			/* a package's link must point at that package's own file */
+			const char *own = map_get(&owner, p + 1);
+			if (own && !matches_any(p + 1, map_get(&copypat, own))) {
+				char *want = xasprintf("/usr/pkg/%s/%s/%s", own, map_get(&folder, own), p + 5);
+				char *t = read_link(full);
+				if (t && strcmp(t, want))
+					flag("%s -> %s (%s installs a link to %s)", p, t, own, want);
+				free(t);
+				free(want);
+			}
 			/* follow links that stay in /usr (outside /usr/pkg), max 8 hops */
 			char *real = xstrdup(p);
 			for (int hop = 0; hop < 8; hop++) {

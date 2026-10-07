@@ -36,7 +36,8 @@ smoke why <pkg>               why a package is installed                (done)
 smoke files <pkg>             files of a package                        (done)
 smoke mark <reason> <pkg>     explicit | dependency | build             (done)
 smoke autoremove              remove orphaned dependencies              (done)
-smoke audit [--quick]         check the system against the inventory    (done)
+smoke audit [--quick]         check the system against the inventory    (done; --quick
+                              skips checksums and unlisted package files)
 smoke hooks <pkg>... | --all  run a package's setup again               (done)
 ```
 
@@ -47,7 +48,9 @@ There is no `smoke install`: adding an app *is* installing it.
 1. **Resolve** `foo`: a full link is used as-is; a name is looked up in the
    name file (below).
 2. **Compile on device?** `[Y/n]` – skipped (yes) with `-c`.
-   - yes: if build tools are missing, smoke asks whether to install them first.
+   - yes: every missing dependency is compiled too (the installer's prebuilt packages in
+     `/var/cig/prebuilt` are used only for prebuilt installs). If build tools are missing,
+     smoke asks whether to install them first (prebuilt: nothing could compile them).
    - no: use a prebuilt release from upstream (must run on musl; glibc
      compatibility is planned as an option).
 3. **Show** source link, version, signature status, and the recipe if it was
@@ -165,8 +168,9 @@ when nothing needs it), **build** (build tools; never removed automatically).
 ## Audit
 
 `smoke audit` reports package folders outside the inventory, modified package
-files, files in `/usr` that aren't links into `/usr/pkg`, broken links, links
-replaced by real files, changed configuration, orphans, and a hand-edited
+files, files in a package folder that the package does not list, files in `/usr` that
+aren't links into `/usr/pkg`, a package's link that points anywhere but at its own file,
+broken links, links replaced by real files, changed configuration, orphans, and a hand-edited
 inventory. It also reads every installed ELF file's needed libraries (`DT_NEEDED`) and
 reports any that no installed package provides, so a missing runtime library shows up
 before a program fails with "Error relocating" (links are resolved inside `SMOKE_ROOT`).

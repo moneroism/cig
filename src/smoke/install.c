@@ -151,6 +151,34 @@ static bool owned_by(const char *path, const char *name)
 	return yes;
 }
 
+/* a refused install: its new folder goes, and /usr/pkg/<name> if nothing else is in it */
+static void drop_new(const char *D)
+{
+	char *parent = dir_name(D);
+	rm_rf(D);
+	rmdir(parent);
+	free(parent);
+}
+
+/* does folder d hold anything but name's own links (another package's links, real files)? */
+static bool holds_others(const char *d, const char *name)
+{
+	DIR *dir = opendir(d);
+	struct dirent *e;
+	bool others = false;
+	if (!dir)
+		return true;
+	while (!others && (e = readdir(dir))) {
+		if (!strcmp(e->d_name, ".") || !strcmp(e->d_name, ".."))
+			continue;
+		char *p = xasprintf("%s/%s", d, e->d_name);
+		others = is_real_dir(p) ? holds_others(p, name) : !(is_link(p) && owned_by(p, name));
+		free(p);
+	}
+	closedir(dir);
+	return others;
+}
+
 /* build dst.smoke-new, then rename it over dst (atomic, even for the running libc) */
 static void swap_in(const char *dst, bool link, const char *what)
 {
@@ -398,16 +426,23 @@ void install_pkg(const char *name, const char *reason_in)
 		free(root); free(usr);
 	}
 
-	/* 2. conflicts: a link in /usr that belongs to a different package */
+	/* 2. conflicts: a link in /usr that belongs to a different package, or a real folder
+	 * where the package has a file (replacing it would drop the other packages' links inside;
+	 * a folder of only its own links, from an older build, is replaced) */
 	for (size_t i = 0; i < files.n; i++) {
 		if (!starts_with(files.v[i], "usr/"))
 			continue;
 		char *dst = xasprintf("%s/%s", ROOT, files.v[i]), *o = link_owner(dst);
+		char *top = link_dir_top(files.v[i], m.linkdirs);
 		if (o && strcmp(o, name) && inv_get(o)) {
-			rm_rf(D);
+			drop_new(D);
 			die("%s: /%s already belongs to %s", name, files.v[i], o);
 		}
-		free(o); free(dst);
+		if (!top && is_real_dir(dst) && holds_others(dst, name)) {
+			drop_new(D);
+			die("%s: /%s is a folder of other packages' files, the package has a file there", name, files.v[i]);
+		}
+		free(top); free(o); free(dst);
 	}
 
 	/* 3. links (whole directories for link_dirs, real copies for copy_files) */
