@@ -16,9 +16,14 @@ set -euo pipefail
 # ---------------- settings ----------------
 SYS=/mnt/cig
 TGT=x86_64-cig-linux-musl
-BUSYBOX_VER=1.36.1     # newest release busybox.net marks stable
-GAWK_VER=5.3.2         # 5.4.x breaks GCC 16's option generator (opt-gather.awk)
-# m4, make, bash: newest GNU releases, detected once and pinned
+REPO="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
+# versions and signing keys come from the recipes (packages/<name>/recipe, keys/)
+rvar() { CIG_REPO=$REPO bash -c '. "$0/packages/$1/recipe" >/dev/null 2>&1; eval "echo \"\$$2\""' "$REPO" "$1" "$2"; }
+M4_VER=$(rvar m4 version)
+MAKE_VER=$(rvar make version)
+GAWK_VER=$(rvar gawk version)    # 5.4.x breaks GCC 16's option generator (opt-gather.awk)
+BASH_VER=$(rvar bash version)
+BUSYBOX_VER=1.36.1     # the temporary system's BusyBox (defconfig, tested); the final one is the recipe's
 # ------------------------------------------
 
 if [ -z "${CIG_CLEAN_ENV:-}" ]; then
@@ -67,7 +72,9 @@ preflight() {
     [ -f "$STAMPS/08-test-cxx" ] || die "the toolchain did not finish; run build-toolchain.sh again"
     command -v "$TGT-gcc" >/dev/null || die "cross compiler not found in $SYS/tools/bin"
     local c missing=""
-    for c in gcc make m4 wget gpg gpgv bzip2 xz tar sha256sum; do
+    [ -n "$M4_VER" ] && [ -n "$MAKE_VER" ] && [ -n "$GAWK_VER" ] && [ -n "$BASH_VER" ] \
+        || die "could not read the versions from $REPO/packages"
+    for c in gcc make m4 wget gpgv bzip2 xz tar sha256sum; do
         command -v "$c" >/dev/null || missing="$missing $c"
     done
     [ -z "$missing" ] || die "missing host tools:$missing"
@@ -81,55 +88,46 @@ fetch() {
     mv "$f.part" "$f"
 }
 
-# latest_gnu <name> <ext regex>  -> newest version number on ftp.gnu.org
-latest_gnu() {
-    wget -qO- "https://ftp.gnu.org/gnu/$1/" \
-        | grep -oE "$1-[0-9]+\.[0-9]+(\.[0-9]+)*\.$2" \
-        | sed -e "s/^$1-//" -e "s/\.$2\$//" | sort -uV | tail -n1 || true
-}
-
-pin() {   # pin VAR name ext  -> detect once, append to VERSIONS
-    local var=$1 name=$2 ext=$3 v
-    if [ -n "${!var:-}" ]; then
-        grep -q "^$var=" "$SRC/VERSIONS" || echo "$var=${!var}" >> "$SRC/VERSIONS"
-        return
-    fi
-    v=$(latest_gnu "$name" "$ext")
-    [ -n "$v" ] || die "could not detect the latest $name version"
-    printf -v "$var" '%s' "$v"
-    echo "$var=$v" >> "$SRC/VERSIONS"
+# keyring <pkg>: the recipe's signing keys (keys= -> keys/<fingerprint>.gpg), and no others
+keyring() {
+    local k out="$SRC/keys-$1.gpg"
+    : > "$out"
+    for k in $(rvar "$1" keys); do
+        [ -s "$REPO/keys/$k.gpg" ] || die "$1: key $k is not in $REPO/keys"
+        cat "$REPO/keys/$k.gpg" >> "$out"
+    done
+    [ -s "$out" ] || die "$1: the recipe lists no keys="
+    echo "$out"
 }
 
 download_and_verify() {
     cd "$SRC"
-    pin M4_VER   m4   'tar\.xz'
-    pin MAKE_VER make 'tar\.gz'
-    pin GAWK_VER gawk 'tar\.xz'
-    pin BASH_VER bash 'tar\.gz'
-    grep -q '^BUSYBOX_VER=' VERSIONS || echo "BUSYBOX_VER=$BUSYBOX_VER" >> VERSIONS
-
+    local v
+    for v in M4_VER MAKE_VER GAWK_VER BASH_VER BUSYBOX_VER; do
+        grep -q "^$v=" VERSIONS || echo "$v=${!v}" >> VERSIONS
+    done
     info "versions: m4 $M4_VER, make $MAKE_VER, gawk $GAWK_VER, bash $BASH_VER, busybox $BUSYBOX_VER"
+    mkdir -p "$GNUPGHOME_TMP"; chmod 700 "$GNUPGHOME_TMP"
 
-    local p
+    local p n
     for p in "m4/m4-$M4_VER.tar.xz" "make/make-$MAKE_VER.tar.gz" \
              "gawk/gawk-$GAWK_VER.tar.xz" "bash/bash-$BASH_VER.tar.gz"; do
         fetch "https://ftp.gnu.org/gnu/$p"
         fetch "https://ftp.gnu.org/gnu/$p.sig"
-        gpgv --homedir "$GNUPGHOME_TMP" --keyring "$SRC/gnu-keyring.gpg" \
+        n=${p%%/*}
+        gpgv --homedir "$GNUPGHOME_TMP" --keyring "$(keyring "$n")" \
             "$(basename "$p").sig" "$(basename "$p")" \
             || die "SIGNATURE CHECK FAILED: $(basename "$p")"
     done
 
     fetch "https://busybox.net/downloads/busybox-$BUSYBOX_VER.tar.bz2"
     fetch "https://busybox.net/downloads/busybox-$BUSYBOX_VER.tar.bz2.sig"
-    info "verifying BusyBox (its signing key is fetched from keyserver.ubuntu.com)"
-    gpg --homedir "$GNUPGHOME_TMP" --keyserver hkps://keyserver.ubuntu.com \
-        --auto-key-retrieve --verify \
+    gpgv --homedir "$GNUPGHOME_TMP" --keyring "$(keyring busybox)" \
         "busybox-$BUSYBOX_VER.tar.bz2.sig" "busybox-$BUSYBOX_VER.tar.bz2" \
-        || die "SIGNATURE CHECK FAILED (or keyserver unreachable): busybox"
+        || die "SIGNATURE CHECK FAILED: busybox"
     info "all signatures OK"
 
-    find . -maxdepth 1 -type f -name '*.tar.*' ! -name '*.sig' ! -name '*.asc' \
+    find . -maxdepth 1 -type f -name '*.tar.*' ! -name '*.sig' ! -name '*.asc' ! -name '*.sign' \
         | sort | xargs sha256sum > SHA256SUMS
 }
 
@@ -226,7 +224,7 @@ s_gcc_native() {
 
 preflight
 mkdir -p "$LOGS" "$STAMPS"
-. "$SRC/VERSIONS"
+. "$SRC/VERSIONS"   # binutils and gcc from build-toolchain.sh; a re-run keeps what it recorded
 BUILD=$(gcc -dumpmachine)       # the Void host's own triplet
 download_and_verify
 
@@ -240,4 +238,4 @@ run_step 16-gcc-native  s_gcc_native
 
 echo
 info "Temporary system finished."
-info "Next: sudo ~/cig/scripts/enter-chroot.sh"
+info "Next: sudo $REPO/scripts/enter-chroot.sh"

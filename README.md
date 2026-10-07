@@ -271,14 +271,13 @@ toolchain and a minimal system; from there `cigbuild` builds everything.
 
 | # | Step | Where |
 |---|---|---|
-| 1 | `scripts/fetch-sources.sh` | host |
-| 2 | `scripts/build-toolchain.sh`, `scripts/build-temp.sh` | host |
-| 3 | `scripts/enter-chroot.sh [-c "<command>"]` | host (sudo), mounts the repo at `/cig`; `cigbuild` from the repo, the installed C `smoke` with the repo's recipes |
-| 4 | `scripts/prepare-base.sh` → `build-base.sh` | host → chroot |
-| 5 | `cigbuild pin ...` | host (gpg) |
-| 6 | `smoke add -c <packages>` | chroot |
-| 7 | `scripts/build-media.sh` | chroot: the install medium (after the media kernel and firmware, see the script) |
-| 8 | `scripts/run-vm.sh` | host: boot an image in QEMU (UEFI) |
+| 1 | `scripts/build-toolchain.sh`, `scripts/build-temp.sh` | host: versions and signing keys from the recipes (`keys/`), sources checked with gpgv |
+| 2 | `scripts/enter-chroot.sh [-c "<command>"]` | host (sudo), mounts the repo at `/cig`; `cigbuild` from the repo, the installed C `smoke` with the repo's recipes |
+| 3 | `scripts/prepare-base.sh` → `build-base.sh` | host → chroot |
+| 4 | `cigbuild pin ...` | host (gpg) |
+| 5 | `smoke add -c <packages>` | chroot |
+| 6 | `scripts/build-media.sh` | chroot: the install medium (after the media kernel and firmware, see the script) |
+| 7 | `scripts/run-vm.sh` | host: boot an image in QEMU (UEFI) |
 
 The bootstrap scripts will be replaced by building from the install medium.
 

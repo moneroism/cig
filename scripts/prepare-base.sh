@@ -11,7 +11,7 @@ set -euo pipefail
 SYS=/mnt/cig
 SINIT_TAG=v1.1
 HERE="$(cd "$(dirname "$0")" && pwd)"
-STAGE="$HOME/cig/stage"
+STAGE="$HERE/../stage"
 
 die() { echo "!! $*" >&2; exit 1; }
 
@@ -42,5 +42,5 @@ sudo chown -R root:root "$SYS/sources/sinit"
 
 echo
 echo "==> ready. Now:"
-echo "    sudo ~/cig/scripts/enter-chroot.sh"
+echo "    sudo $HERE/enter-chroot.sh"
 echo "    bash /sources/build-base.sh"

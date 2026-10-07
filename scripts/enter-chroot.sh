@@ -75,15 +75,19 @@ fi
 if [ -x "$REPO/cigbuild" ]; then
     mkdir -p "$SYS/cig"
     mountpoint -q "$SYS/cig" || mount --bind "$REPO" "$SYS/cig"
-    ln -sfn /cig/cigbuild "$SYS/usr/bin/cigbuild"
-    # smoke is the installed C one (cig-tools); CIG_REPO below makes it use these recipes
-    ln -sfn ../share/cig/smoke "$SYS/usr/bin/smoke"
+    # cigbuild from the repository (PATH below, /cig first); smoke is the installed C one
+    # (cig-tools), CIG_REPO below makes it use these recipes. /usr/bin keeps cig-tools' own
+    # links: smoke audit checks them
 fi
 
-# the EFI partition (partition 1 of the same disk) at /boot, for kernel installs
+# the EFI partition (partition 1 of the same image) at /boot, for kernel installs; only for
+# the dev image on a loop device: never a guess on a real disk
 ROOTDEV=$(findmnt -no SOURCE "$SYS")
-ESPDEV="${ROOTDEV%2}1"
-if [ -b "$ESPDEV" ] && ! grep -q " $SYS/boot " /proc/mounts; then
+case "$ROOTDEV" in
+    /dev/loop*p2) ESPDEV="${ROOTDEV%p2}p1" ;;
+    *)            ESPDEV=; echo "   ! $SYS is not on a loop device ($ROOTDEV): /boot not mounted" >&2 ;;
+esac
+if [ -n "$ESPDEV" ] && [ -b "$ESPDEV" ] && ! grep -q " $SYS/boot " /proc/mounts; then
     mount "$ESPDEV" "$SYS/boot"
 fi
 
@@ -97,7 +101,7 @@ grep -q " $SYS/etc/resolv.conf " /proc/mounts || mount --bind /etc/resolv.conf "
 chroot "$SYS" /usr/bin/env -i \
     HOME=/root TERM="${TERM:-xterm}" \
     PS1='(distro) \u:\w\$ ' \
-    PATH=/usr/bin:/usr/sbin:/cig \
+    PATH=/cig:/usr/bin:/usr/sbin \
     CIG_REPO=/cig CIGBUILD=/cig/cigbuild \
     MAKEFLAGS="-j$(nproc)" \
     /bin/bash --login "${CMD[@]}"

@@ -16,10 +16,14 @@ set -euo pipefail
 # ---------------- settings ----------------
 SYS=/mnt/cig
 TGT=x86_64-cig-linux-musl
-KSRC="$HOME/cig/linux-hardened"
-GCC_VER=16.2.0
-MUSL_VER=1.2.6
-BINUTILS_VER=""        # empty = newest release on ftp.gnu.org (pinned after first run)
+REPO="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
+# versions and signing keys come from the recipes (packages/<name>/recipe, keys/), the same
+# record cigbuild builds the final system from
+rvar() { CIG_REPO=$REPO bash -c '. "$0/packages/$1/recipe" >/dev/null 2>&1; eval "echo \"\$$2\""' "$REPO" "$1" "$2"; }
+BINUTILS_VER=$(rvar binutils version)
+GCC_VER=$(rvar gcc version)
+MUSL_VER=$(rvar musl version)
+KVER=$(rvar linux _kver)   # kernel headers: the signed kernel.org release the linux recipe uses
 # ------------------------------------------
 
 # Restart with a clean environment so nothing from Void leaks into the build
@@ -64,10 +68,11 @@ run_step() {
 preflight() {
     [ "$(id -u)" -ne 0 ] || die "run this as your normal user, not root"
     mountpoint -q "$SYS" || die "$SYS is not mounted. Attach the image (losetup) and mount it first."
-    [ -f "$KSRC/Makefile" ] || die "kernel source not found at $KSRC"
+    [ -n "$BINUTILS_VER" ] && [ -n "$GCC_VER" ] && [ -n "$MUSL_VER" ] && [ -n "$KVER" ] \
+        || die "could not read the versions from $REPO/packages"
     local c missing=""
     for c in gcc g++ make bison gawk m4 makeinfo patch perl python3 tar xz \
-             wget gpg gpgv readelf sha256sum rsync sudo; do
+             wget gpgv readelf sha256sum rsync sudo; do
         command -v "$c" >/dev/null || missing="$missing $c"
     done
     [ -z "$missing" ] || die "missing host tools:$missing"
@@ -93,41 +98,47 @@ fetch() {   # fetch <url>  ->  $SRC/<file name>
     mv "$f.part" "$f"
 }
 
+# keyring <pkg>: the recipe's signing keys (keys= -> keys/<fingerprint>.gpg), and no others
+keyring() {
+    local k out="$SRC/keys-$1.gpg"
+    : > "$out"
+    for k in $(rvar "$1" keys); do
+        [ -s "$REPO/keys/$k.gpg" ] || die "$1: key $k is not in $REPO/keys"
+        cat "$REPO/keys/$k.gpg" >> "$out"
+    done
+    [ -s "$out" ] || die "$1: the recipe lists no keys="
+    echo "$out"
+}
+
 download_and_verify() {
     cd "$SRC"
+    info "versions: binutils $BINUTILS_VER, gcc $GCC_VER, musl $MUSL_VER, kernel headers $KVER"
 
-    if [ -z "$BINUTILS_VER" ]; then
-        BINUTILS_VER=$(wget -qO- https://ftp.gnu.org/gnu/binutils/ \
-            | grep -oE 'binutils-[0-9]+\.[0-9]+(\.[0-9]+)?\.tar\.xz' \
-            | sed -e 's/^binutils-//' -e 's/\.tar\.xz$//' | sort -uV | tail -n1 || true)
-        [ -n "$BINUTILS_VER" ] || die "could not detect the latest binutils version"
-    fi
-
-    info "versions: binutils $BINUTILS_VER, gcc $GCC_VER, musl $MUSL_VER"
-
-    fetch https://ftp.gnu.org/gnu/gnu-keyring.gpg
     fetch "https://ftp.gnu.org/gnu/binutils/binutils-$BINUTILS_VER.tar.xz"
     fetch "https://ftp.gnu.org/gnu/binutils/binutils-$BINUTILS_VER.tar.xz.sig"
     fetch "https://ftp.gnu.org/gnu/gcc/gcc-$GCC_VER/gcc-$GCC_VER.tar.xz"
     fetch "https://ftp.gnu.org/gnu/gcc/gcc-$GCC_VER/gcc-$GCC_VER.tar.xz.sig"
     fetch "https://musl.libc.org/releases/musl-$MUSL_VER.tar.gz"
     fetch "https://musl.libc.org/releases/musl-$MUSL_VER.tar.gz.asc"
-    fetch https://musl.libc.org/musl.pub
+    fetch "https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-$KVER.tar.xz"
+    fetch "https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-$KVER.tar.sign"
 
     local gh="$SRC/.gnupg"
     mkdir -p "$gh"; chmod 700 "$gh"
-    gpg --homedir "$gh" --batch --yes --dearmor -o "$SRC/musl.gpg" "$SRC/musl.pub"
 
-    info "checking signatures"
-    gpgv --homedir "$gh" --keyring "$SRC/gnu-keyring.gpg" \
+    info "checking signatures (keys from the recipes)"
+    gpgv --homedir "$gh" --keyring "$(keyring binutils)" \
         "binutils-$BINUTILS_VER.tar.xz.sig" "binutils-$BINUTILS_VER.tar.xz" \
         || die "SIGNATURE CHECK FAILED: binutils"
-    gpgv --homedir "$gh" --keyring "$SRC/gnu-keyring.gpg" \
+    gpgv --homedir "$gh" --keyring "$(keyring gcc)" \
         "gcc-$GCC_VER.tar.xz.sig" "gcc-$GCC_VER.tar.xz" \
         || die "SIGNATURE CHECK FAILED: gcc"
-    gpgv --homedir "$gh" --keyring "$SRC/musl.gpg" \
+    gpgv --homedir "$gh" --keyring "$(keyring musl)" \
         "musl-$MUSL_VER.tar.gz.asc" "musl-$MUSL_VER.tar.gz" \
         || die "SIGNATURE CHECK FAILED: musl"
+    # kernel.org signs the uncompressed tarball
+    xz -dc "linux-$KVER.tar.xz" | gpgv --homedir "$gh" --keyring "$(keyring linux)" \
+        "linux-$KVER.tar.sign" - || die "SIGNATURE CHECK FAILED: linux"
     info "all signatures OK"
 
     # Pin versions and record checksums: the start of the distro's build record
@@ -135,9 +146,10 @@ download_and_verify() {
 BINUTILS_VER=$BINUTILS_VER
 GCC_VER=$GCC_VER
 MUSL_VER=$MUSL_VER
+KVER=$KVER
 EOF
     sha256sum "binutils-$BINUTILS_VER.tar.xz" "gcc-$GCC_VER.tar.xz" \
-        "musl-$MUSL_VER.tar.gz" > "$SRC/SHA256SUMS"
+        "musl-$MUSL_VER.tar.gz" "linux-$KVER.tar.xz" > "$SRC/SHA256SUMS"
 }
 
 # ---------------- build steps ----------------
@@ -155,8 +167,10 @@ s_binutils1() {
 }
 
 s_kernel_headers() {
-    # Uses your own linux-hardened tree; does not touch its .config
-    make -C "$KSRC" headers_install ARCH=x86_64 INSTALL_HDR_PATH="$SYS/usr"
+    cd "$SRC"; rm -rf "linux-$KVER"
+    tar xf "linux-$KVER.tar.xz"
+    make -C "linux-$KVER" headers_install ARCH=x86_64 INSTALL_HDR_PATH="$SYS/usr"
+    rm -rf "linux-$KVER"
 }
 
 s_gcc_prep() {
