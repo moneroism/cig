@@ -2,7 +2,7 @@
 # (no network servers, no su, no setuid, no BusyBox TLS).
 name=busybox
 version=1.38.0
-rel=2
+rel=3
 source="https://busybox.net/downloads/busybox-$version.tar.bz2"
 signature="https://busybox.net/downloads/busybox-$version.tar.bz2.sig"
 keys="C9E9416F76E610DBD09D040F47B70C55ACC9965B"
