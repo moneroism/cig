@@ -134,14 +134,38 @@ void remove_pkg(const char *name, bool force)
 	free(D); free(ff);
 }
 
-void autoremove(void)
+/* add name's depends to s */
+static void push_depends(struct strv *s, const char *name)
+{
+	const struct inv_ent *e = inv_get(name);
+	char *d = e ? xstrdup(e->depends) : NULL, *save = NULL;
+	for (char *w = d ? strtok_r(d, ",", &save) : NULL; w; w = strtok_r(NULL, ",", &save))
+		if (strcmp(w, "-") && !sv_has(s, w))
+			sv_push(s, w);
+	free(d);
+}
+
+void remove_with_depends(char **names, int n)
+{
+	struct strv freed = { 0 };
+	for (int i = 0; i < n; i++) {
+		push_depends(&freed, names[i]);   /* before the inventory forgets them */
+		remove_pkg(names[i], false);
+	}
+	autoremove(&freed);
+	sv_free(&freed);
+}
+
+/* dependencies nothing needs any more: all of them (only = NULL), or only those in *only
+ * and what they depend on (smoke remove: the removed packages' own, never other orphans) */
+void autoremove(struct strv *only)
 {
 	bool changed = true;
 	while (changed) {
 		struct strv cand = { 0 };
 		changed = false;
 		for (size_t i = 0; i < inv_count(); i++)
-			if (!strcmp(inv_at(i)->reason, "dependency"))
+			if (!strcmp(inv_at(i)->reason, "dependency") && (!only || sv_has(only, inv_at(i)->name)))
 				sv_push(&cand, inv_at(i)->name);
 		for (size_t i = 0; i < cand.n; i++) {
 			struct strv users = { 0 };
@@ -150,6 +174,8 @@ void autoremove(void)
 			needed_by(cand.v[i], &users);
 			if (users.n == 0) {
 				info("%s: no longer needed", cand.v[i]);
+				if (only)
+					push_depends(only, cand.v[i]);
 				remove_pkg(cand.v[i], false);
 				changed = true;
 			}

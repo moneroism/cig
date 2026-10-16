@@ -245,6 +245,38 @@ done:
 	fclose(f);
 }
 
+/* is want name itself, or in the depends of name, followed through the inventory? */
+static bool depends_on(const char *name, const char *want)
+{
+	struct strv todo = { 0 }, seen = { 0 };
+	bool found = false;
+	sv_push(&todo, name);
+	while (todo.n && !found) {
+		char *p = todo.v[--todo.n];
+		bool dup = false;
+		for (size_t i = 0; i < seen.n && !dup; i++)
+			dup = !strcmp(seen.v[i], p);
+		if (dup) {
+			free(p);
+			continue;
+		}
+		found = !strcmp(p, want);
+		const struct inv_ent *e = inv_get(p);
+		if (e && !found) {
+			char *d = xstrdup(e->depends), *save = NULL;
+			for (char *w = strtok_r(d, ",", &save); w; w = strtok_r(NULL, ",", &save))
+				if (strcmp(w, "-"))
+					sv_push(&todo, w);
+			free(d);
+		}
+		sv_push(&seen, p);
+		free(p);
+	}
+	sv_free(&todo);
+	sv_free(&seen);
+	return found;
+}
+
 /* every program and library must find the libraries it needs on this system
  * (e.g. a library built against gcc's libstdc++ on a system without gcc, or one still
  * linked to a library version an update replaced); returns the number of problems */
@@ -263,6 +295,16 @@ int audit_libraries(void)
 			for (size_t k = 0; k < need.n; k++) {
 				char *lib = xasprintf("/usr/lib/%s", need.v[k]);
 				bool found = root_exists(lib);
+				if (found) {
+					/* from a package it declares (or musl, under everything): otherwise it works
+					 * only while something else installs that library (scripts/check-deps.sh) */
+					char *at = xasprintf("%s%s", ROOT, lib), *from = link_owner(at);
+					if (from && strcmp(from, "musl") && !depends_on(e->name, from))
+						flag("%s links %s from %s, which %s does not depend on", files.v[j], need.v[k],
+						     from, e->name);
+					free(from);
+					free(at);
+				}
 				for (size_t r = 0; r < runpath.n && !found; r++) {
 					/* $ORIGIN: the folder of the file inside its package */
 					char *dir = starts_with(runpath.v[r], "$ORIGIN")

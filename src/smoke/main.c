@@ -17,8 +17,8 @@ const char *ROOT, *PKGROOT, *INV, *CIG_VAR, *CIG_REPO, *CIGBUILD;
 
 static const char usage_text[] =
 	"  smoke add [-c|-p] [-y] <pkg>.. add and install (-c compile here, -p prebuilt, -y no questions)\n"
-	"  smoke remove  <pkg>...         remove, then remove dependencies nothing needs\n"
-	"  smoke autoremove               remove orphaned dependencies\n"
+	"  smoke remove  <pkg>...         remove, then its own dependencies nothing needs\n"
+	"  smoke autoremove               remove every orphaned dependency\n"
 	"  smoke update [-c|-p] [-y] [<pkg>...]\n"
 	"                                 rebuild what its recipe changed, report new upstream releases\n"
 	"  smoke update --check [<pkg>..] only report\n"
@@ -648,11 +648,9 @@ int main(int argc, char **argv)
 	} else if (!strcmp(cmd, "remove")) {
 		if (n < 1)
 			usage();
-		for (int i = 0; i < n; i++)
-			remove_pkg(args[i], false);
-		autoremove();
+		remove_with_depends(args, n);
 	} else if (!strcmp(cmd, "autoremove")) {
-		autoremove();
+		autoremove(NULL);
 	} else if (!strcmp(cmd, "update")) {
 		enum compile compile = ASK;
 		bool yes = false, check = false;

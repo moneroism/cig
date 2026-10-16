@@ -91,7 +91,8 @@ char *link_owner(const char *path);
 
 /* remove.c */
 void remove_pkg(const char *name, bool force);
-void autoremove(void);
+void autoremove(struct strv *only);   /* NULL: every orphaned dependency */
+void remove_with_depends(char **names, int n);   /* smoke remove: and their own orphaned dependencies */
 
 /* audit.c */
 int audit(bool quick);

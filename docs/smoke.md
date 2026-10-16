@@ -26,7 +26,7 @@ smoke add <name|url>...       add and install                          (done for
 smoke add -c <name|url>...    compile on this device without asking    (done)
 smoke add -p <name|url>...    use a prebuilt package without asking    (done)
 smoke add -y ...              no questions (scripts, the installer)    (done)
-smoke remove <pkg>...         remove, then dependencies nothing needs   (done)
+smoke remove <pkg>...         remove, and its orphaned dependencies    (done)
 smoke update [<pkg>...]       rebuild what its recipe changed, report   (done; applying
                               new upstream releases (--check: report)    upstream releases on
                                                                          the device: planned)
@@ -35,7 +35,7 @@ smoke list [-a [<word>]]      packages, reason, who needs them          (done)
 smoke why <pkg>               why a package is installed                (done)
 smoke files <pkg>             files of a package                        (done)
 smoke mark <reason> <pkg>     explicit | dependency | build             (done)
-smoke autoremove              remove orphaned dependencies              (done)
+smoke autoremove              remove every orphaned dependency         (done)
 smoke audit [--quick]         check the system against the inventory    (done; --quick
                               skips checksums and unlisted package files)
 smoke hooks <pkg>... | --all  run a package's setup again               (done)

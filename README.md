@@ -167,8 +167,8 @@ Installs, removes and audits packages.
 smoke add [-c|-p] [-y] <pkg>.. add and install: asks "compile on this device?" (-c yes, also
                                every missing dependency; -p use prebuilt packages) and
                                "install?" (-y no questions)
-smoke remove  <pkg>...         remove, then dependencies nothing needs anymore
-smoke autoremove               remove orphaned dependencies
+smoke remove  <pkg>...         remove, then its own dependencies nothing needs any more
+smoke autoremove               remove every orphaned dependency
 smoke update [-c|-p] [-y] [<pkg>...]
                                rebuild packages whose recipe changed (dependencies first),
                                report newer upstream releases, then check that every
@@ -192,8 +192,9 @@ Config files changed by the user are kept; the new version is saved as `*.new`.
 
 `smoke audit` reports: package folders not in the inventory, modified package
 files, files in `/usr` that are not links into `/usr/pkg`, broken links, links
-replaced by real files, changed configuration, orphaned dependencies, and a
-hand-edited inventory (smoke then refuses to write until it is resolved).
+replaced by real files, libraries a program cannot find or takes from a package
+its own does not depend on (it would break with another selection), changed
+configuration, orphaned dependencies, and a hand-edited inventory (smoke then refuses to write until it is resolved).
 `--quick` skips the package checksums. Paths in `/etc/smoke/audit.ignore` are
 skipped.
 
