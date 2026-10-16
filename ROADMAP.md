@@ -172,14 +172,15 @@ Work:
 - ~~unbound recipe; DNS choice in the installer~~ (done 2026-10-06: DNS over TLS to Quad9 and
   Cloudflare by default, unbound as its own resolver, or DHCP DNS; servers in
   `/etc/unbound/unbound.conf.d/forward-tls.conf`)
-- day-one usability (so cig can be used for a full day on the PC), all optional:
-  sound (ALSA), ~~clipboard (wl-clipboard), screenshots (grim, slurp)~~ (done). No browser
-  yet (see Phase 6)
-- install on the development PC's SATA SSD; verify boot, WiFi, display, input, poweroff
+- basic usability, all optional: sound (ALSA), ~~clipboard (wl-clipboard), screenshots
+  (grim, slurp)~~ (done). No browser yet, so no full day of use (moved to Phase 6)
+- install on the laptop (decided 2026-10-05, not the development PC); verify boot, WiFi,
+  display, input, sound, suspend, poweroff
 
-**Exit criteria:** cig installed from the ISO on the PC and usable for a full day;
-an installed system with dwl uses ≤ 100 MB RAM after boot (measured with `free -m`);
-the bugs found that day are the input for 0.3.x.
+**Exit criteria:** cig installed from the ISO on the laptop, and the checks above work there
+(a short session, not a full day: without a browser that is not possible, see Phase 6); an
+installed system with dwl uses ≤ 100 MB RAM after boot (measured with `free -m`); the bugs
+found are the input for 0.3.x.
 
 ### 0.3.x – GPU acceleration (after the first bare-metal install)
 
@@ -259,6 +260,8 @@ Also in this phase:
 
 - web browser as an optional component (Firefox-class; needs Rust, LLVM/clang, Node.js
   to build, glibc compatibility would allow upstream binaries instead)
+- **cig as a daily system:** used for a full day or more on the laptop (moved here from
+  Phase 3 on 2026-10-16: without a browser it can't be used for more than a short session)
 - hardened_malloc
 - sandboxing and privilege separation
 - smoke over the network (see docs/smoke.md): `smoke sync` against a separate recipe

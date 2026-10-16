@@ -309,12 +309,12 @@ See [`ROADMAP.md`](ROADMAP.md). In short:
 - [x] Phase 0 – Foundation: toolchain, userland, init, desktop, cigbuild, kernel, firmware
 - [x] Phase 1 – smoke: symlink farm, inventory with install reasons, autoremove, audit
 - [x] Phase 2 – Installer (shell TUI), tested in QEMU (0.2.0)
-- [ ] Phase 3 – Install media (ISO), first bare-metal install, day-one usability (ALSA, clipboard, screenshots, DNS);
+- [ ] Phase 3 – Install media (ISO), first bare-metal install, basic usability (ALSA, clipboard, screenshots, DNS);
   the medium, clipboard and screenshots are done
 - [ ] 0.3.x – GPU acceleration: Mesa without LLVM (RADV + Zink); built, not yet tested on an AMD GPU
 - [ ] Phase 4 – Optional components (PipeWire, Bluetooth, wmenu), UEFI boot entries, libre-meter
 - [ ] Phase 5 – Security layers (allowlisting), read-only root, own kernel base config
-- [ ] Phase 6 – Browser, hardened_malloc, sandboxing, smoke updates
+- [ ] Phase 6 – Browser (then: cig as a daily system), hardened_malloc, sandboxing, smoke updates
 - [ ] Phase 7 – Code quality: sanitizers, strict flags, fuzzing
 
 ## License
