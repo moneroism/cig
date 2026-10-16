@@ -1,0 +1,8 @@
+#!/bin/sh
+# login on the first serial port (QEMU's -serial, a server's console). Not enabled by
+# default (the install media enable it): ln -s /etc/sv/getty-ttyS0 /etc/service/
+# No serial port (no 8250 driver, or port type 0 = none): the service stops itself
+# instead of being restarted every second.
+t=$(cat /sys/class/tty/ttyS0/type 2>/dev/null)
+[ "${t:-0}" -gt 0 ] 2>/dev/null || exec sv down .
+exec getty -L 115200 ttyS0 vt100

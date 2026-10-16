@@ -3,6 +3,7 @@
 # installed systems never get it. The live logins are created by scripts/build-media.sh.
 name=cig-live
 version=$(cat "$CIG_REPO/VERSION")
+rel=2
 source=""
 sha256=""
 depends="cig-base cig-installer"
@@ -19,4 +20,7 @@ do_install() {
 }
 post_install() {
     cp /usr/share/cig-live/issue /etc/issue
+    # a login on the serial console too (QEMU tests, machines without a screen)
+    mkdir -p /etc/service
+    [ -e /etc/service/getty-ttyS0 ] || ln -s /etc/sv/getty-ttyS0 /etc/service/getty-ttyS0
 }
