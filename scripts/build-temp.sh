@@ -88,7 +88,8 @@ fetch() {
     mv "$f.part" "$f"
 }
 
-# keyring <pkg>: the recipe's signing keys (keys= -> keys/<fingerprint>.gpg), and no others
+# keyring <pkg>: $KEYRING = a file with the recipe's signing keys (keys= -> keys/<fingerprint>.gpg),
+# and no others. Called in the main shell, not as $(keyring): a die there would only end the subshell
 keyring() {
     local k out="$SRC/keys-$1.gpg"
     : > "$out"
@@ -97,7 +98,7 @@ keyring() {
         cat "$REPO/keys/$k.gpg" >> "$out"
     done
     [ -s "$out" ] || die "$1: the recipe lists no keys="
-    echo "$out"
+    KEYRING=$out
 }
 
 download_and_verify() {
@@ -115,14 +116,16 @@ download_and_verify() {
         fetch "https://ftp.gnu.org/gnu/$p"
         fetch "https://ftp.gnu.org/gnu/$p.sig"
         n=${p%%/*}
-        gpgv --homedir "$GNUPGHOME_TMP" --keyring "$(keyring "$n")" \
+        keyring "$n"
+        gpgv --homedir "$GNUPGHOME_TMP" --keyring "$KEYRING" \
             "$(basename "$p").sig" "$(basename "$p")" \
             || die "SIGNATURE CHECK FAILED: $(basename "$p")"
     done
 
     fetch "https://busybox.net/downloads/busybox-$BUSYBOX_VER.tar.bz2"
     fetch "https://busybox.net/downloads/busybox-$BUSYBOX_VER.tar.bz2.sig"
-    gpgv --homedir "$GNUPGHOME_TMP" --keyring "$(keyring busybox)" \
+    keyring busybox
+    gpgv --homedir "$GNUPGHOME_TMP" --keyring "$KEYRING" \
         "busybox-$BUSYBOX_VER.tar.bz2.sig" "busybox-$BUSYBOX_VER.tar.bz2" \
         || die "SIGNATURE CHECK FAILED: busybox"
     info "all signatures OK"

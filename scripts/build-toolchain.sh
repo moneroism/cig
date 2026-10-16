@@ -98,7 +98,8 @@ fetch() {   # fetch <url>  ->  $SRC/<file name>
     mv "$f.part" "$f"
 }
 
-# keyring <pkg>: the recipe's signing keys (keys= -> keys/<fingerprint>.gpg), and no others
+# keyring <pkg>: $KEYRING = a file with the recipe's signing keys (keys= -> keys/<fingerprint>.gpg),
+# and no others. Called in the main shell, not as $(keyring): a die there would only end the subshell
 keyring() {
     local k out="$SRC/keys-$1.gpg"
     : > "$out"
@@ -107,7 +108,7 @@ keyring() {
         cat "$REPO/keys/$k.gpg" >> "$out"
     done
     [ -s "$out" ] || die "$1: the recipe lists no keys="
-    echo "$out"
+    KEYRING=$out
 }
 
 download_and_verify() {
@@ -127,17 +128,21 @@ download_and_verify() {
     mkdir -p "$gh"; chmod 700 "$gh"
 
     info "checking signatures (keys from the recipes)"
-    gpgv --homedir "$gh" --keyring "$(keyring binutils)" \
+    keyring binutils
+    gpgv --homedir "$gh" --keyring "$KEYRING" \
         "binutils-$BINUTILS_VER.tar.xz.sig" "binutils-$BINUTILS_VER.tar.xz" \
         || die "SIGNATURE CHECK FAILED: binutils"
-    gpgv --homedir "$gh" --keyring "$(keyring gcc)" \
+    keyring gcc
+    gpgv --homedir "$gh" --keyring "$KEYRING" \
         "gcc-$GCC_VER.tar.xz.sig" "gcc-$GCC_VER.tar.xz" \
         || die "SIGNATURE CHECK FAILED: gcc"
-    gpgv --homedir "$gh" --keyring "$(keyring musl)" \
+    keyring musl
+    gpgv --homedir "$gh" --keyring "$KEYRING" \
         "musl-$MUSL_VER.tar.gz.asc" "musl-$MUSL_VER.tar.gz" \
         || die "SIGNATURE CHECK FAILED: musl"
     # kernel.org signs the uncompressed tarball
-    xz -dc "linux-$KVER.tar.xz" | gpgv --homedir "$gh" --keyring "$(keyring linux)" \
+    keyring linux
+    xz -dc "linux-$KVER.tar.xz" | gpgv --homedir "$gh" --keyring "$KEYRING" \
         "linux-$KVER.tar.sign" - || die "SIGNATURE CHECK FAILED: linux"
     info "all signatures OK"
 

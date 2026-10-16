@@ -97,6 +97,8 @@ touch "$SYS/etc/resolv.conf"
 grep -q " $SYS/etc/resolv.conf " /proc/mounts || mount --bind /etc/resolv.conf "$SYS/etc/resolv.conf"
 
 # ---- enter ----
+# /etc/profile sets PATH (cig-base: /usr/bin:/usr/sbin), so /cig goes first only after it:
+# else `cigbuild` is cig-tools' installed copy, which builds with its own lib/ and recipes
 [ ${#CMD[@]} -gt 0 ] || echo "==> entering the new system. Type 'exit' to leave."
 chroot "$SYS" /usr/bin/env -i \
     HOME=/root TERM="${TERM:-xterm}" \
@@ -104,4 +106,5 @@ chroot "$SYS" /usr/bin/env -i \
     PATH=/cig:/usr/bin:/usr/sbin \
     CIG_REPO=/cig CIGBUILD=/cig/cigbuild \
     MAKEFLAGS="-j$(nproc)" \
-    /bin/bash --login "${CMD[@]}"
+    /bin/bash -c '[ -r /etc/profile ] && . /etc/profile; PATH=/cig:$PATH; exec /bin/bash --norc "$@"' \
+    bash "${CMD[@]:--i}"
