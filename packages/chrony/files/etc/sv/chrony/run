@@ -1,0 +1,3 @@
+#!/bin/sh
+# -d: foreground, log to the service log; runs as the chrony user after start
+exec chronyd -d 2>&1

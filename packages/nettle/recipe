@@ -1,0 +1,11 @@
+# nettle - low-level cryptographic library (GnuTLS's crypto, chrony's hashes)
+name=nettle
+version=4.0
+source="https://ftp.gnu.org/gnu/nettle/nettle-$version.tar.gz"
+keys="343C2FF0FBEE5EC2EDBEF399F3599FF828C67298"
+signature="https://ftp.gnu.org/gnu/nettle/nettle-$version.tar.gz.sig"
+sha256="-"
+depends="gmp"
+style=gnu
+# the default libdir on x86_64 would be lib64
+configure_args="--libdir=/usr/lib --disable-documentation"

@@ -1,0 +1,15 @@
+# gnutls - TLS library (chrony's NTS: authenticated time). Only the library: no tools, no
+# C++, no DANE, no PKCS#11/TPM; libtasn1 and libunistring are the bundled copies
+name=gnutls
+version=3.8.13
+source="https://www.gnupg.org/ftp/gcrypt/gnutls/v${version%.*}/gnutls-$version.tar.xz"
+keys="5D46CB0F763405A7053556F47A75A648B3F9220C"
+signature="https://www.gnupg.org/ftp/gcrypt/gnutls/v3.8/gnutls-$version.tar.xz.sig"
+sha256="-"
+depends="nettle gmp ca-certificates"
+makedepends="pkgconf"
+style=gnu
+configure_args="--disable-doc --disable-tools --disable-cxx --disable-tests --disable-nls
+    --disable-libdane --with-included-libtasn1 --with-included-unistring --without-idn
+    --without-p11-kit --without-tpm2 --without-tpm --without-zlib --without-brotli --without-zstd
+    --with-default-trust-store-file=/etc/ssl/certs/ca-certificates.crt"

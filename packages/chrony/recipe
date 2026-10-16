@@ -1,0 +1,36 @@
+# chrony - network time over NTS (authenticated); off: no time server sees your address
+# Off, the clock only runs on and is kept from going backwards (rc.init); drift is set by hand.
+name=chrony
+version=4.9
+source="https://chrony-project.org/releases/chrony-$version.tar.gz"
+keys="8F375C7E8D0EE125A3D3BD51537E2B76F7680DAC"
+signature="https://chrony-project.org/releases/chrony-$version-tar-gz-asc.txt"
+sha256="-"
+depends="gnutls nettle libcap"
+makedepends="pkgconf"
+group="network"
+default=on
+config_files="etc/chrony.conf"
+style=custom
+# its own configure script (not autoconf); no editline, no NSS/tomcrypt, no reference
+# clocks (GPS/PPS hardware); privileges dropped to the chrony user through libcap
+do_build() {
+    ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
+        --chronyrundir=/run/chrony --with-pidfile=/run/chrony/chronyd.pid \
+        --with-user=chrony --without-editline --disable-readline --without-nss \
+        --without-tomcrypt --without-seccomp --disable-refclock
+    make
+}
+do_install() {
+    make DESTDIR="$DEST" install
+    cp -R "$PKGDIR/files/etc" "$DEST/"
+}
+post_install() {
+    grep -q '^chrony:' /etc/group || addgroup -S chrony
+    grep -q '^chrony:' /etc/passwd || adduser -S -D -H -h /var/lib/chrony -s /bin/false -G chrony chrony
+    install -d -o chrony -g chrony -m 750 /var/lib/chrony
+    install -d -m 750 /var/log/chrony
+    # its service: installing chrony means wanting network time (no other package needs it)
+    mkdir -p /etc/service
+    [ -e /etc/service/chrony ] || ln -s /etc/sv/chrony /etc/service/chrony
+}

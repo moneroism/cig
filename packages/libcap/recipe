@@ -1,0 +1,11 @@
+# libcap - POSIX capabilities (chrony drops root and keeps only the right to set the clock)
+name=libcap
+version=2.78
+source="https://cdn.kernel.org/pub/linux/libs/security/linux-privs/libcap2/libcap-$version.tar.xz"
+keys="38A644698C69787344E954CE29EE848AE2CCF3F4"
+signature="https://cdn.kernel.org/pub/linux/libs/security/linux-privs/libcap2/libcap-$version.tar.sign"
+sha256="-"
+style=custom
+_make() { make prefix=/usr lib=lib RAISE_SETFCAP=no GOLANG=no PAM_CAP=no "$@"; }
+do_build() { _make; }
+do_install() { _make DESTDIR="$DEST" install; }

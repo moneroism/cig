@@ -21,7 +21,8 @@ gitlab.freedesktop.org      forge (freedesktop.org)
 gitlab.alpinelinux.org      forge (Alpine Linux: aports files used by linux, elfutils)
 
 # official release sites, by project
-cdn.kernel.org              Linux (kernel.org)
+cdn.kernel.org              Linux (kernel.org), libcap
+chrony-project.org          chrony
 ftp.gnu.org                 GNU
 download.savannah.gnu.org   GNU Savannah (freetype)
 sourceware.org              sourceware (elfutils)
