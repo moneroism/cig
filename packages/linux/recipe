@@ -63,7 +63,9 @@ do_build() {
     if [ "${CIG_KERNEL_PROFILE:-local}" = local ]; then
         local l="$WORK/lsmod" m
         if [ -n "${CIG_KERNEL_LSMOD:-}" ]; then cp "$CIG_KERNEL_LSMOD" "$l"; else lsmod > "$l"; fi
-        for m in ${CIG_KERNEL_EXTRA_MODULES:-}; do echo "$m 0 0" >> "$l"; done
+        # kept whatever lsmod showed (not loaded at build time, needed later): loop devices
+        # (mounting an image file; the install medium's own build). Not loaded until used
+        for m in loop ${CIG_KERNEL_EXTRA_MODULES:-}; do echo "$m 0 0" >> "$l"; done
         echo "local profile: $(($(wc -l < "$l") - 1)) modules from the running system"
         make LSMOD="$l" localmodconfig < /dev/null
         _cig_settings            # localmodconfig must not undo cig's settings
