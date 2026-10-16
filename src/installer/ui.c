@@ -349,7 +349,7 @@ bool ui_input(const char *title, const char *prompt, char *buf, size_t n, bool h
 		move(y, 4 + (int)len);
 		refresh();
 		k = key();
-		trace_screen(hidden && k >= 32 && k < 127 ? '*' : k);   /* never a password in the trace */
+		trace_screen(hidden && k >= 32 && k <= 255 ? '*' : k);   /* never a password (or a byte of a UTF-8 one) in the trace */
 		if (k == '\n') {
 			snprintf(buf, n, "%s", edit);
 			break;

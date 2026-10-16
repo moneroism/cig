@@ -122,6 +122,43 @@ static bool disk_in_use(const char *table, const char *disk)
 	return used;
 }
 
+/* does a dir hold anything but . and ..? */
+static bool dir_has_entries(const char *path)
+{
+	DIR *d = opendir(path);
+	struct dirent *de;
+	bool any = false;
+	while (d && !any && (de = readdir(d)))
+		any = strcmp(de->d_name, ".") && strcmp(de->d_name, "..");
+	if (d)
+		closedir(d);
+	return any;
+}
+
+/* is the disk or one of its partitions held by device-mapper or md (an open LUKS container,
+ * LVM, RAID)? Its mounts and swaps show up as /dev/dm-N or /dev/mdN, not as the disk */
+static bool disk_held(const char *disk)
+{
+	char *p = xasprintf("/sys/block/%s", disk), *h = xasprintf("%s/holders", p);
+	bool held = dir_has_entries(h);
+	DIR *d = opendir(p);
+	struct dirent *de;
+	while (d && !held && (de = readdir(d))) {
+		char *dev = xasprintf("/dev/%s", de->d_name);
+		if (strcmp(de->d_name, disk) && on_disk(dev, disk)) {   /* a partition's folder */
+			free(h);
+			h = xasprintf("%s/%s/holders", p, de->d_name);
+			held = dir_has_entries(h);
+		}
+		free(dev);
+	}
+	if (d)
+		closedir(d);
+	free(h);
+	free(p);
+	return held;
+}
+
 /* a path inside the new system: its /usr links are absolute (/usr/pkg/...) and only
  * resolve there, never from the install media */
 static bool target_has(const char *path)
@@ -245,37 +282,31 @@ static bool was_dropped(int num, const int *dropped, int n)
 	return false;
 }
 
+/* the disk's partition table (sfdisk -d, lower case: its uuid= lines are the partition GUIDs) */
+static char *disk_table(const char *disk)
+{
+	char *d = xasprintf("/dev/%s", disk), *argv[] = { "sfdisk", "-d", d, NULL }, *t = capture(argv);
+	free(d);
+	for (char *c = t; c && *c; c++)
+		*c = (char)tolower((unsigned char)*c);
+	return t;
+}
+
+/* the target disk's table before partitioning: its old partitions' GUIDs */
+static char *old_table;
+
 /* entries an earlier cig install made ("cig", HD(...)/File(...)) that point at this ESP (a
- * reinstall) or at a partition that no longer exists (a disk repartitioned since): every
- * reinstall added one more. Entries of other systems, and cig entries for partitions that
- * still exist (another cig disk), stay; so do all of them when no partition list can be read. */
-static void drop_old_entries(const unsigned char esp_guid[16], int *dropped, int *ndropped)
+ * reinstall) or at a partition of the target disk that partitioning removed: every reinstall
+ * added one more. Entries of other systems and of other disks (another cig disk, attached or
+ * not) stay; so does the new entry (keep). */
+static void drop_old_entries(const struct state *s, const unsigned char esp_guid[16], int keep,
+                             int *dropped, int *ndropped)
 {
 	static const unsigned char desc[] = { 'c', 0, 'i', 0, 'g', 0, 0, 0 };
-	/* the partition GUIDs of every disk (sfdisk -d: uuid=...); BusyBox blkid shows none */
-	char *known = xstrdup("");
-	DIR *d = opendir("/sys/block");
-	struct dirent *de;
-	while (d && (de = readdir(d))) {
-		if (de->d_name[0] == '.' || !strncmp(de->d_name, "loop", 4) || !strncmp(de->d_name, "ram", 3) ||
-		    !strncmp(de->d_name, "zram", 4) || !strncmp(de->d_name, "sr", 2))
-			continue;
-		char *dev = xasprintf("/dev/%s", de->d_name), *argv[] = { "sfdisk", "-d", dev, NULL };
-		char *dump = capture(argv);
-		if (dump) {
-			char *n = xasprintf("%s%s\n", known, dump);
-			free(known);
-			known = n;
-			free(dump);
-		}
-		free(dev);
-	}
-	if (d)
-		closedir(d);
-	bool have_list = strstr(known, "uuid=") != NULL;
-	for (char *c = known; *c; c++)
-		*c = (char)tolower((unsigned char)*c);
+	char *now = disk_table(s->disk);
 	for (int i = 0; i < 0x1000 && *ndropped < 64; i++) {
+		if (i == keep)
+			continue;
 		char *v = xasprintf(EFIVARS "/Boot%04X-" EFI_GLOBAL, i), g[37];
 		unsigned char buf[512];
 		FILE *f = fopen(v, "rb");
@@ -287,7 +318,8 @@ static void drop_old_entries(const unsigned char esp_guid[16], int *dropped, int
 		if (n >= 10 + sizeof(desc) + 42 && !memcmp(buf + 10, desc, sizeof(desc)) &&
 		    buf[18] == 4 && buf[19] == 1) {
 			guid_text(buf + 18 + 24, g);
-			bool mine = !memcmp(buf + 18 + 24, esp_guid, 16), gone = have_list && !strstr(known, g);
+			bool mine = !memcmp(buf + 18 + 24, esp_guid, 16);
+			bool gone = old_table && now && strstr(old_table, g) && !strstr(now, g);
 			if ((mine || gone) && unlink(v) == 0) {
 				dropped[(*ndropped)++] = i;
 				logf_("removed the old boot entry Boot%04X (%s)\n", i, mine ? "this ESP" : "its partition is gone");
@@ -295,7 +327,7 @@ static void drop_old_entries(const unsigned char esp_guid[16], int *dropped, int
 		}
 		free(v);
 	}
-	free(known);
+	free(now);
 }
 
 static void efi_boot_entry(struct state *s, const struct part *esp)
@@ -323,7 +355,6 @@ static void efi_boot_entry(struct state *s, const struct part *esp)
 	}
 	free(uuid);
 	int dropped[64], ndropped = 0;
-	drop_old_entries(guid, dropped, &ndropped);
 	for (int i = 0; i < 0x1000 && num < 0; i++) {   /* a free Boot#### */
 		char *v = xasprintf(EFIVARS "/Boot%04X-" EFI_GLOBAL, i);
 		if (!file_exists(v))
@@ -360,6 +391,8 @@ static void efi_boot_entry(struct state *s, const struct part *esp)
 		logf_("    ! the firmware did not accept a boot entry (the fallback path is used)\n");
 		return;
 	}
+	/* only now that the new entry exists: a failed write leaves the old ones */
+	drop_old_entries(s, guid, num, dropped, &ndropped);
 	/* first in BootOrder (attributes, then 16-bit entry numbers) */
 	char *op = xasprintf(EFIVARS "/BootOrder-" EFI_GLOBAL);
 	FILE *f = fopen(op, "rb");
@@ -398,8 +431,11 @@ void do_install(struct state *s)
 		fail("the disk has mounted partitions; unmount them first");
 	if (disk_in_use("/proc/swaps", s->disk))
 		fail("the disk has a swap partition in use; swapoff it first");
+	if (disk_held(s->disk))
+		fail("the disk is in use by device-mapper or RAID (LUKS, LVM, md); close it first");
 	if (layout_place(&s->lay))
 		fail("the partition layout does not fit the disk");
+	old_table = disk_table(s->disk);
 	{
 		char *script = table_script(&s->lay), *d = xasprintf("/dev/%s", s->disk);
 		logf_("%s", script);
