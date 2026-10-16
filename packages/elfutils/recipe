@@ -4,6 +4,7 @@ name=elfutils
 version=0.196
 rel=2
 _aports=8f13294206888f3dd44ed74a8eb3dd9934499e81
+license="GPL-3.0-or-later AND (GPL-2.0-or-later OR LGPL-3.0-or-later)"
 source="https://sourceware.org/elfutils/ftp/$version/elfutils-$version.tar.bz2
     musl-macros.patch::https://gitlab.alpinelinux.org/alpine/aports/-/raw/$_aports/main/elfutils/musl-macros.patch"
 signature="https://sourceware.org/elfutils/ftp/$version/elfutils-$version.tar.bz2.sig -"

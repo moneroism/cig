@@ -5,6 +5,7 @@ name=gpgv
 version=2.5.24
 rel=2
 upstream="https://gnupg.org/ftp/gcrypt/gnupg/"
+license="GPL-3.0-or-later"
 source="https://gnupg.org/ftp/gcrypt/gnupg/gnupg-$version.tar.bz2"
 signature="https://gnupg.org/ftp/gcrypt/gnupg/gnupg-$version.tar.bz2.sig"
 keys="6DAA6E64A76D2840571B4902528897B826403ADA"

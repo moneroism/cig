@@ -1,6 +1,7 @@
 # sinit - PID 1, about 100 lines. Runs /bin/rc.init and /bin/rc.shutdown.
 name=sinit
 version=1.1
+license="MIT"
 source="https://dl.suckless.org/sinit/sinit-$version.tar.gz"
 sha256="545a6dd100e17a089b009562a946d76ff0578d060c237d94d39fadc555f7b549"
 style=custom

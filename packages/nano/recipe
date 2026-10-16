@@ -1,6 +1,7 @@
 # nano - simple text editor for the terminal
 name=nano
 version=9.2
+license="GPL-3.0-or-later"
 source="https://www.nano-editor.org/dist/v9/nano-$version.tar.xz"
 signature="https://www.nano-editor.org/dist/v9/nano-$version.tar.xz.asc"
 keys="168E6F4297BFD7A79AFD4496514BBE2EB8E1961F"

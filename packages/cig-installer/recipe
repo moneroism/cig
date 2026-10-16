@@ -4,6 +4,7 @@
 name=cig-installer
 version=$(cat "$CIG_REPO/VERSION")
 rel=8
+license="GPL-3.0-or-later"
 source=""
 sha256=""
 depends="cig-tools util-linux e2fsprogs ncurses"

@@ -2,6 +2,7 @@
 # version = date this bundle snapshot was taken
 name=ca-certificates
 version=2026.10.02
+license="MPL-2.0"
 source="cacert.pem::https://curl.se/ca/cacert.pem"
 sha256="a41b5d356aea97a529fe27e0f7316d2f9d946d75927476cf9cf1b90637d00505"
 style=custom

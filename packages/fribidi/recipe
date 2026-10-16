@@ -1,6 +1,7 @@
 # fribidi - Unicode bidirectional text (for pango)
 name=fribidi
 version=1.0.17
+license="LGPL-2.1-or-later"
 source="fribidi-$version.tar.gz::https://github.com/fribidi/fribidi/archive/refs/tags/v$version.tar.gz"
 signature="tag=https://github.com/fribidi/fribidi.git#v$version"
 keys="0AD041B27CA166DDA1FE3BAEA7B3409C0CA4ED14"

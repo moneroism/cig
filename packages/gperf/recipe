@@ -1,6 +1,7 @@
 name=gperf
 version=3.3
 rel=2
+license="GPL-3.0-or-later"
 source="https://ftp.gnu.org/gnu/gperf/gperf-$version.tar.gz"
 signature="https://ftp.gnu.org/gnu/gperf/gperf-$version.tar.gz.sig"
 keys="E0FFBD975397F77A32AB76ECB6301D9E1BBEAC08"

@@ -2,6 +2,7 @@
 # also the GLES2 and Vulkan renderers; pixman (CPU) always, as the fallback wlroots picks itself.
 name=wlroots
 version=0.20.2
+license="MIT"
 source="https://gitlab.freedesktop.org/wlroots/wlroots/-/releases/$version/downloads/wlroots-$version.tar.gz"
 signature="https://gitlab.freedesktop.org/wlroots/wlroots/-/releases/$version/downloads/wlroots-$version.tar.gz.sig"
 keys="34FF9526CFEF0E97A340E2E40FDE7BE0E88F5E48"

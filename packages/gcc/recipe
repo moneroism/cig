@@ -1,6 +1,7 @@
 # gcc - C and C++ compiler. PIE + stack protector by default.
 name=gcc
 version=16.2.0
+license="GPL-3.0-or-later WITH GCC-exception-3.1"
 source="https://ftp.gnu.org/gnu/gcc/gcc-$version/gcc-$version.tar.xz"
 signature="https://ftp.gnu.org/gnu/gcc/gcc-$version/gcc-$version.tar.xz.sig"
 keys="13975A70E63C361C73AE69EF6EEB81F8981C74C7"

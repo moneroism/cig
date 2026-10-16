@@ -2,6 +2,7 @@
 name=mpfr
 version=4.2.2
 upstream="https://www.mpfr.org/mpfr-current/"
+license="LGPL-3.0-or-later"
 source="https://www.mpfr.org/mpfr-$version/mpfr-$version.tar.xz"
 signature="https://www.mpfr.org/mpfr-$version/mpfr-$version.tar.xz.asc"
 keys="A534BE3F83E241D918280AEB5831D11A0D4DB02A"

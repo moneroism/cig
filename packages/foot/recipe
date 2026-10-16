@@ -1,6 +1,7 @@
 # foot - fast, small Wayland terminal (upstream defaults; only login-shell is set)
 name=foot
 version=1.28.0
+license="MIT"
 source="foot-$version.tar.gz::https://codeberg.org/dnkl/foot/archive/$version.tar.gz"
 signature="tag=https://codeberg.org/dnkl/foot.git#$version"
 keys="B19964FBBA09664CC81027ED5BBD4992C116573F"

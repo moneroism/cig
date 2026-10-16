@@ -1,6 +1,7 @@
 # libjpeg-turbo - JPEG images (no SIMD assembly: no nasm needed)
 name=libjpeg-turbo
 version=3.2.0
+license="IJG AND BSD-3-Clause AND Zlib"
 source="https://github.com/libjpeg-turbo/libjpeg-turbo/releases/download/$version/libjpeg-turbo-$version.tar.gz"
 signature="https://github.com/libjpeg-turbo/libjpeg-turbo/releases/download/$version/libjpeg-turbo-$version.tar.gz.sig"
 keys="0338C8D8D9FDA62CF9C421BD7EC2DBB6F4DBF434"

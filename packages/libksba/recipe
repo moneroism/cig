@@ -1,6 +1,7 @@
 # libksba - X.509 and CMS for GnuPG (only to build GnuPG; gpgv does not use it)
 name=libksba
 version=1.8.1
+license="(LGPL-3.0-or-later OR GPL-2.0-or-later) AND GPL-3.0-or-later"
 source="https://gnupg.org/ftp/gcrypt/libksba/libksba-$version.tar.bz2"
 signature="https://gnupg.org/ftp/gcrypt/libksba/libksba-$version.tar.bz2.sig"
 keys="6DAA6E64A76D2840571B4902528897B826403ADA"

@@ -2,6 +2,7 @@
 # Part of cig (src/pixel): built from the repository, like cig-tools.
 name=pixel
 version=$(cat "$CIG_REPO/VERSION")
+license="GPL-3.0-or-later"
 source=""
 sha256=""
 makedepends="make"

@@ -2,6 +2,7 @@
 # (the kernel's hardening plugins: latent_entropy, stackleak, randstruct).
 name=gmp
 version=6.3.0
+license="LGPL-3.0-or-later OR GPL-2.0-or-later"
 source="https://ftp.gnu.org/gnu/gmp/gmp-$version.tar.xz"
 signature="https://ftp.gnu.org/gnu/gmp/gmp-$version.tar.xz.sig"
 keys="343C2FF0FBEE5EC2EDBEF399F3599FF828C67298"

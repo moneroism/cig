@@ -2,6 +2,7 @@
 # No group=: installed systems only get it if the user asks for it.
 name=ncurses
 version=6.6
+license="X11"
 source="https://ftp.gnu.org/gnu/ncurses/ncurses-$version.tar.gz"
 signature="https://ftp.gnu.org/gnu/ncurses/ncurses-$version.tar.gz.sig"
 keys="19882D92DDA4C400C22C0D56CC2AF4472167BE03"

@@ -1,6 +1,7 @@
 # grim - screenshots on Wayland
 name=grim
 version=1.5.0
+license="MIT"
 source="https://gitlab.freedesktop.org/emersion/grim/-/releases/v$version/downloads/grim-$version.tar.gz"
 signature="https://gitlab.freedesktop.org/emersion/grim/-/releases/v$version/downloads/grim-$version.tar.gz.sig"
 keys="34FF9526CFEF0E97A340E2E40FDE7BE0E88F5E48"

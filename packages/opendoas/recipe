@@ -1,6 +1,7 @@
 # opendoas - run commands as root (members of wheel). The only setuid program.
 name=opendoas
 version=6.8.2
+license="ISC"
 source="https://github.com/Duncaen/OpenDoas/releases/download/v$version/opendoas-$version.tar.xz"
 signature="https://github.com/Duncaen/OpenDoas/releases/download/v$version/opendoas-$version.tar.xz.sig"
 keys="C4B6FBA98211F7EFF35DEB73335C1D17EC3D6E35"

@@ -1,6 +1,7 @@
 # libevent - event notification library (for tmux)
 name=libevent
 version=2.1.13
+license="BSD-3-Clause"
 source="https://github.com/libevent/libevent/releases/download/release-$version-stable/libevent-$version-stable.tar.gz"
 signature="https://github.com/libevent/libevent/releases/download/release-$version-stable/libevent-$version-stable.tar.gz.asc"
 keys="2133BC600AB133E1D826D173FE43009C4607B1FB"

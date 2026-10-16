@@ -6,6 +6,7 @@ name=cig-tools
 version=$(cat "$CIG_REPO/VERSION")
 rel=12
 makedepends="make"
+license="GPL-3.0-or-later"
 source=""
 sha256=""
 style=custom

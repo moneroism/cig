@@ -4,6 +4,7 @@ version=5.3.2
 rel=2
 # track 5.3: gawk 5.4 breaks GCC 16's option generator (README)
 track=5.3
+license="GPL-3.0-or-later"
 source="https://ftp.gnu.org/gnu/gawk/gawk-$version.tar.xz"
 signature="https://ftp.gnu.org/gnu/gawk/gawk-$version.tar.xz.sig"
 keys="D1967C63788713177D861ED7DF597815937EC0D2"

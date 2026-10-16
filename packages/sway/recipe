@@ -2,6 +2,7 @@
 name=sway
 version=1.12
 rel=2
+license="MIT"
 source="https://github.com/swaywm/sway/releases/download/$version/sway-$version.tar.gz"
 signature="https://github.com/swaywm/sway/releases/download/$version/sway-$version.tar.gz.sig"
 keys="34FF9526CFEF0E97A340E2E40FDE7BE0E88F5E48"

@@ -1,6 +1,7 @@
 # pcre2 - Perl-compatible regular expressions (no JIT: no executable memory at run time)
 name=pcre2
 version=10.49
+license="BSD-3-Clause WITH PCRE2-exception"
 source="https://github.com/PCRE2Project/pcre2/releases/download/pcre2-$version/pcre2-$version.tar.bz2"
 signature="https://github.com/PCRE2Project/pcre2/releases/download/pcre2-$version/pcre2-$version.tar.bz2.sig"
 keys="A95536204A3BB489715231282A98E77EB6F24CA8"

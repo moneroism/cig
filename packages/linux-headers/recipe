@@ -3,6 +3,7 @@ name=linux-headers
 version=6.18.54
 # updates: the kernel's series (6.18 LTS)
 track=6.18
+license="GPL-2.0-only WITH Linux-syscall-note"
 source="https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-$version.tar.xz"
 signature="https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-$version.tar.sign"
 keys="647F28654894E3BD457199BE38DBBDC86092693E"

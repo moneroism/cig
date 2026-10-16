@@ -1,6 +1,7 @@
 # curl - transfer data from URLs (HTTP(S) and FILE only)
 name=curl
 version=8.22.0
+license="curl"
 source="https://curl.se/download/curl-$version.tar.xz"
 signature="https://curl.se/download/curl-$version.tar.xz.asc"
 keys="27EDEAF22F3ABCEB50DB9A125CC908FDB71E12C2"

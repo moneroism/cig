@@ -114,6 +114,7 @@ rewritten automatically.
 ```sh
 name=dwl
 version=0.8
+license="GPL-3.0-or-later AND MIT AND CC0-1.0"   # SPDX expression (the libre-meter reads it)
 source="https://codeberg.org/dwl/dwl/releases/download/v$version/dwl-v$version.tar.gz"
 signature=""                 # signature URL per source, or "-"
 keys=""                      # fingerprints allowed to sign (filled in by pin/sig/keys; new ones: cigbuild trust)

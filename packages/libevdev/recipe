@@ -1,5 +1,6 @@
 name=libevdev
 version=1.13.7
+license="MIT"
 source="https://www.freedesktop.org/software/libevdev/libevdev-$version.tar.xz"
 signature="https://www.freedesktop.org/software/libevdev/libevdev-$version.tar.xz.sig"
 keys="3C2C43D9447D5938EF4551EBE23B7E70B467F0BF"

@@ -3,6 +3,7 @@ name=e2fsprogs
 version=1.47.4
 rel=2
 depends="util-linux"
+license="GPL-2.0-only AND LGPL-2.0-only AND BSD-3-Clause AND MIT"
 source="https://cdn.kernel.org/pub/linux/kernel/people/tytso/e2fsprogs/v$version/e2fsprogs-$version.tar.xz"
 signature="https://cdn.kernel.org/pub/linux/kernel/people/tytso/e2fsprogs/v$version/e2fsprogs-$version.tar.sign"
 keys="3AB057B7E78D945C8C5591FBD36F769BC11804F0"

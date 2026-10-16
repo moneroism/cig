@@ -2,6 +2,7 @@
 # C++, no DANE, no PKCS#11/TPM; libtasn1 and libunistring are the bundled copies
 name=gnutls
 version=3.8.13
+license="LGPL-2.1-or-later"
 source="https://www.gnupg.org/ftp/gcrypt/gnutls/v${version%.*}/gnutls-$version.tar.xz"
 keys="5D46CB0F763405A7053556F47A75A648B3F9220C"
 signature="https://www.gnupg.org/ftp/gcrypt/gnutls/v3.8/gnutls-$version.tar.xz.sig"

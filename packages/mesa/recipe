@@ -3,6 +3,7 @@
 name=mesa
 version=26.2.4
 rel=4
+license="MIT"
 source="https://archive.mesa3d.org/mesa-$version.tar.xz"
 signature="https://archive.mesa3d.org/mesa-$version.tar.xz.sig"
 keys="57551DE15B968F6341C248F68D8E31AFC32428A6"

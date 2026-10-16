@@ -1,6 +1,7 @@
 # argp-standalone - argument parser (glibc's argp) for musl; build dependency of elfutils
 name=argp-standalone
 version=1.5.0
+license="LGPL-2.1-or-later"
 source="argp-standalone-$version.tar.gz::https://github.com/argp-standalone/argp-standalone/archive/refs/tags/$version.tar.gz"
 sha256="c29eae929dfebd575c38174f2c8c315766092cec99a8f987569d0cad3c6d64f6"
 makedepends="autoconf automake"

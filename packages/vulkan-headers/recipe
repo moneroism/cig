@@ -1,6 +1,7 @@
 # vulkan-headers - Vulkan API headers (to build the Vulkan loader and Vulkan programs)
 name=vulkan-headers
 version=1.4.365
+license="Apache-2.0 AND MIT"
 source="vulkan-headers-$version.tar.gz::https://github.com/KhronosGroup/Vulkan-Headers/archive/refs/tags/v$version.tar.gz"
 sha256="ed832b3292cce324ebba6522fd2d3004bf1b797fa49bfbcad0b302ff23d56abc"
 makedepends="cmake make"

@@ -2,6 +2,7 @@
 name=seatd
 version=0.9.3
 rel=3
+license="MIT"
 source="seatd-$version.tar.gz::https://git.sr.ht/~kennylevinsen/seatd/archive/$version.tar.gz"
 sha256="302564d54d8e28191fadfd734f2675ecb0c9e0615a58011b89ef15dfa4dbaa96"
 makedepends="meson pkgconf"

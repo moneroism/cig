@@ -2,6 +2,7 @@
 name=cmake
 version=4.4.4
 rel=2
+license="BSD-3-Clause"
 source="https://github.com/Kitware/CMake/releases/download/v$version/cmake-$version.tar.gz"
 signature="sums=https://github.com/Kitware/CMake/releases/download/v$version/cmake-$version-SHA-256.txt"
 keys="CBA23971357C2E6590D9EFD3EC8FEF3A7BFB4EDA"

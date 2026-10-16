@@ -1,6 +1,7 @@
 # fcft - small font rendering library (used by foot)
 name=fcft
 version=3.3.3
+license="MIT"
 source="fcft-$version.tar.gz::https://codeberg.org/dnkl/fcft/archive/$version.tar.gz"
 signature="tag=https://codeberg.org/dnkl/fcft.git#$version"
 keys="B19964FBBA09664CC81027ED5BBD4992C116573F"

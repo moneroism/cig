@@ -1,6 +1,7 @@
 # xkeyboard-config - keyboard layout data
 name=xkeyboard-config
 version=2.48
+license="MIT AND HPND"
 source="https://www.x.org/releases/individual/data/xkeyboard-config/xkeyboard-config-$version.tar.xz"
 signature="https://www.x.org/releases/individual/data/xkeyboard-config/xkeyboard-config-$version.tar.xz.sig"
 keys="FFB4CCD275AAA422F5F9808E0661D98FC933A145"

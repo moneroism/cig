@@ -1,6 +1,7 @@
 # libgpg-error - error codes shared by GnuPG's libraries (needed by gpgv)
 name=libgpg-error
 version=1.61
+license="LGPL-2.1-or-later"
 source="https://gnupg.org/ftp/gcrypt/libgpg-error/libgpg-error-$version.tar.bz2"
 signature="https://gnupg.org/ftp/gcrypt/libgpg-error/libgpg-error-$version.tar.bz2.sig"
 keys="6DAA6E64A76D2840571B4902528897B826403ADA"

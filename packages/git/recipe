@@ -3,6 +3,7 @@ name=git
 version=2.56.0
 # track 2: git 3.0 makes Rust mandatory (README)
 track=2
+license="GPL-2.0-only"
 source="https://cdn.kernel.org/pub/software/scm/git/git-$version.tar.xz"
 signature="https://cdn.kernel.org/pub/software/scm/git/git-$version.tar.sign"
 keys="96E07AF25771955980DAD10020D04E5A713660A7"

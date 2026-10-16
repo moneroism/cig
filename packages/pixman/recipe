@@ -1,5 +1,6 @@
 name=pixman
 version=0.46.4
+license="MIT"
 source="https://www.x.org/releases/individual/lib/pixman-$version.tar.xz"
 signature="sums=https://www.x.org/releases/individual/lib/pixman-$version.tar.xz.sha512.asc"
 keys="3BB639E56F861FA2E86505690FDD682D974CA72A"

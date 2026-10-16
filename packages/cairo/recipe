@@ -1,6 +1,7 @@
 # cairo - 2D graphics (no X11)
 name=cairo
 version=1.18.6
+license="LGPL-2.1-only OR MPL-1.1"
 source="https://cairographics.org/releases/cairo-$version.tar.xz"
 signature="tag=https://gitlab.freedesktop.org/cairo/cairo.git#$version"
 keys="53EF3DC3B63E2899271BD26322E8091EEA11BBB7"

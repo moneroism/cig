@@ -6,6 +6,7 @@
 # Taken from the official repository, trusted on first use, until the key can be checked.
 name=libpng
 version=1.6.59
+license="libpng-2.0"
 source="libpng-$version.tar.gz::https://github.com/pnggroup/libpng/archive/refs/tags/v$version.tar.gz"
 signature="-"
 sha256="2540302a1844ad2b2b501977abecfa850f265f97b78f065a712ab4074a89f5b5"

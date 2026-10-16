@@ -1,6 +1,7 @@
 # openssh - secure shell client (ssh, scp, sftp); the server is built but not enabled
 name=openssh
 version=10.5p1
+license="SSH-OpenSSH AND BSD-2-Clause AND BSD-3-Clause AND ISC"
 source="https://cdn.openbsd.org/pub/OpenBSD/OpenSSH/portable/openssh-$version.tar.gz"
 signature="https://cdn.openbsd.org/pub/OpenBSD/OpenSSH/portable/openssh-$version.tar.gz.asc"
 keys="7168B983815A5EEF59A4ADFD2A3F414E736060BA"

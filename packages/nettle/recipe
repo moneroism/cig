@@ -1,6 +1,7 @@
 # nettle - low-level cryptographic library (GnuTLS's crypto, chrony's hashes)
 name=nettle
 version=4.0
+license="LGPL-3.0-or-later OR GPL-2.0-or-later"
 source="https://ftp.gnu.org/gnu/nettle/nettle-$version.tar.gz"
 keys="343C2FF0FBEE5EC2EDBEF399F3599FF828C67298"
 signature="https://ftp.gnu.org/gnu/nettle/nettle-$version.tar.gz.sig"

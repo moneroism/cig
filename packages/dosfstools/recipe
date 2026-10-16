@@ -3,6 +3,7 @@
 # only mkfs.fat is installed (BusyBox keeps mkfs.vfat).
 name=dosfstools
 version=4.2
+license="GPL-3.0-or-later"
 source="https://github.com/dosfstools/dosfstools/releases/download/v$version/dosfstools-$version.tar.gz"
 signature="https://github.com/dosfstools/dosfstools/releases/download/v$version/dosfstools-$version.tar.gz.sig"
 keys="25714AECDBFDACEE1CE95FE77F6022516E869F64"

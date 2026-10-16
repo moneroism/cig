@@ -1,6 +1,7 @@
 # zstd - Zstandard compression (library and tool)
 name=zstd
 version=1.5.7
+license="BSD-3-Clause OR GPL-2.0-only"
 source="https://github.com/facebook/zstd/releases/download/v$version/zstd-$version.tar.gz"
 signature="https://github.com/facebook/zstd/releases/download/v$version/zstd-$version.tar.gz.sig"
 keys="4EF4AC63455FC9F4545D9B7DEF8FE99528B52FFD"

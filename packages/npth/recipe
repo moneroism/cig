@@ -1,6 +1,7 @@
 # npth - GnuPG's thread library (gpgv links it)
 name=npth
 version=1.8
+license="LGPL-2.1-or-later"
 source="https://gnupg.org/ftp/gcrypt/npth/npth-$version.tar.bz2"
 signature="https://gnupg.org/ftp/gcrypt/npth/npth-$version.tar.bz2.sig"
 keys="6DAA6E64A76D2840571B4902528897B826403ADA"

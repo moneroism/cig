@@ -1,6 +1,7 @@
 # musl-obstack - obstack(3) memory functions for musl (maintained by Void Linux)
 name=musl-obstack
 version=1.2.3
+license="LGPL-2.1-or-later"
 source="musl-obstack-$version.tar.gz::https://github.com/void-linux/musl-obstack/archive/refs/tags/v$version.tar.gz"
 sha256="9ffb3479b15df0170eba4480e51723c3961dbe0b461ec289744622db03a69395"
 makedepends="autoconf automake libtool pkgconf"

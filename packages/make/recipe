@@ -1,6 +1,7 @@
 # make - GNU make. Pre-C23 code: built as C17.
 name=make
 version=4.4.1
+license="GPL-3.0-or-later"
 source="https://ftp.gnu.org/gnu/make/make-$version.tar.gz"
 signature="https://ftp.gnu.org/gnu/make/make-$version.tar.gz.sig"
 keys="6D4EEB02AD834703510B117680CB727A20C79BB2"

@@ -8,6 +8,8 @@
 # What got installed is listed in /usr/share/cig/firmware.list
 name=linux-firmware
 version=20260916
+# license: per file, listed in WHENCE; many files are not free (redistributable only)
+license="LicenseRef-linux-firmware"
 source="https://cdn.kernel.org/pub/linux/kernel/firmware/linux-firmware-$version.tar.xz"
 signature="https://cdn.kernel.org/pub/linux/kernel/firmware/linux-firmware-$version.tar.sign"
 keys="4CDE8575E547BF835FE15807A31B6BD72486CFD6"

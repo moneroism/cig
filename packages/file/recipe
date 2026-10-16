@@ -2,6 +2,7 @@
 name=file
 version=5.48
 rel=2
+license="BSD-2-Clause"
 source="https://astron.com/pub/file/file-$version.tar.gz"
 signature="https://astron.com/pub/file/file-$version.tar.gz.asc"
 keys="BE04995BA8F90ED0C0C176C471112AB16CB33B3A"

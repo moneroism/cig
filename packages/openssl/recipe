@@ -3,6 +3,7 @@ name=openssl
 version=3.5.9
 # updates: the 3.5 LTS series
 track=3.5
+license="Apache-2.0"
 source="https://github.com/openssl/openssl/releases/download/openssl-$version/openssl-$version.tar.gz"
 signature="https://github.com/openssl/openssl/releases/download/openssl-$version/openssl-$version.tar.gz.asc"
 keys="B146647E45A7B33947AB226B2A2C87D161692D40"

@@ -1,6 +1,7 @@
 # swaybg - wallpaper for Wayland compositors
 name=swaybg
 version=1.2.2
+license="MIT"
 source="https://github.com/swaywm/swaybg/releases/download/v$version/swaybg-$version.tar.gz"
 signature="https://github.com/swaywm/swaybg/releases/download/v$version/swaybg-$version.tar.gz.sig"
 keys="34FF9526CFEF0E97A340E2E40FDE7BE0E88F5E48"

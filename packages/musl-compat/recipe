@@ -5,6 +5,7 @@
 name=musl-compat
 version=1
 rel=2
+license="GPL-3.0-or-later"
 source=""
 sha256=""
 style=custom

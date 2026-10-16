@@ -1,6 +1,7 @@
 # libcap - POSIX capabilities (chrony drops root and keeps only the right to set the clock)
 name=libcap
 version=2.78
+license="BSD-3-Clause OR GPL-2.0-only"
 source="https://cdn.kernel.org/pub/linux/libs/security/linux-privs/libcap2/libcap-$version.tar.xz"
 keys="38A644698C69787344E954CE29EE848AE2CCF3F4"
 signature="https://cdn.kernel.org/pub/linux/libs/security/linux-privs/libcap2/libcap-$version.tar.sign"

@@ -1,6 +1,7 @@
 # slurp - select a screen region (for grim)
 name=slurp
 version=1.5.0
+license="MIT"
 source="https://github.com/emersion/slurp/releases/download/v$version/slurp-$version.tar.gz"
 signature="https://github.com/emersion/slurp/releases/download/v$version/slurp-$version.tar.gz.sig"
 keys="34FF9526CFEF0E97A340E2E40FDE7BE0E88F5E48"

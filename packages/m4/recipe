@@ -1,5 +1,6 @@
 name=m4
 version=1.4.21
+license="GPL-3.0-or-later"
 source="https://ftp.gnu.org/gnu/m4/m4-$version.tar.xz"
 signature="https://ftp.gnu.org/gnu/m4/m4-$version.tar.xz.sig"
 keys="71C2CC22B1C4602927D2F3AAA7A16B4A2527436A"

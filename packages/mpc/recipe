@@ -1,6 +1,7 @@
 # mpc - multiple-precision complex numbers. Needed for GCC plugin headers.
 name=mpc
 version=1.3.1
+license="LGPL-3.0-or-later"
 source="https://ftp.gnu.org/gnu/mpc/mpc-$version.tar.gz"
 signature="https://ftp.gnu.org/gnu/mpc/mpc-$version.tar.gz.sig"
 keys="AD17A21EF8AED8F1CC02DBD9F7D5C9BF765C61E3"

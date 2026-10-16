@@ -1,6 +1,7 @@
 # autoconf - generates configure scripts (build tool)
 name=autoconf
 version=2.73
+license="GPL-3.0-or-later WITH Autoconf-exception-3.0"
 source="https://ftp.gnu.org/gnu/autoconf/autoconf-$version.tar.xz"
 signature="https://ftp.gnu.org/gnu/autoconf/autoconf-$version.tar.xz.sig"
 keys="82F854F3CE73174B8B63174091FCC32B6769AA64"

@@ -1,6 +1,7 @@
 # flex - lexer generator (build tool). Pre-C23 code: built as C17.
 name=flex
 version=2.6.4
+license="BSD-3-Clause"
 source="https://github.com/westes/flex/releases/download/v$version/flex-$version.tar.gz"
 signature="https://github.com/westes/flex/releases/download/v$version/flex-$version.tar.gz.sig"
 keys="56C67868E93390AA1039AD1CE4B29C8D64885307"

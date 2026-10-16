@@ -1,5 +1,6 @@
 name=wayland-protocols
 version=1.49
+license="MIT"
 source="https://gitlab.freedesktop.org/wayland/wayland-protocols/-/releases/$version/downloads/wayland-protocols-$version.tar.xz"
 signature="https://gitlab.freedesktop.org/wayland/wayland-protocols/-/releases/$version/downloads/wayland-protocols-$version.tar.xz.sig"
 keys="34FF9526CFEF0E97A340E2E40FDE7BE0E88F5E48"

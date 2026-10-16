@@ -1,6 +1,7 @@
 # wayland - display protocol library and wayland-scanner
 name=wayland
 version=1.26.0
+license="MIT"
 source="https://gitlab.freedesktop.org/wayland/wayland/-/releases/$version/downloads/wayland-$version.tar.xz"
 signature="https://gitlab.freedesktop.org/wayland/wayland/-/releases/$version/downloads/wayland-$version.tar.xz.sig"
 keys="34FF9526CFEF0E97A340E2E40FDE7BE0E88F5E48"

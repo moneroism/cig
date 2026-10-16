@@ -1,6 +1,7 @@
 # pkgconf - pkg-config implementation
 name=pkgconf
 version=3.0.7
+license="ISC"
 source="https://distfiles.ariadne.space/pkgconf/pkgconf-$version.tar.xz"
 sha256="c926ff491cbd9a331a589160811bd97ab1749b4d5198a519338f2cdfabe6940a"
 style=custom

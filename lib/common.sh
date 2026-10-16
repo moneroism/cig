@@ -37,7 +37,7 @@ load_recipe() {
     local f; f=$(recipe_path "$1")
     [ -f "$f" ] || die "no recipe: packages/$1/recipe"
     # reset everything a recipe may set
-    name= version= rel=1 source= signature= sha256= depends= makedepends= style=
+    name= version= rel=1 license= source= signature= sha256= depends= makedepends= style=
     configure_args= meson_args= make_args= wrksrc= keep_static= nostrip= config_files= link_dirs= copy_files= noextract= track= upstream= stable= keys=
     unset -f pre_build do_build do_install post_install upstream_version 2>/dev/null || true
     PKGDIR="$CIG_REPO/packages/$1"
@@ -222,6 +222,7 @@ make_package() {
     rm -rf "$tmp"; mkdir -p "$tmp"
     {
         echo "name=$name"; echo "version=$version"; echo "rel=$rel"
+        echo "license=\"$license\""
         echo "depends=\"$depends\""
         echo "gpus=\"$(cig_gpus)\""
         echo "config_files=\"$(echo $config_files)\""
@@ -603,6 +604,7 @@ pkg_info() {
     load_recipe "$1"
     echo "name:     $name"
     echo "version:  $version-$rel"
+    echo "license:  ${license:--}"
     echo "style:    $style"
     echo "depends:  ${depends:--}"
     echo "builds with: ${makedepends:--}"

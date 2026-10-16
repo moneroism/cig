@@ -1,6 +1,7 @@
 # libgcrypt - GnuPG's cryptographic library (needed by gpgv)
 name=libgcrypt
 version=1.12.4
+license="LGPL-2.1-or-later"
 source="https://gnupg.org/ftp/gcrypt/libgcrypt/libgcrypt-$version.tar.bz2"
 signature="https://gnupg.org/ftp/gcrypt/libgcrypt/libgcrypt-$version.tar.bz2.sig"
 keys="6DAA6E64A76D2840571B4902528897B826403ADA"
