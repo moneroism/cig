@@ -1,6 +1,7 @@
 # sway - tiling Wayland compositor, i3-compatible (no tray: it needs D-Bus)
 name=sway
 version=1.12
+rel=2
 source="https://github.com/swaywm/sway/releases/download/$version/sway-$version.tar.gz"
 signature="https://github.com/swaywm/sway/releases/download/$version/sway-$version.tar.gz.sig"
 keys="34FF9526CFEF0E97A340E2E40FDE7BE0E88F5E48"
@@ -22,4 +23,11 @@ do_install() {
     mkdir -p "$DEST/etc/sway/config.d"
     printf '%s\n' '# Files in /etc/sway/config.d are included by /etc/sway/config.' \
         '# Put local additions here (or in ~/.config/sway/config).' > "$DEST/etc/sway/config.d/00-local.conf"
+}
+
+post_install() {
+    # the seat daemon it needs (/etc/sv/seatd, from cig-base). Enabled here, not by seatd:
+    # seatd is also installed only to build wlroots or a compositor, and then stays off
+    mkdir -p /etc/service
+    [ -e /etc/service/seatd ] || ln -s /etc/sv/seatd /etc/service/seatd
 }

@@ -1,16 +1,10 @@
 # seatd - device access for the session, without logind / D-Bus
 name=seatd
 version=0.9.3
-rel=2
+rel=3
 source="seatd-$version.tar.gz::https://git.sr.ht/~kennylevinsen/seatd/archive/$version.tar.gz"
 sha256="302564d54d8e28191fadfd734f2675ecb0c9e0615a58011b89ef15dfa4dbaa96"
 makedepends="meson pkgconf"
 style=meson
 meson_args="-Dlibseat-logind=disabled -Dlibseat-seatd=enabled -Dlibseat-builtin=enabled
     -Dserver=enabled -Dexamples=disabled -Dman-pages=disabled"
-post_install() {
-    # its service (/etc/sv/seatd, from cig-base): compositors need it, also when seatd comes
-    # later than the install (smoke add dwl)
-    mkdir -p /etc/service
-    [ -e /etc/service/seatd ] || ln -s /etc/sv/seatd /etc/service/seatd
-}
