@@ -24,6 +24,7 @@ meson_known_opts() {
                 # the project's options file defines them (no file: none)
                 case "$n" in
                     b_*|c_*|cpp_*|default_library|buildtype|optimization|debug|warning_level|werror|wrap_mode) ;;
+                    prefix|bindir|datadir|includedir|infodir|libdir|libexecdir|localedir|localstatedir|mandir|sbindir|sharedstatedir|sysconfdir) ;;
                     *)
                         if [ -z "$f" ] || ! grep -qE "['\"]$n['\"]" "$f"; then
                             echo "   (skipping option not defined by this version: $a)" >&2
