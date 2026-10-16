@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 #include <sys/stat.h>
 #include <unistd.h>
 
@@ -208,11 +209,25 @@ static bool ask_yn(const char *q, bool def)
 	char buf[64];
 	if (!isatty(0))
 		return def;
-	printf("%s [%s] ", q, def ? "Y/n" : "y/N");
-	fflush(stdout);
-	if (!fgets(buf, sizeof(buf), stdin) || buf[0] == '\n')
-		return def;
-	return !strcmp(buf, "y\n") || !strcmp(buf, "Y\n") || !strcmp(buf, "yes\n");
+	for (;;) {
+		printf("%s [%s] ", q, def ? "Y/n" : "y/N");
+		fflush(stdout);
+		if (!fgets(buf, sizeof(buf), stdin))
+			return def;
+		/* surrounding blanks do not count; anything but yes/no is asked again, never taken
+		 * as no (a Cyrillic "у" looks like y) */
+		char *a = buf + strspn(buf, " \t");
+		size_t n = strlen(a);
+		while (n && strchr(" \t\r\n", a[n - 1]))
+			a[--n] = '\0';
+		if (!n)
+			return def;
+		if (!strcasecmp(a, "y") || !strcasecmp(a, "yes"))
+			return true;
+		if (!strcasecmp(a, "n") || !strcasecmp(a, "no"))
+			return false;
+		printf("  please answer y or n\n");
+	}
 }
 
 /* a line "key:  value" of `cigbuild info` */
