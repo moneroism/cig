@@ -1,0 +1,22 @@
+# labwc - stacking Wayland compositor (Openbox-like): windows overlap and float
+# Release tags are unsigned: pinned by SHA256 (flagged in docs/sources.md); the tarball matches
+# the SHA-512 of Alpine's aports (community/labwc) for the same release.
+name=labwc
+version=0.20.2
+license="GPL-2.0-only"
+source="labwc-$version.tar.gz::https://github.com/labwc/labwc/archive/refs/tags/$version.tar.gz"
+sha256="fae023b6fe022f7057556707a17cdb2d98e0138c5dffaedaa1dade975699f9e8"
+depends="wlroots libxml2 glib cairo pango libpng libinput libxkbcommon wayland pixman libdrm seatd"
+makedepends="meson pkgconf wayland-protocols"
+style=meson
+group="desktop"
+# no X11 apps (XWayland), no SVG buttons (librsvg needs Rust), no window icons (libsfdo), no
+# systemd session files, no translations; the man pages need scdoc
+meson_args="-Dxwayland=disabled -Dsvg=disabled -Dicon=disabled -Dsystemd-session=disabled
+    -Dnls=disabled -Dman-pages=disabled"
+
+post_install() {
+    # the seat daemon it needs (/etc/sv/seatd, from cig-base), as dwl and sway do
+    mkdir -p /etc/service
+    [ -e /etc/service/seatd ] || ln -s /etc/sv/seatd /etc/service/seatd
+}

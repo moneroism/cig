@@ -203,12 +203,15 @@ is detected, and everything else renders with pixman. Not yet tested on the RX57
   on installed systems. Categories come from the recipes. **Wayland only** (decided
   2026-10-05): sway, labwc, wayfire and friends instead of X11 window managers; X11 may come
   later as an optional recipe. First wave of easy recipes: sway, labwc, nano, vim, htop
-  (done except labwc, plus tmux, tree, jq, rsync, strace, fastfetch, pixel)
+  (done, plus tmux, tree, jq, rsync, strace, fastfetch, pixel; labwc 2026-10-16). The
+  component list marks packages whose upstream signs nothing (done 2026-10-16)
 
 - components as recipes, offered in the installer:
-  PipeWire (optional), Bluetooth = BlueZ + D-Bus (optional),
+  PipeWire (optional), Bluetooth = BlueZ + D-Bus (optional, off by default: done
+  2026-10-16), network time = chrony with NTS (on by default: done 2026-10-16),
   wmenu (default on, uncheckable); ALSA moves to Phase 3
-- UEFI boot entries (efibootmgr) instead of only the fallback path
+- ~~UEFI boot entries instead of only the fallback path~~ (done 2026-10-07: the installer writes
+  the entry itself through efivarfs, no efibootmgr; the kernel stays at the fallback path)
 - **libre-meter** in the installer, right before the final summary: how libre the
   installed system will be, and which software changes would make it more libre
   - assesses every part cig installs: packages (recipe `license=`), kernel and
@@ -227,7 +230,8 @@ is detected, and everything else renders with pixman. Not yet tested on the RX57
     judged against an ideal it cannot meet
   - nothing changes without the user choosing it; suggestions link to the screen
     (components, hardware) where they can be applied
-  - needs `license=` in every recipe and a list of free alternatives per non-free item
+  - needs `license=` in every recipe (done 2026-10-16: SPDX, also in .PKGINFO) and a list
+    of free alternatives per non-free item
 
 **Exit criteria:** every component installs and works on the PC.
 

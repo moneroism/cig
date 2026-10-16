@@ -1,0 +1,29 @@
+# bluez - Bluetooth (bluetoothd, bluetoothctl); needs the D-Bus system bus
+name=bluez
+version=5.87
+rel=2
+license="GPL-2.0-or-later AND LGPL-2.1-or-later"
+source="https://cdn.kernel.org/pub/linux/bluetooth/bluez-$version.tar.xz"
+keys="E932D120BC2AEC444E558F0106CA9F5D1DCF2659"
+signature="https://cdn.kernel.org/pub/linux/bluetooth/bluez-$version.tar.sign"
+sha256="-"
+depends="dbus glib readline"
+makedepends="pkgconf"
+style=gnu
+group="network"
+# no systemd, udev, CUPS printing or OBEX file transfer (libical); bluetoothctl uses readline
+configure_args="--libexecdir=/usr/lib --disable-systemd --disable-udev --disable-cups --disable-obex
+    --disable-manpages"
+do_install() {
+    style_install
+    cp -R "$PKGDIR/files/etc" "$DEST/"
+}
+post_install() {
+    install -d -m 750 /var/log/bluetoothd
+    install -d -m 700 /var/lib/bluetooth
+    # its services: bluetoothd and the system bus it talks through
+    mkdir -p /etc/service
+    for s in dbus bluetoothd; do
+        [ -e "/etc/service/$s" ] || ln -s "/etc/sv/$s" "/etc/service/$s"
+    done
+}

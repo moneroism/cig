@@ -1,0 +1,11 @@
+#!/bin/sh
+# no Bluetooth in this kernel (no module, nothing in /sys/class/bluetooth): the service stops
+# itself instead of failing every second
+modprobe -q bluetooth 2>/dev/null
+if [ ! -d /sys/class/bluetooth ]; then
+    echo "this kernel has no Bluetooth support: bluetoothd not started"
+    exec sv down .
+fi
+# bluetoothd talks through the system bus: wait for it
+sv check dbus >/dev/null || exit 1
+exec /usr/lib/bluetooth/bluetoothd -n 2>&1

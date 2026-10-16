@@ -45,8 +45,9 @@ machine.
 | Admin | doas, for members of `wheel` (the only setuid program) |
 | Packages | `cigbuild` builds, `smoke` installs: every package in its own folder under `/usr/pkg` |
 | TLS | OpenSSL 3.5 LTS |
-| Desktop | Wayland: dwl, foot; CPU rendering (pixman) for now. No X11. |
-| D-Bus | none (planned only as a dependency of optional Bluetooth) |
+| Desktop | Wayland: dwl, foot (sway, labwc optional); CPU rendering (pixman) for now. No X11. |
+| D-Bus | only with optional Bluetooth (BlueZ, off by default); its service runs only then |
+| Time | chrony with NTS (authenticated) to Netnod and PTB; Cloudflare only if neither answers within 60 s. Optional: off, no time server sees the machine |
 
 ### Hardening
 

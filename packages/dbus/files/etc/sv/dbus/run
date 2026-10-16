@@ -1,0 +1,5 @@
+#!/bin/sh
+# the system bus; enabled by the components that need it (bluez), not by dbus itself
+install -d -m 755 /run/dbus
+dbus-uuidgen --ensure
+exec dbus-daemon --system --nofork --nopidfile --nosyslog 2>&1

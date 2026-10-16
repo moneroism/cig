@@ -1,0 +1,13 @@
+# libxml2 - XML parser library (labwc reads its configuration with it)
+# GNOME publishes no signatures for it: pinned by SHA256 (flagged in docs/sources.md); the
+# pin matches the libxml2-$version.sha256sum GNOME publishes next to the tarball.
+name=libxml2
+version=2.15.4
+license="MIT"
+source="https://download.gnome.org/sources/libxml2/${version%.*}/libxml2-$version.tar.xz"
+sha256="98087fd181d9070724f3fbc65c7377db03038eb92bd882374daff44940138821"
+makedepends="meson pkgconf"
+style=meson
+# no fetching over the network while parsing (http), no Python bindings, no ICU, no readline
+meson_args="-Dhttp=disabled -Dpython=disabled -Dicu=disabled -Dreadline=disabled -Dhistory=disabled
+    -Dzlib=disabled -Ddocs=disabled -Dlegacy=disabled"

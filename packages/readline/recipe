@@ -1,0 +1,12 @@
+# readline - line editing for command-line programs (bluetoothctl)
+name=readline
+version=8.3
+license="GPL-3.0-or-later"
+source="https://ftp.gnu.org/gnu/readline/readline-$version.tar.gz"
+keys="7C0135FB088AAF6C66C650B9BB5869F064EA74AB"
+signature="https://ftp.gnu.org/gnu/readline/readline-$version.tar.gz.sig"
+sha256="-"
+depends="ncurses"
+style=gnu
+configure_args="--with-curses"
+make_args="SHLIB_LIBS=-lncursesw"
