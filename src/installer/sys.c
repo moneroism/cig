@@ -270,6 +270,17 @@ int load_components(const char *share, struct comp **out, char **base)
 					s = dash + 3;
 				snprintf(c[n].desc, sizeof(c[n].desc), "%.*s", (int)strcspn(s, "\n"), s);
 			}
+			/* whether its upstream signs it: a signature, signed checksum file or signed tag
+			 * for a source (signature= other than "-"); else the source is only pinned */
+			char sig[512], *save = NULL;
+			bool signed_up = false;
+			recipe_value(text, "signature", sig, sizeof(sig));
+			for (char *w = strtok_r(sig, " \t", &save); w && !signed_up; w = strtok_r(NULL, " \t", &save))
+				signed_up = strcmp(w, "-") != 0;
+			if (!signed_up) {
+				size_t l = strlen(c[n].desc);
+				snprintf(c[n].desc + l, sizeof(c[n].desc) - l, "%s(unsigned upstream)", l ? " " : "");
+			}
 			n++;
 		}
 		free(text);

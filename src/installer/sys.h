@@ -29,7 +29,7 @@ bool file_exists(const char *p);
 char *read_text(const char *p);
 
 struct comp {
-	char name[64], group[32], desc[160];
+	char name[64], group[32], desc[200];
 	bool on;
 };
 /* components offered by the recipes (group= other than base); base packages in *base */

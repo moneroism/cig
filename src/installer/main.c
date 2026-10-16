@@ -119,7 +119,7 @@ static void components_screen(struct state *s)
 		descs[i] = s->comps[i].desc;
 		on[i] = s->comps[i].on;
 	}
-	char *text = xasprintf("Always installed: %s\nNot available yet: PipeWire, Bluetooth", s->base);
+	char *text = xasprintf("Always installed: %s\nNot available yet: PipeWire", s->base);
 	ui_catalog("Components", text, groups, names, descs, on, s->ncomp);
 	for (int i = 0; i < s->ncomp; i++)
 		s->comps[i].on = on[i];
