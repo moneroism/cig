@@ -5,6 +5,9 @@
 # downloads and staging
 /stage
 
+# image snapshots, old ISOs and build/session logs kept on the development machine
+/backups/
+
 # disk images, VM state, build output
 *.img
 *.iso
