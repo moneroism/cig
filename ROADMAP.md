@@ -168,7 +168,7 @@ Work:
 - ~~installer: compile-by-default, generic-kernel option with warning, builds on the target~~ (done)
 - ~~installer: auto partitioning with optional swap, partition editor~~ (done)
 - ~~smoke: `add` (replaces `install`) with the compile/install questions, `-c`, the
-  build-tools prompt, the unsigned warning~~ (done); name-file lookup (local file first)
+  build-tools prompt, the unsigned warning~~ (done); name-file lookup (local file first; done 2026-10-16: /etc/smoke/names, then cig's own `names`; the signed online list comes with `smoke sync`)
 - ~~unbound recipe; DNS choice in the installer~~ (done 2026-10-06: DNS over TLS to Quad9 and
   Cloudflare by default, unbound as its own resolver, or DHCP DNS; servers in
   `/etc/unbound/unbound.conf.d/forward-tls.conf`)

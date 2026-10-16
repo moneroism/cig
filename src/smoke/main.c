@@ -270,6 +270,28 @@ static void prebuilt_from_mirror(const char *f)
 
 enum compile { ASK, YES, NO };
 
+/* a word in the name files: "<word> <target> [<key>]" lines, the user's /etc/smoke/names
+ * first, then cig's own (next to its recipes). The target, or NULL; *from: which file */
+static char *name_lookup(const char *word, char **from)
+{
+	char *files[] = { xasprintf("%s/etc/smoke/names", ROOT), xasprintf("%s/names", CIG_REPO) }, *t = NULL;
+	for (size_t i = 0; i < 2 && !t; i++) {
+		struct strv l = { 0 };
+		read_lines(files[i], &l);
+		for (size_t j = 0; j < l.n && !t; j++) {
+			char *save = NULL, *w = strtok_r(l.v[j], " \t", &save), *target = strtok_r(NULL, " \t", &save);
+			if (w && *w != '#' && target && !strcmp(w, word)) {
+				t = xstrdup(target);
+				*from = xstrdup(files[i]);
+			}
+		}
+		sv_free(&l);
+	}
+	free(files[0]);
+	free(files[1]);
+	return t;
+}
+
 static void add_pkg(const char *name, enum compile compile, bool yes)
 {
 	char *recipe = xasprintf("%s/packages/%s/recipe", CIG_REPO, name), *f, *out, *version, *src, *sig;
@@ -278,8 +300,26 @@ static void add_pkg(const char *name, enum compile compile, bool yes)
 
 	if (!valid_name(name))   /* a path in the name would make cigbuild source any file */
 		die("not a package name: %s", name);
-	if (!is_file(recipe))
-		die("unknown package: %s (name lookup and links come later; see docs/smoke.md)", name);
+	if (!is_file(recipe)) {
+		char *from = NULL, *t = name_lookup(name, &from);
+		if (t && strstr(t, "://"))
+			die("%s is %s (%s); smoke cannot build from a link yet: it needs a recipe (planned, see "
+			    "docs/smoke.md)", name, t, from);
+		char *tr = t && valid_name(t) ? xasprintf("%s/packages/%s/recipe", CIG_REPO, t) : NULL;
+		bool ok = tr && is_file(tr);   /* a recipe itself: names never chain */
+		free(tr);
+		if (!ok && t)
+			die("%s names %s as %s, which is not a package (no recipe)", from, name, t);
+		if (!ok)
+			die("unknown package: %s (no recipe, and not in %s/etc/smoke/names or %s/names)", name, ROOT,
+			    CIG_REPO);
+		info("%s is the package %s (%s)", name, t, from);
+		free(from);
+		free(recipe);
+		add_pkg(t, compile, yes);
+		free(t);
+		return;
+	}
 	free(recipe);
 
 	if ((e = inv_get(name)) && compile != YES) {

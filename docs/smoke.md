@@ -73,10 +73,15 @@ dwl           https://codeberg.org/dwl/dwl                              -
 
 - `-` = upstream doesn't sign; smoke warns on install.
 - An entry may point to a reviewed recipe (see "Recipes").
-- **Official file:** `/usr/share/cig/names`, signed by the cig project key
-  (`names.sig`). smoke refuses an official file whose signature doesn't match.
 - **Local file:** `/etc/smoke/names`, the user's own entries and overrides;
-  checked first, not signed (the user trusts themselves).
+  checked first, not signed (the user trusts themselves). (done)
+- **cig's file:** `/usr/share/cig/names` (`names` in the repository), shipped with the
+  recipes in cig-tools and trusted like them; for now only words for what cig itself
+  needs, each pointing at a recipe (`doas` -> `opendoas`). (done)
+- **Online list** (planned, with `smoke sync`): every package, signed by the cig project
+  key (`names.sig`); smoke refuses it when the signature doesn't match.
+- A word that names a recipe is used as it is; a target is always a recipe or a link,
+  never another word. A link stops with a message until smoke can write recipes.
 
 The project key is the one point of trust in the cig developer. It only maps
 names to links; every link and key is shown before installing and can be

@@ -1,0 +1,25 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 moneroism
+#
+# names - plain words for packages: smoke add <word> looks a word up here when no recipe has
+# that name. One entry per line: <word> <target> [<key fingerprint>]. The target is a cig
+# recipe, or an upstream link (building from a link needs a generated recipe: planned).
+# Your own entries go in /etc/smoke/names, which is read first. This file holds only the
+# words for what cig itself needs; the full list will come online, signed by the cig
+# project key (docs/smoke.md, "The name file").
+#
+# word          target
+doas            opendoas
+sh              busybox
+coreutils       busybox
+libc            musl
+kernel          linux
+firmware        linux-firmware
+gnupg           gpgv
+gpg             gpgv
+init            sinit
+mkfs.ext4       e2fsprogs
+fdisk           util-linux
+sfdisk          util-linux
+smoke           cig-tools
+cigbuild        cig-tools
