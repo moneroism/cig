@@ -12,6 +12,8 @@ set -euo pipefail
 # CIG_VM_EXTRA:  more QEMU options, e.g. "-rtc base=2024-03-01T12:00:00" (a wrong clock)
 # CIG_VM_MONITOR: a QEMU monitor on this unix socket (screendump, sendkey: tests without a
 #             person at the VM window)
+# CIG_VM_SERIAL:  the serial console (getty-ttyS0) on this unix socket instead of this
+#             terminal: scripts log in and run commands there
 CDROM="${CIG_CDROM:-}"
 if [ -n "$CDROM" ]; then IMG="${CIG_IMG:-}"; else IMG="${CIG_IMG:-$HOME/cig.img}"; fi
 TARGET="${CIG_TARGET:-}"
@@ -54,6 +56,9 @@ ACCEL=()
 MON=()
 [ -n "${CIG_VM_MONITOR:-}" ] && MON=(-monitor "unix:$CIG_VM_MONITOR,server,nowait")
 
+SERIAL=(-serial mon:stdio)
+[ -n "${CIG_VM_SERIAL:-}" ] && SERIAL=(-serial "unix:$CIG_VM_SERIAL,server,nowait")
+
 DISKS=(-device ahci,id=ahci)
 [ -n "$IMG" ] && DISKS+=(-drive "file=$IMG,format=raw,if=none,id=disk" -device ide-hd,drive=disk,bus=ahci.0,bootindex=0)
 [ -n "$TARGET" ] && DISKS+=(-drive "file=$TARGET,format=raw,if=none,id=target" -device ide-hd,drive=target,bus=ahci.1)
@@ -66,4 +71,4 @@ exec qemu-system-x86_64 \
     -device virtio-vga \
     -device qemu-xhci -device usb-tablet \
     -nic user,model=e1000e \
-    -serial mon:stdio
+    "${SERIAL[@]}"
