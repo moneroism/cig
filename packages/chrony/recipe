@@ -2,6 +2,8 @@
 # Off, the clock only runs on and is kept from going backwards (rc.init); drift is set by hand.
 name=chrony
 version=4.9
+rel=2
+license="GPL-2.0-only"
 source="https://chrony-project.org/releases/chrony-$version.tar.gz"
 keys="8F375C7E8D0EE125A3D3BD51537E2B76F7680DAC"
 signature="https://chrony-project.org/releases/chrony-$version-tar-gz-asc.txt"
@@ -10,7 +12,7 @@ depends="gnutls nettle libcap"
 makedepends="pkgconf"
 group="network"
 default=on
-config_files="etc/chrony.conf"
+config_files="etc/chrony.conf etc/chrony.fallback"
 style=custom
 # its own configure script (not autoconf); no editline, no NSS/tomcrypt, no reference
 # clocks (GPS/PPS hardware); privileges dropped to the chrony user through libcap

@@ -1,3 +1,15 @@
 #!/bin/sh
+# the fallback servers (/etc/chrony.fallback) join only if no server of chrony.conf has
+# answered 60 seconds after the start. Detached twice: chronyd replaces this shell, and init
+# reaps the checker
+( (
+    sleep 60
+    # chronyc -c sources: mode,state,address,stratum,poll,reach,...; reach 0 = never answered
+    chronyc -n -c sources 2>/dev/null | awk -F, '$6 != "0" { ok = 1 } END { exit !ok }' && exit 0
+    echo "no time server answered within 60 seconds: adding the fallback (/etc/chrony.fallback)"
+    grep -v '^[[:space:]]*\(#\|$\)' /etc/chrony.fallback 2>/dev/null | while read -r l; do
+        chronyc "add $l"
+    done
+) & ) 2>&1
 # -d: foreground, log to the service log; runs as the chrony user after start
 exec chronyd -d 2>&1

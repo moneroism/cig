@@ -1,0 +1,5 @@
+# chrony.fallback (cig) - time servers used ONLY when none of the servers in chrony.conf has
+# answered 60 seconds after chronyd started (sv/chrony/run adds them then, with chronyc).
+# Until then these servers never see this machine. One chrony "server" line each; delete
+# the lines for no fallback.
+server time.cloudflare.com iburst nts
