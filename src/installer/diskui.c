@@ -313,6 +313,26 @@ static bool auto_layout(struct state *s)
 	return true;
 }
 
+/* the auto layout without questions (cig-install --answers): s->disk, sep_home, root_g,
+ * swap_g as given; NULL or why not (caller frees) */
+char *disk_auto(struct state *s)
+{
+	char *sys = system_disk();
+	bool own = sys && !strcmp(sys, s->disk);
+	free(sys);
+	if (own)
+		return xasprintf("/dev/%s runs this system", s->disk);
+	unsigned long long size_g = sectors_of(s->disk) * sect_of(s->disk) >> 30;
+	if (!size_g)
+		return xasprintf("no disk /dev/%s", s->disk);
+	if (s->sep_home && (s->root_g < 20 || s->root_g >= size_g))
+		return xasprintf("/dev/%s has %lluG: the system partition needs 20G or more and must leave room for "
+		                 "/home (home = no for one partition)", s->disk, size_g);
+	layout_clear(&s->lay, s->disk, sect_of(s->disk), sectors_of(s->disk));
+	layout_auto(&s->lay, s->sep_home, s->root_g, s->swap_g);
+	return problems(s);
+}
+
 void disk_screen(struct state *s)
 {
 	char *sys = system_disk(), *text = xstrdup("Choose the disk to install on.");

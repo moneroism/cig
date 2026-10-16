@@ -46,6 +46,7 @@ bool comp_on(const struct state *s, const char *name);
 
 void do_install(struct state *s);   /* returns only on success */
 void disk_screen(struct state *s);
+char *disk_auto(struct state *s);   /* --answers: auto layout, NULL or why not */
 char *size_h(unsigned long long bytes);   /* 512M / 40G / 1.8T */
 
 #endif

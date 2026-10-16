@@ -11,9 +11,11 @@
 #define KEY_ESC 27
 
 static FILE *trace_f;
+static bool active;   /* ncurses started; without it (--answers) messages are plain text */
 
 void ui_init(void)
 {
+	active = true;
 	const char *t = getenv("CIG_TUI_TRACE");
 	if (t && !(trace_f = fopen(t, "a")))
 		perror(t);
@@ -34,6 +36,9 @@ void ui_init(void)
 
 void ui_end(void)
 {
+	if (!active)
+		return;
+	active = false;
 	endwin();
 	if (trace_f)
 		fclose(trace_f);
@@ -380,6 +385,11 @@ bool ui_yesno(const char *title, const char *text, bool def)
 void ui_msg(const char *title, const char *text)
 {
 	int k;
+	if (!active) {
+		printf("\n== %s\n%s\n", title, text);
+		fflush(stdout);
+		return;
+	}
 	frame(title);
 	text_block(4, text);
 	footer("Enter continue");
@@ -392,6 +402,11 @@ void ui_msg(const char *title, const char *text)
 
 void ui_wait(const char *title, const char *text)
 {
+	if (!active) {
+		printf("%s: %s\n", title, text);
+		fflush(stdout);
+		return;
+	}
 	frame(title);
 	text_block(4, text);
 	refresh();
@@ -400,8 +415,19 @@ void ui_wait(const char *title, const char *text)
 void ui_progress(const char *title, const char *step, const char *logfile)
 {
 	char lines[64][256];
-	int n = 0, y = frame(title), rows;
-	FILE *f = logfile ? fopen(logfile, "r") : NULL;
+	int n = 0, y, rows;
+	FILE *f;
+	if (!active) {   /* each step once; the log has the details */
+		static char last[256];
+		if (strcmp(last, step)) {
+			snprintf(last, sizeof(last), "%s", step);
+			printf("==> %s\n", step);
+			fflush(stdout);
+		}
+		return;
+	}
+	y = frame(title);
+	f = logfile ? fopen(logfile, "r") : NULL;
 	attron(A_BOLD);
 	mvprintw(y++, 2, "==> %s", step);
 	attroff(A_BOLD);

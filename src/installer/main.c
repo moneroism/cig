@@ -35,6 +35,17 @@ static bool valid_name(const char *s, bool user)
 	return true;
 }
 
+/* accounts the system or its packages create: adduser would fail at the end of the install */
+static bool taken_name(const char *n)
+{
+	static const char *const taken[] = { "root", "nobody", "unbound", "chrony", "sshd", "daemon", "bin", "sys",
+	                                     "tty", "wheel", "audio", "video", "input", "users", "nogroup", NULL };
+	for (int i = 0; taken[i]; i++)
+		if (!strcmp(n, taken[i]))
+			return true;
+	return false;
+}
+
 /* a password, typed twice */
 static bool password(const char *title, const char *who, char *out, size_t n)
 {
@@ -79,14 +90,10 @@ static void identity_screen(struct state *s)
 		ui_msg("Identity", "A user name starts with a lowercase letter or _, then letters, digits, - or _.");
 		return;
 	}
-	/* accounts the system or its packages create: adduser would fail at the end of the install */
-	static const char *const taken[] = { "root", "nobody", "unbound", "sshd", "daemon", "bin", "sys", "tty",
-	                                     "wheel", "audio", "video", "input", "users", "nogroup", NULL };
-	for (int i = 0; taken[i]; i++)
-		if (!strcmp(buf, taken[i])) {
-			ui_msg("Identity", "That name belongs to a system account. Choose another user name.");
-			return;
-		}
+	if (taken_name(buf)) {
+		ui_msg("Identity", "That name belongs to a system account. Choose another user name.");
+		return;
+	}
 	snprintf(s->user, sizeof(s->user), "%.32s", buf);
 	if (!password("Identity", s->user, s->userpass, sizeof(s->userpass)))
 		return;
@@ -434,17 +441,201 @@ static void preflight(struct state *s)
 	}
 	mkdir(WORKDIR, 0700);
 	/* long builds: keep the console from blanking while the installer runs */
-	fputs("\033[9;0]", stdout);
-	fflush(stdout);
+	if (isatty(1)) {
+		fputs("\033[9;0]", stdout);
+		fflush(stdout);
+	}
 }
 
-int main(void)
+/* ---------------- cig-install --answers <file> ---------------- */
+
+/* every answer the menus would ask, as "key = value" lines (# starts a comment line):
+ *   disk = sda            required; ERASED (auto layout)
+ *   erase = sda           required: the same disk again, so a wrong file can't erase another
+ *   home = yes            separate /home (default yes); root_size = 40 (G, with home)
+ *   swap = 0              G
+ *   hostname = cig
+ *   user = name           required; password = ... (required); root_password = ... (none: locked)
+ *   components = -openssh +labwc   changes to the default selection
+ *   firmware = detected | none
+ *   wifi_ssid = ...  wifi_psk = ...
+ *   dns = tls | recursive | dhcp
+ *   compile = yes | no    (no: the media's prebuilt packages)
+ *   kernel = local | generic
+ * Progress goes to stdout as plain text, no screens and no keys: for testing (serial console). */
+static _Noreturn void bad_answer(const char *path, int line, const char *msg)
+{
+	fprintf(stderr, "cig-install: %s:%d: %s\n", path, line, msg);
+	exit(1);
+}
+
+static bool yes_no(const char *v, const char *path, int line)
+{
+	if (!strcmp(v, "yes"))
+		return true;
+	if (!strcmp(v, "no"))
+		return false;
+	bad_answer(path, line, "yes or no");
+}
+
+static void read_answers(struct state *s, const char *path)
+{
+	struct stat st;
+	char *text = read_text(path), erase[64] = "";
+	int ln = 0;
+	if (!text) {
+		fprintf(stderr, "cig-install: cannot read %s\n", path);
+		exit(1);
+	}
+	if (stat(path, &st) == 0 && (st.st_mode & 077))
+		fprintf(stderr, "cig-install: warning: %s holds passwords and others can read it (chmod 600)\n", path);
+	s->swap_g = 0;
+	/* strtok_r would skip empty lines and miscount: split by hand */
+	for (char *l = text, *next; l && *l; l = next) {
+		next = strchr(l, '\n');
+		if (next)
+			*next++ = '\0';
+		ln++;
+		char *line = l;
+		size_t len = strlen(line);
+		l += strspn(l, " \t");
+		if (!*l || *l == '#')
+			continue;
+		char *eq = strchr(l, '=');
+		if (!eq)
+			bad_answer(path, ln, "expected key = value");
+		char *k = l, *v = eq + 1, *e = eq;
+		while (e > k && (e[-1] == ' ' || e[-1] == '\t'))
+			e--;
+		*e = '\0';
+		v += strspn(v, " \t");
+		size_t vn = strlen(v);
+		while (vn && (v[vn - 1] == ' ' || v[vn - 1] == '\t' || v[vn - 1] == '\r'))
+			v[--vn] = '\0';
+		if (!strcmp(k, "disk") || !strcmp(k, "erase")) {
+			if (!*v || strchr(v, '/') || vn >= sizeof(s->disk))
+				bad_answer(path, ln, "a disk name as in /sys/block, e.g. sda");
+			snprintf(!strcmp(k, "disk") ? s->disk : erase, sizeof(erase), "%s", v);
+		} else if (!strcmp(k, "home")) {
+			s->sep_home = yes_no(v, path, ln);
+		} else if (!strcmp(k, "root_size") || !strcmp(k, "swap")) {
+			char *end;
+			unsigned long g = strtoul(v, &end, 10);
+			if (!*v || *end || g > 1u << 20)
+				bad_answer(path, ln, "a size in G");
+			*(!strcmp(k, "swap") ? &s->swap_g : &s->root_g) = (unsigned)g;
+		} else if (!strcmp(k, "hostname")) {
+			if (!valid_name(v, false))
+				bad_answer(path, ln, "a hostname is letters, digits and dashes, not starting with a dash");
+			snprintf(s->host, sizeof(s->host), "%s", v);
+		} else if (!strcmp(k, "user")) {
+			if (!valid_name(v, true) || taken_name(v))
+				bad_answer(path, ln, "not a usable user name (or a system account)");
+			snprintf(s->user, sizeof(s->user), "%s", v);
+		} else if (!strcmp(k, "password") || !strcmp(k, "root_password")) {
+			bool root = !strcmp(k, "root_password");
+			if (!*v || vn >= sizeof(s->userpass))
+				bad_answer(path, ln, "an empty or too long password");
+			snprintf(root ? s->rootpass : s->userpass, sizeof(s->userpass), "%s", v);
+			if (root)
+				s->root_lock = false;
+		} else if (!strcmp(k, "components")) {
+			char *w2 = NULL;
+			for (char *w = strtok_r(v, " \t", &w2); w; w = strtok_r(NULL, " \t", &w2)) {
+				int i = 0;
+				while (i < s->ncomp && strcmp(s->comps[i].name, w + 1))
+					i++;
+				if ((*w != '+' && *w != '-') || i == s->ncomp)
+					bad_answer(path, ln, "components: +name or -name of a component the installer offers");
+				s->comps[i].on = *w == '+';
+			}
+		} else if (!strcmp(k, "firmware")) {
+			if (strcmp(v, "detected") && strcmp(v, "none"))
+				bad_answer(path, ln, "firmware: detected or none");
+			for (int i = 0; i < s->ndrv; i++)
+				s->drvs[i].on = s->drvs[i].on && !strcmp(v, "detected");
+		} else if (!strcmp(k, "wifi_ssid")) {
+			if (!*v || vn > 32)
+				bad_answer(path, ln, "a network name has 1 to 32 characters");
+			snprintf(s->ssid, sizeof(s->ssid), "%s", v);
+		} else if (!strcmp(k, "wifi_psk")) {
+			bool ok = vn >= 8 && vn <= 63;
+			for (size_t i = 0; i < vn && ok; i++)
+				ok = v[i] >= 32 && v[i] < 127;
+			if (!ok)
+				bad_answer(path, ln, "a WiFi password has 8 to 63 printable ASCII characters");
+			snprintf(s->psk, sizeof(s->psk), "%s", v);
+		} else if (!strcmp(k, "dns")) {
+			if (!strcmp(v, "tls"))
+				s->dns = DNS_TLS;
+			else if (!strcmp(v, "recursive"))
+				s->dns = DNS_RECURSIVE;
+			else if (!strcmp(v, "dhcp"))
+				s->dns = DNS_DHCP;
+			else
+				bad_answer(path, ln, "dns: tls, recursive or dhcp");
+		} else if (!strcmp(k, "compile")) {
+			s->compile_pkgs = yes_no(v, path, ln);
+		} else if (!strcmp(k, "kernel")) {
+			if (strcmp(v, "local") && strcmp(v, "generic"))
+				bad_answer(path, ln, "kernel: local or generic");
+			s->generic_kernel = !strcmp(v, "generic");
+		} else {
+			bad_answer(path, ln, "unknown key");
+		}
+		memset(line, 0, len);   /* no password left in memory longer than needed */
+	}
+	free(text);
+	if (!*s->disk || strcmp(s->disk, erase))
+		bad_answer(path, ln, "disk = <name> and erase = <the same name> are both required");
+	if (!*s->user || !*s->userpass)
+		bad_answer(path, ln, "user and password are required");
+	if (!!*s->ssid != !!*s->psk)
+		bad_answer(path, ln, "wifi_ssid and wifi_psk go together");
+}
+
+static int install_answers(struct state *s, const char *path)
+{
+	read_answers(s, path);
+	if (s->generic_kernel && !generic_kernel_ok(s))
+		s->generic_kernel = false;   /* generic_kernel_ok said why */
+	/* demo (testing on a development host): the layout is not checked, sfdisk never runs */
+	char *err = getenv("CIG_INSTALL_DEMO") ? NULL : disk_auto(s);
+	if (err) {
+		fprintf(stderr, "cig-install: %s\n", err);
+		return 1;
+	}
+	char *pk = selected(s);
+	printf("cig %s: installing on /dev/%s (ERASED), host %s, user %s, root %s\ncomponents: %s\n",
+	       s->version, s->disk, s->host, s->user, s->root_lock ? "locked" : "with password", pk);
+	free(pk);
+	fflush(stdout);
+	if (getenv("CIG_INSTALL_DEMO")) {
+		puts("demo: would install now");
+		return 0;
+	}
+	do_install(s);
+	printf("\ncig %s is installed on /dev/%s.\n%s", s->version, s->disk, s->warnings);
+	return 0;
+}
+
+int main(int argc, char **argv)
 {
 	static struct state s;
 	umask(022);   /* system files are world-readable, whatever the caller's umask (cig's profile: 027) */
 	settings(&s);
 	if (getenv("CIG_INSTALL_DEMO"))
 		LOG = WORKDIR "/install.log";   /* demo/testing: never touches the real log */
+	if (argc == 3 && !strcmp(argv[1], "--answers")) {
+		preflight(&s);
+		s.ncomp = load_components(s.share, &s.comps, &s.base);
+		s.ndrv = detect_hardware(&s.drvs, WORKDIR "/lsmod");
+		return install_answers(&s, argv[2]);
+	}
+	if (argc != 1) {
+		fputs("usage: cig-install [--answers <file>]\n", stderr);
+		return 2;
+	}
 	preflight(&s);
 	s.ncomp = load_components(s.share, &s.comps, &s.base);
 	s.ndrv = detect_hardware(&s.drvs, WORKDIR "/lsmod");
