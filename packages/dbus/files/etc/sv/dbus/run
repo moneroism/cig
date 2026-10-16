@@ -1,5 +1,8 @@
 #!/bin/sh
-# the system bus; enabled by the components that need it (bluez), not by dbus itself
+exec 2>&1
+# the system bus; enabled by the components that need it (bluez), not by dbus itself.
+# Its machine-id is new at every boot and lives in /run only, so nothing can recognise this
+# machine across boots (/var/lib/dbus/machine-id points there: dbus post_install)
 install -d -m 755 /run/dbus
-dbus-uuidgen --ensure
-exec dbus-daemon --system --nofork --nopidfile --nosyslog 2>&1
+[ -s /run/dbus/machine-id ] || { dbus-uuidgen > /run/dbus/machine-id && chmod 444 /run/dbus/machine-id; }
+exec dbus-daemon --system --nofork --nopidfile --nosyslog

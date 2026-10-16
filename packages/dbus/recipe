@@ -2,6 +2,7 @@
 # (BlueZ). Nothing else in cig needs it, and its service runs only when such a component does.
 name=dbus
 version=1.16.2
+rel=2
 license="AFL-2.1 OR GPL-2.0-or-later"
 source="https://dbus.freedesktop.org/releases/dbus/dbus-$version.tar.xz"
 keys="DA98F25C0871C49A59EAFF2C4DE8FF2A63C7CC90"
@@ -24,4 +25,7 @@ post_install() {
     grep -q '^messagebus:' /etc/group || addgroup -S messagebus
     grep -q '^messagebus:' /etc/passwd || adduser -S -D -H -h /run/dbus -s /bin/false -G messagebus messagebus
     install -d -m 750 /var/log/dbus
+    # the machine-id is per boot (sv/dbus/run writes it to /run): never a permanent one here
+    install -d -m 755 /var/lib/dbus
+    ln -sfn /run/dbus/machine-id /var/lib/dbus/machine-id
 }
