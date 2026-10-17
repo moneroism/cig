@@ -13,6 +13,8 @@
 #       CIG_KERNEL_CMDLINE_EXTRA="console=ttyS0,115200 console=tty0" cigbuild build linux
 #   CIG_VAR=/cig/media-build CIG_SOURCE_MIRROR=/var/cig/sources CIG_FIRMWARE=all \
 #       cigbuild build linux-firmware
+#   CIG_VAR=/cig/media-build/generic CIG_SOURCE_MIRROR=/var/cig/sources CIG_KERNEL_PROFILE=generic \
+#       cigbuild build linux       (the installer's "generic kernel": all drivers, root by name)
 #   /cig/scripts/build-media.sh [output.iso]      (default: the repository, cig-<version>.iso)
 #
 # The ISO: the live system as ISO 9660 with Rock Ridge (read-only; the volume label
@@ -53,6 +55,22 @@ for p in linux linux-firmware; do
     f=$(CIG_VAR=$MEDIA_VAR "$CIGBUILD" pkgfile "$p")
     [ -f "$f" ] || die "no media $p package ($f): build it first (see the top of this script)"
 done
+
+# the generic install kernel (root=PARTLABEL=cig-root): the all-drivers one from the media
+# build if there is one, otherwise the dev system's test kernel
+generic=
+for g in "$MEDIA_VAR/generic" "$DEV_VAR/generic"; do
+    ls "$g"/pkgs/linux-[0-9]*.tar.gz >/dev/null 2>&1 || continue   # a folder without a kernel does not count
+    # the installer takes it only when it is the recipe's version-rel: an older one would leave
+    # the medium without its generic kernel (linux rel 2 did, 2026-10-16)
+    [ -f "$(CIG_VAR=$g "$CIGBUILD" pkgfile linux)" ] \
+        || die "the generic install kernel in $g is older than the linux recipe; build it first:
+    CIG_VAR=$g CIG_SOURCE_MIRROR=$DEV_VAR/sources CIG_KERNEL_PROFILE=generic $CIGBUILD build linux"
+    generic=$g
+    break
+done
+[ -n "$generic" ] || die "no generic install kernel (the installer's \"generic kernel\" option); build it first:
+    CIG_VAR=$MEDIA_VAR/generic CIG_SOURCE_MIRROR=$DEV_VAR/sources CIG_KERNEL_PROFILE=generic $CIGBUILD build linux"
 
 # the installer's prebuilt packages must match the recipes: a component (group=), or any
 # package built before, whose current version-rel has no package is built now (smoke
@@ -191,14 +209,9 @@ for f in "$DEV_VAR"/pkgs/*.tar.gz $(for p in $REPO_PKGS; do echo "$MEDIA_VAR/pkg
     link "$f" "$STAGE/var/cig/pkgs/"
     [ -f "$f.sha256" ] && link "$f.sha256" "$STAGE/var/cig/pkgs/"
 done
-# the generic install kernel (root=PARTLABEL=cig-root): the all-drivers one from the media
-# build if there is one, otherwise the dev system's test kernel
-for g in "$MEDIA_VAR/generic" "$DEV_VAR/generic"; do
-    ls "$g"/pkgs/linux-[0-9]*.tar.gz >/dev/null 2>&1 || continue   # a folder without a kernel does not count
-    mkdir -p "$STAGE"/var/cig/generic/{sources,build,db,logs}
-    link "$g/pkgs" "$STAGE/var/cig/generic/"
-    break
-done
+# the generic install kernel (chosen and checked at the top)
+mkdir -p "$STAGE"/var/cig/generic/{sources,build,db,logs}
+link "$generic/pkgs" "$STAGE/var/cig/generic/"
 
 # ---- the ISO: Rock Ridge (owners, modes, links as they are), the ESP image for El Torito
 # and as an appended GPT partition (the same file: UEFI finds it on a CD and on a USB stick)
