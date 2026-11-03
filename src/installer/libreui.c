@@ -169,6 +169,22 @@ void libre_screen(struct state *s)
 	}
 	char *r = libre_report(&l);
 	libre_free(&l);
+	/* what the firmware selection already left out: the files a driver names but did not load */
+	char *trim = xstrdup("");
+	for (int i = 0; i < s->ndrv; i++) {
+		const struct drv *d = &s->drvs[i];
+		if (!d->on || d->loaded <= 0 || d->loaded == d->nreq)
+			continue;
+		char *t = xasprintf("%s  %s: %d of %d files (only those it loaded)\n", trim, d->name, d->loaded, d->nreq);
+		free(trim);
+		trim = t;
+	}
+	if (*trim) {
+		char *t = xasprintf("%s\nFirmware left out (not needed by this machine):\n%s", r, trim);
+		free(r);
+		r = t;
+	}
+	free(trim);
 	ui_text("Libre-meter", r);
 	free(r);
 }
