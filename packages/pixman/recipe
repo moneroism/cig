@@ -4,7 +4,7 @@ license="MIT"
 source="https://www.x.org/releases/individual/lib/pixman-$version.tar.xz"
 signature="sums=https://www.x.org/releases/individual/lib/pixman-$version.tar.xz.sha512.asc"
 keys="3BB639E56F861FA2E86505690FDD682D974CA72A"
-sha256="a098c33924754ad43f981b740f6d576c70f9ed1006e12221b1845431ebce1239"
+sha256="-"
 makedepends="meson pkgconf"
 style=meson
 meson_args="-Dgtk=disabled -Dlibpng=disabled -Dtests=disabled -Ddemos=disabled"

@@ -92,28 +92,57 @@ get_local() {
 
 # gpgv_verify <file> <signature entry>: the upstream signature, checked on this device with
 # gpgv against the recipe's own keys (keys/<fingerprint>.gpg in the repository) and no
-# others. Returns 2 when it cannot be checked here: no gpgv yet (bootstrap), no keys=, or a
-# signed checksum file or tag (still checked through the pinned sha256).
+# others: a detached signature of the file, or a signed checksum file (sums=) that lists it.
+# Returns 2 when it cannot be checked here: no gpgv yet (bootstrap), no keys=, a signed tag
+# (needs git: checked through the pinned sha256), or a checksum file that cannot be fetched
+# (offline: the pinned sha256 decides, and a source without one is refused by the caller).
 gpgv_verify() {
-    local f=$1 e=$2 d sigf out signer k
+    local f=$1 e=$2 d sigf url out signer k want have
     command -v gpgv >/dev/null && [ -n "${keys:-}" ] || return 2
-    case "$e" in sums=*|tag=*) return 2 ;; esac
+    case "$e" in tag=*) return 2 ;; esac
     d=$(mktemp -d)
     for k in $keys; do
         [ -s "$CIG_REPO/keys/$k.gpg" ] || { rm -rf "$d"; die "$name: key $k is not in keys/ (on the host: cigbuild keys $name)"; }
         cat "$CIG_REPO/keys/$k.gpg" >> "$d/keyring.gpg"
     done
-    sigf="$CIG_VAR/sources/${e##*/}"
-    get_local "$sigf" || fetch "$e" "$sigf" || { rm -rf "$d"; die "signature download failed: $e"; }
-    case "$e:$f" in   # kernel.org signs the uncompressed tarball
-        *.sign:*.xz) out=$(xz -dc "$f" | gpgv --homedir "$d" --keyring "$d/keyring.gpg" --status-fd 1 "$sigf" - 2>/dev/null || true) ;;
-        *.sign:*.gz) out=$(gzip -dc "$f" | gpgv --homedir "$d" --keyring "$d/keyring.gpg" --status-fd 1 "$sigf" - 2>/dev/null || true) ;;
-        *)           out=$(gpgv --homedir "$d" --keyring "$d/keyring.gpg" --status-fd 1 "$sigf" "$f" 2>/dev/null || true) ;;
+    case "$e" in
+        sums=*)
+            url=${e#sums=}; sigf="$CIG_VAR/sources/${url##*/}"
+            get_local "$sigf" || fetch "$url" "$sigf" 2>/dev/null || { rm -rf "$d"; return 2; }
+            if head -c 15 "$sigf" | grep -q '^-----BEGIN PGP'; then
+                # inline-signed: gpgv writes the signed text (to stdout: a file name leaves a .part)
+                gpgv --homedir "$d" --keyring "$d/keyring.gpg" --status-fd 3 --output - "$sigf" \
+                    3> "$d/status" > "$d/plain" 2>/dev/null || true
+            else
+                # plain text with a detached <url>.asc
+                get_local "$sigf.asc" || fetch "$url.asc" "$sigf.asc" 2>/dev/null || { rm -rf "$d"; return 2; }
+                gpgv --homedir "$d" --keyring "$d/keyring.gpg" --status-fd 3 "$sigf.asc" "$sigf" \
+                    3> "$d/status" 2>/dev/null || true
+                cp "$sigf" "$d/plain"
+            fi
+            out=$(cat "$d/status") ;;
+        *)
+            sigf="$CIG_VAR/sources/${e##*/}"
+            get_local "$sigf" || fetch "$e" "$sigf" || { rm -rf "$d"; die "signature download failed: $e"; }
+            case "$e:$f" in   # kernel.org signs the uncompressed tarball
+                *.sign:*.xz) out=$(xz -dc "$f" | gpgv --homedir "$d" --keyring "$d/keyring.gpg" --status-fd 1 "$sigf" - 2>/dev/null || true) ;;
+                *.sign:*.gz) out=$(gzip -dc "$f" | gpgv --homedir "$d" --keyring "$d/keyring.gpg" --status-fd 1 "$sigf" - 2>/dev/null || true) ;;
+                *)           out=$(gpgv --homedir "$d" --keyring "$d/keyring.gpg" --status-fd 1 "$sigf" "$f" 2>/dev/null || true) ;;
+            esac ;;
     esac
-    rm -rf "$d"
     signer=$(echo "$out" | awk '/VALIDSIG/ { p = $NF; if (length(p) < 40) p = $3; print p; exit }')
-    [ -n "$signer" ] || die "$name: no valid signature on ${f##*/} by its trusted keys ($keys): tampered, or signed by another key"
-    case " $keys " in *" $signer "*) ;; *) die "$name: ${f##*/} is signed by $signer, not by $keys" ;; esac
+    [ -n "$signer" ] || { rm -rf "$d"; die "$name: no valid signature on ${sigf##*/} by its trusted keys ($keys): tampered, or signed by another key"; }
+    case " $keys " in *" $signer "*) ;; *) rm -rf "$d"; die "$name: ${sigf##*/} is signed by $signer, not by $keys" ;; esac
+    if [ -f "$d/plain" ]; then
+        want=$(awk -v n="${f##*/}" '$2 == n || $2 == "*" n { print $1; exit }' "$d/plain")
+        case ${#want} in
+            64)  have=$(sha256sum "$f" | cut -d' ' -f1) ;;
+            128) have=$(sha512sum "$f" | cut -d' ' -f1) ;;
+            *)   rm -rf "$d"; die "$name: the signed ${sigf##*/} lists no checksum for ${f##*/}" ;;
+        esac
+        [ "$want" = "$have" ] || { rm -rf "$d"; die "$name: CHECKSUM MISMATCH: ${f##*/} does not match the signed ${sigf##*/}"; }
+    fi
+    rm -rf "$d"
     return 0
 }
 
@@ -354,7 +383,8 @@ verify_sig() {   # verify_sig <file> <detached signature>
 }
 
 # verify_source <file> <signature entry>: how a source's authenticity is established at pin
-# time (devices then only check the pinned SHA256):
+# time, with gpg on the host (devices check signatures and checksum files again with gpgv, and
+# signed tags through the pinned SHA256):
 #   <url>                 a detached upstream GPG signature of the file
 #   sums=<url>            a GPG-signed checksum file (inline-signed, or with a detached <url>.asc)
 #                         listing the file's SHA-256 or SHA-512
@@ -500,7 +530,7 @@ pkg_sigonly() {   # pkg_sigonly <pkg>: signed sources drop their pinned sha256 (
     for e in $source; do
         f=$(src_name "$e"); sig=${sigs[$i]:--}
         case "$sig" in
-            -|sums=*|tag=*) new="$new ${sums[$i]:-}" ;;   # kept: unsigned, or checked through the pin
+            -|tag=*) new="$new ${sums[$i]:-}" ;;   # kept: unsigned, or a tag (checked through the pin)
             *)
                 [ "${sums[$i]:-}" != - ] || { new="$new -"; i=$((i + 1)); continue; }
                 [ -s "$CIG_VAR/sources/$f" ] || fetch "$(src_url "$e")" "$CIG_VAR/sources/$f" \
@@ -542,8 +572,9 @@ pkg_pin() {
                 verify_source "$CIG_VAR/sources/$f" "$sig"
                 check_signer "$p" "$f"
                 info "$p: $f -> $HOW OK (key $SIGNER)"
-                # a detached signature is checked on every device (gpgv): no hash to pin
-                case "$sig" in sums=*|tag=*) ;; *) have=- ;; esac
+                # a detached signature or a signed checksum file is checked on every device
+                # (gpgv): no hash to pin; a signed tag needs git there, so its hash is pinned
+                case "$sig" in tag=*) ;; *) have=- ;; esac
             else
                 # 3. nothing to verify against
                 warn "$p: $f -> no upstream signature; trusted on first use"

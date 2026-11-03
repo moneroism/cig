@@ -4,7 +4,7 @@
 # smoke is C (src/smoke), compiled in the build folder, never inside the repository.
 name=cig-tools
 version=$(cat "$CIG_REPO/VERSION")
-rel=12
+rel=13
 makedepends="make"
 license="GPL-3.0-or-later"
 source=""

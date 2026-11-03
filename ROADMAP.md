@@ -10,7 +10,7 @@ hardware waits until cig has booted on real hardware.
 | Goal | Meaning |
 |---|---|
 | Minimal attack surface | Small implementations, unused features compiled out, nothing running that isn't needed |
-| Every source verified | GPG signatures checked with gpgv on every device against the recipe's pinned keys (`keys=`, `keys/`); SHA256 pinned only where there is no detached signature; sources only from forges and projects' own sites (`lib/hosts`); unsigned sources marked openly |
+| Every source verified | GPG signatures checked with gpgv on every device against the recipe's pinned keys (`keys=`, `keys/`); SHA256 pinned only where there is no detached signature or signed checksum file; sources only from forges and projects' own sites (`lib/hosts`); unsigned sources marked openly |
 | Compiled on the machine | Kernel and packages built for the machine they run on; every install gets its own module signing key |
 | Nothing hardcoded | Hardware choices are detected or chosen, every optional component can be deselected |
 | Upstream defaults | No theming; users configure their own system |
@@ -275,7 +275,8 @@ Also in this phase:
   prebuilt packages with reproducible builds, no mirrors
 - smoke: `update`, name-file recipes, generated recipe drafts, builds as an unprivileged
   user, recipe diffs on update, on-device signature checks (gpgv: done; signed checksum
-  files and tags through gpgv next; later minisign/signify),
+  files too since 2026-11-03; signed tags need git on the device and stay pinned; later
+  minisign/signify),
   optional glibc compatibility for prebuilt upstream binaries
 - `sudo` compatibility command that calls doas
 - user power helper (poweroff/reboot without doas)

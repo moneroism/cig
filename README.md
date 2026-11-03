@@ -101,7 +101,7 @@ cigbuild pin     <pkg>...   verify upstream signature, pin the SHA256
 cigbuild sig     <pkg> <url|->...  check pinned sources against upstream signatures, record the URLs
 cigbuild keys    <pkg>...   check pinned sources again, record their signing keys (keys=)
 cigbuild trust   <pkg> <fpr>  accept one more signing key (only after checking it independently)
-cigbuild sigonly <pkg>...   signed sources: verify, then drop the pinned SHA256 (gpgv decides)
+cigbuild sigonly <pkg>...   signed sources and checksum files: verify, then drop the pinned SHA256 (gpgv decides)
 cigbuild info    <pkg>      show a recipe
 cigbuild pkgfile <pkg>      path of the package file for the current recipe
 ```

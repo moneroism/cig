@@ -25,13 +25,15 @@ project announced it on its own site.
 
 Where the check happens (2026-10-07): a source with a detached signature pins no SHA256 (its
 `sha256=` entry is `-`); every device that builds it checks the signature with `gpgv` against
-the recipe's keys, whose public halves are in `keys/<fingerprint>.gpg`. Signed checksum files,
-signed tags and unsigned sources keep a pinned SHA256 (for unsigned sources it is the only
-check). A source with neither is trusted on first use on each device (`$CIG_VAR/tofu`).
+the recipe's keys, whose public halves are in `keys/<fingerprint>.gpg`. Signed checksum files
+are checked the same way since 2026-11-03: gpgv verifies the file (inline-signed, or with its
+`<url>.asc`) and the source must match the SHA-256 or SHA-512 it lists. Signed tags need git
+on the device, so they keep a pinned SHA256 (checked against the tag on the host), as unsigned
+sources do (for them it is the only check). Offline, a checksum file that is not in the source
+mirror leaves the pinned SHA256 to decide; a source without one is refused. A source with neither is trusted on first use on each device (`$CIG_VAR/tofu`).
 
 Keys are fetched by ID from public keyservers only, never from the forge that hosts the code.
-All checks run once, on the host, when a source is pinned (`cigbuild pin`, `cigbuild sig`);
-devices then check the pinned SHA256. Every other source is **flagged**: its SHA256 was pinned
+All checks also run on the host when a source is pinned (`cigbuild pin`, `cigbuild sig`). Every other source is **flagged**: its SHA256 was pinned
 on first download (trust on first use), and `smoke add` warns about it on every install.
 
 `scripts/audit-sources.sh` prints the current table (below, as of 2026-11-03).

@@ -92,7 +92,7 @@ overridden locally.
 | Check | How |
 |---|---|
 | Source integrity | SHA256 pinned in the recipe; mismatch = abort, file deleted (done) |
-| Upstream signature | verified on the device with `gpgv` (planned; later also minisign/signify) |
+| Upstream signature | verified on the device with `gpgv`: detached signatures and signed checksum files (signed tags through the pin checked on the host; later also minisign/signify) |
 | Which key is valid | the fingerprint from the name file; the key itself may come from anywhere (keyserver, project site) – only a key with that fingerprint is accepted |
 | Apps added by link | key remembered on first install (trust on first use); a later change is a loud warning |
 | Unsigned upstream | allowed, with a warning on every install |
