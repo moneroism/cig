@@ -1,10 +1,29 @@
 # lua - small scripting language
+# liblua.a is kept (built with -fPIC) with a lua.pc, so programs that embed Lua find it with
+# pkg-config and link it in statically (WirePlumber in pipewire): Lua stays a build dependency
 name=lua
 version=5.5.1
+rel=2
 license="MIT"
 source="https://www.lua.org/ftp/lua-$version.tar.gz"
 sha256="1c4b4068d67061f2a2231ad2b5422e77acea1487ea9890f6320af614f4373dce"
 style=custom
 group="development"
-do_build()   { make linux CC=cc MYCFLAGS="$CFLAGS" MYLDFLAGS="$LDFLAGS"; }
-do_install() { make INSTALL_TOP="$DEST/usr" INSTALL_MAN="$DEST/usr/share/man/man1" install; }
+keep_static=1
+do_build()   { make linux CC=cc MYCFLAGS="$CFLAGS -fPIC" MYLDFLAGS="$LDFLAGS"; }
+do_install() {
+    make INSTALL_TOP="$DEST/usr" INSTALL_MAN="$DEST/usr/share/man/man1" install
+    # upstream ships no pkg-config file
+    mkdir -p "$DEST/usr/lib/pkgconfig"
+    cat > "$DEST/usr/lib/pkgconfig/lua.pc" <<PC
+prefix=/usr
+libdir=\${prefix}/lib
+includedir=\${prefix}/include
+
+Name: Lua
+Description: An extensible extension language
+Version: $version
+Libs: -L\${libdir} -llua -lm
+Cflags: -I\${includedir}
+PC
+}
