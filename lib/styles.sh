@@ -12,12 +12,18 @@
 
 # keep only -D options this package version defines; report the rest
 meson_known_opts() {
-    local a n f
-    f=$(ls meson_options.txt meson.options 2>/dev/null | head -n1 || true)
+    local a n f top
+    top=$(ls meson_options.txt meson.options 2>/dev/null | head -n1 || true)
     for a in "$@"; do
         case "$a" in
             -D*=*)
-                n=${a#-D}; n=${n%%=*}
+                n=${a#-D}; n=${n%%=*}; f=$top
+                # a subproject's option (-Dsub:name=...): checked against the subproject's file
+                case "$n" in
+                    *:*) f=$(ls "subprojects/${n%%:*}/meson_options.txt" "subprojects/${n%%:*}/meson.options" \
+                             2>/dev/null | head -n1 || true)
+                         n=${n#*:} ;;
+                esac
                 # match the quoted name anywhere: many projects write option(
                 #     'name', ...) across several lines
                 # meson's own built-in options are always valid; project options only if
