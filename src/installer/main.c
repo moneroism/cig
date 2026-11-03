@@ -173,7 +173,12 @@ static void hardware_screen(struct state *s)
 		const char **items = xmalloc((size_t)s->ndrv * sizeof(char *));
 		bool *on = xmalloc((size_t)s->ndrv * sizeof(bool));
 		for (int i = 0; i < s->ndrv; i++) {
-			items[i] = xasprintf("%-12s %s", s->drvs[i].name, s->drvs[i].files);
+			const struct drv *d = &s->drvs[i];
+			items[i] = d->loaded > 0 ? xasprintf("%-12s %d of %d files, those it loaded: %s", d->name, d->loaded,
+			                                     d->nreq, d->files)
+			         : d->loaded == 0 ? xasprintf("%-12s all %d files (it has loaded none yet): %s", d->name,
+			                                      d->nreq, d->files)
+			                          : xasprintf("%-12s %s", d->name, d->files);
 			on[i] = s->drvs[i].on;
 		}
 		ui_checklist("Hardware: firmware",

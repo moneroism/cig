@@ -119,10 +119,12 @@ static int spawn(char *const argv[], const char *input, int out_fd)
 			if (nul >= 0)
 				dup2(nul, 0);
 		}
-		if (logfd >= 0) {
-			dup2(out_fd >= 0 ? out_fd : logfd, 1);
+		if (out_fd >= 0)   /* captured output, even when the log cannot be opened */
+			dup2(out_fd, 1);
+		else if (logfd >= 0)
+			dup2(logfd, 1);
+		if (logfd >= 0)
 			dup2(logfd, 2);
-		}
 		execvp(argv[0], argv);
 		_exit(127);
 	}
@@ -368,6 +370,51 @@ static char *find_module(const char *dir, const char *name)
 	return found;
 }
 
+/* the firmware files the kernel loaded since boot ("\n"-separated, starting with "\n"), or
+ * NULL if it logs none: the firmware loader's debug messages are on only on the install medium */
+static char *loaded_firmware(void)
+{
+	char *argv[] = { "dmesg", NULL }, *log = capture(argv), *list = NULL;
+	for (char *p = log ? strstr(log, "Loaded FW: ") : NULL; p; p = strstr(p, "Loaded FW: ")) {
+		p += 11;
+		size_t l = strcspn(p, ", \n");
+		char *old = list ? list : xstrdup("\n");
+		list = xasprintf("%s%.*s\n", old, (int)l, p);
+		free(old);
+	}
+	free(log);
+	return list;
+}
+
+static void keep_loaded(struct drv *dv, int n)
+{
+	char *got = loaded_firmware();
+	for (int i = 0; i < n; i++) {
+		char *copy = xstrdup(dv[i].files), *kept = xstrdup(""), *sv = NULL;
+		dv[i].nreq = 0;
+		dv[i].loaded = got ? 0 : -1;
+		for (char *f = strtok_r(copy, " ", &sv); f; f = strtok_r(NULL, " ", &sv)) {
+			dv[i].nreq++;
+			char *needle = xasprintf("\n%s\n", f);
+			if (got && strstr(got, needle)) {
+				char *k = xasprintf("%s%s%s", kept, *kept ? " " : "", f);
+				free(kept);
+				kept = k;
+				dv[i].loaded++;
+			}
+			free(needle);
+		}
+		if (dv[i].loaded > 0) {
+			free(dv[i].files);
+			dv[i].files = kept;
+		} else {
+			free(kept);
+		}
+		free(copy);
+	}
+	free(got);
+}
+
 int detect_hardware(struct drv **out, const char *lsmod_out)
 {
 	struct utsname u;
@@ -416,6 +463,7 @@ int detect_hardware(struct drv **out, const char *lsmod_out)
 		fclose(ls);
 	free(kdir);
 	free(mods);
+	keep_loaded(dv, n);
 	*out = dv;
 	return n;
 }

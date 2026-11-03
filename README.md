@@ -65,7 +65,7 @@ machine.
 - `/tmp` in RAM with `noexec`; `/home` with `nosuid,nodev`; the EFI partition
   is not mounted during normal use.
 - No CPU microcode is ever shipped. Firmware: only the files the machine's
-  drivers request.
+  drivers load (installer), and never a non-free file that has a free replacement.
 - curl: HTTP(S) and FILE only. wpa_supplicant: WPA2/WPA3-Personal only (no WPS,
   EAP or D-Bus), MAC randomization.
 
@@ -218,7 +218,7 @@ edits a section, Esc goes back, Install is at the bottom.
 | Disk | target disk (the running system's disk is not offered); **auto** (erase, default layout: ESP 512M, system, optional swap and `/home`) or **custom** (partition editor: keep, delete, add, format, mount points) |
 | Identity | hostname, user (in `wheel`, `audio`, `video`, `input`), root locked or with password |
 | Components | from the recipes' `group=` / `default=`, under category headings, `/` searches; base packages always |
-| Hardware, network | detected GPU and network, firmware per driver (toggle), optional WiFi network; DNS: **encrypted** (DNS over TLS to Quad9 and Cloudflare through unbound, default), unbound as its **own resolver** (no third party), or the **network's** DHCP DNS |
+| Hardware, network | detected GPU and network, firmware per driver (toggle; only the files each driver loaded on the medium, not its whole `firmware=` list: amdgpu names every GPU generation's; a driver that loaded none yet, e.g. Bluetooth, keeps its list), optional WiFi network; DNS: **encrypted** (DNS over TLS to Quad9 and Cloudflare through unbound, default), unbound as its **own resolver** (no third party), or the **network's** DHCP DNS |
 | Security | optional layers (placeholders for now) |
 | Build | packages compiled here or prebuilt; kernel compiled for this machine (default) or the medium's generic kernel (with a warning) |
 

@@ -39,10 +39,15 @@ void recipe_value(const char *text, const char *key, char *out, size_t n);
 
 struct drv {
 	char name[64];
-	char *files;   /* firmware files the driver requests, space-separated */
+	char *files;   /* firmware files to install for it, space-separated */
+	int nreq;      /* files its firmware= list names */
+	int loaded;    /* -1: unknown (no firmware log); else how many of them it loaded */
 	bool on;
 };
-/* loaded drivers that request firmware (no CPU microcode); lsmod copied to lsmod_out */
+/* loaded drivers that request firmware (no CPU microcode); lsmod copied to lsmod_out. A
+ * driver keeps only the files the kernel logged as loaded ("Loaded FW: <name>", the install
+ * medium's firmware_class.dyndbg=+p); one that loaded none yet (e.g. Bluetooth, on first use)
+ * keeps its whole list */
 int detect_hardware(struct drv **out, const char *lsmod_out);
 
 #endif

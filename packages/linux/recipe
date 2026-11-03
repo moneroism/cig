@@ -36,9 +36,13 @@ nostrip=1          # stripping would destroy the module signatures
 link_dirs="usr/lib/modules/*"   # depmod does not follow file links: link the whole folder
 
 _cmdline() {
+    # the install medium logs every firmware file a driver loads ("Loaded FW: <name>", from
+    # CONFIG_FW_LOADER_DEBUG): the installer keeps only those of each driver's firmware= list
+    local media=
+    [ -z "${CIG_KERNEL_INITRAMFS:-}" ] || media="firmware_class.dyndbg=+p "
     echo "root=${CIG_ROOT:-PARTLABEL=cig-root} rootfstype=ext4 rootwait=30 ro init=/usr/bin/sinit" \
          "loglevel=4 slab_nomerge init_on_alloc=1 init_on_free=1 page_alloc.shuffle=1" \
-         "randomize_kstack_offset=on vsyscall=none debugfs=off ${CIG_KERNEL_CMDLINE_EXTRA:-}"
+         "randomize_kstack_offset=on vsyscall=none debugfs=off $media${CIG_KERNEL_CMDLINE_EXTRA:-}"
 }
 
 _cig_settings() {
