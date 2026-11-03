@@ -209,6 +209,14 @@ for f in "$DEV_VAR"/pkgs/*.tar.gz $(for p in $REPO_PKGS; do echo "$MEDIA_VAR/pkg
     link "$f" "$STAGE/var/cig/pkgs/"
     [ -f "$f.sha256" ] && link "$f.sha256" "$STAGE/var/cig/pkgs/"
 done
+# installed sizes for the installer's catalog (KiB, the size= of each package's .PKGINFO;
+# packages built before cigbuild recorded it are left out and shown without a size)
+for f in "$STAGE"/var/cig/pkgs/*.tar.gz; do
+    [ -f "$f" ] || continue
+    info=$(tar -xzOf "$f" ./.PKGINFO 2>/dev/null || true)
+    n=$(printf '%s\n' "$info" | sed -n 's/^name=//p'); sz=$(printf '%s\n' "$info" | sed -n 's/^size=//p')
+    [ -z "$n" ] || [ -z "$sz" ] || echo "$n $sz"
+done | sort -u > "$STAGE/var/cig/pkgs/sizes"
 # the generic install kernel (chosen and checked at the top)
 mkdir -p "$STAGE"/var/cig/generic/{sources,build,db,logs}
 link "$generic/pkgs" "$STAGE/var/cig/generic/"

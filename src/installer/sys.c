@@ -219,6 +219,88 @@ void recipe_value(const char *text, const char *key, char *out, size_t n)
 	}
 }
 
+/* the named packages (space-separated) and every runtime dependency their recipes name, as a
+ * "\n"-separated list starting with "\n" */
+char *pkg_closure(const char *share, const char *names)
+{
+	char *todo = xasprintf("\n%s", names), *done = xstrdup("\n");
+	for (char *c = todo; *c; c++)
+		if (*c == ' ')
+			*c = '\n';
+	char *t = xasprintf("%s\n", todo);
+	free(todo);
+	todo = t;
+	for (char *p = todo + 1; *p;) {
+		size_t l = strcspn(p, "\n");
+		char *name = xasprintf("%.*s", (int)l, p), *needle = xasprintf("\n%s\n", name);
+		p += l + (p[l] == '\n');
+		if (!l || strstr(done, needle)) {
+			free(name);
+			free(needle);
+			continue;
+		}
+		free(needle);
+		t = xasprintf("%s%s\n", done, name);
+		free(done);
+		done = t;
+		char *rp = xasprintf("%s/packages/%s/recipe", share, name), *text = read_text(rp), dep[1024];
+		free(rp);
+		if (text) {
+			recipe_value(text, "depends", dep, sizeof(dep));
+			char *sv = NULL;
+			for (char *w = strtok_r(dep, " \t", &sv); w; w = strtok_r(NULL, " \t", &sv)) {
+				size_t off = (size_t)(p - todo);   /* todo moves when it grows */
+				t = xasprintf("%s%s\n", todo, w);
+				free(todo);
+				todo = t;
+				p = todo + off;
+			}
+			free(text);
+		}
+		free(name);
+	}
+	free(todo);
+	return done;
+}
+
+/* installed KiB of the packages in a "\n"-list (the medium's pkgs/sizes, from build-media);
+ * *unknown counts those without a size */
+long pkg_size(const char *list, int *unknown)
+{
+	char *path = xasprintf("%s/pkgs/sizes", getenv("CIG_VAR") ? getenv("CIG_VAR") : "/var/cig");
+	char *sizes = read_text(path);
+	free(path);
+	long kib = 0;
+	*unknown = 0;
+	for (const char *p = list + (*list == '\n'); *p;) {
+		size_t l = strcspn(p, "\n");
+		if (l) {
+			char *needle = xasprintf("\n%.*s ", (int)l, p), *hay = sizes ? xasprintf("\n%s", sizes) : NULL;
+			const char *hit = hay ? strstr(hay, needle) : NULL;
+			if (hit)
+				kib += atol(hit + strlen(needle));
+			else
+				(*unknown)++;
+			free(needle);
+			free(hay);
+		}
+		p += l + (p[l] == '\n');
+	}
+	free(sizes);
+	return kib;
+}
+
+/* "12 MiB", "640 KiB" (">=" in front when some sizes are unknown); NULL if none is known */
+char *size_text(long kib, int unknown, int n)
+{
+	if (unknown == n)
+		return NULL;
+	const char *ge = unknown ? ">= " : "";
+	return kib >= 10240 ? xasprintf("%s%ld MiB", ge, (kib + 512) / 1024)
+	     : kib >= 1024 ? xasprintf("%s%.1f MiB", ge, (double)kib / 1024)
+	                   : xasprintf("%s%ld KiB", ge, kib);
+}
+
 static int group_order(const char *g)
 {
 	static const char *order[] = { "desktop", "wayland", "terminal", "fonts", "graphics", "editors",
@@ -297,6 +379,35 @@ int load_components(const char *share, struct comp **out, char **base)
 	free(dir);
 	if (n > 1)
 		qsort(c, (size_t)n, sizeof(*c), cmp_comp);
+	/* the size each component adds: itself and the dependencies the base does not have */
+	char *bl = pkg_closure(share, b);
+	for (int i = 0; i < n; i++) {
+		char *cl = pkg_closure(share, c[i].name), *add = xstrdup("\n");
+		int count = 0, unknown;
+		for (char *p = cl + 1; *p;) {
+			size_t l = strcspn(p, "\n");
+			char *needle = xasprintf("\n%.*s\n", (int)l, p);
+			if (!strstr(bl, needle)) {
+				char *t = xasprintf("%s%.*s\n", add, (int)l, p);
+				free(add);
+				add = t;
+				count++;
+			}
+			free(needle);
+			p += l + (p[l] == '\n');
+		}
+		long kib = pkg_size(add, &unknown);
+		char *st = size_text(kib, unknown, count);
+		if (st) {   /* in front: a long description is cut at the screen's edge */
+			char old[sizeof(c[i].desc)];
+			snprintf(old, sizeof(old), "%s", c[i].desc);
+			snprintf(c[i].desc, sizeof(c[i].desc), "%7.12s  %.170s", st, old);
+			free(st);
+		}
+		free(add);
+		free(cl);
+	}
+	free(bl);
 	*out = c;
 	*base = b;
 	return n;

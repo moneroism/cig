@@ -258,6 +258,7 @@ make_package() {
         echo "link_dirs=\"$(echo $link_dirs)\""
         echo "copy_files=\"$(echo $copy_files)\""
         echo "built=$(date -u +%Y-%m-%dT%H:%MZ)"
+        echo "size=$(du -sk "$DEST" | cut -f1)"   # KiB installed (the installer's catalog shows it)
     } > "$DEST/.PKGINFO"
     ( cd "$DEST" && find . \( -type f -o -type l \) ! -name '.PKGINFO' ! -name '.FILES' ! -name '.INSTALL' \
         | sed 's#^\./##' | sort ) > "$DEST/.FILES"

@@ -28,44 +28,19 @@ static char *append(char *list, const char *w)
 }
 
 /* the packages to be installed: the base and the chosen components with every runtime
- * dependency their recipes name ("\n"-separated, starting with "\n") */
+ * dependency, and the kernel */
 static char *closure(const struct state *s)
 {
-	char *todo = xstrdup("\n"), *done = xstrdup("\n");
-	char *b = xstrdup(s->base), *sv = NULL;
-	for (char *w = strtok_r(b, " ", &sv); w; w = strtok_r(NULL, " ", &sv))
-		todo = append(todo, w);
-	free(b);
+	char *names = xasprintf("%s linux", s->base);
 	for (int i = 0; i < s->ncomp; i++)
-		if (s->comps[i].on)
-			todo = append(todo, s->comps[i].name);
-	todo = append(todo, "linux");
-	for (char *p = todo + 1; *p;) {
-		size_t l = strcspn(p, "\n");
-		char *name = xasprintf("%.*s", (int)l, p);
-		p += l + (p[l] == '\n');
-		if (listed(done, name)) {
-			free(name);
-			continue;
+		if (s->comps[i].on) {
+			char *n = xasprintf("%s %s", names, s->comps[i].name);
+			free(names);
+			names = n;
 		}
-		done = append(done, name);
-		char *rp = xasprintf("%s/packages/%s/recipe", s->share, name), *text = read_text(rp), dep[1024];
-		free(rp);
-		if (text) {
-			recipe_value(text, "depends", dep, sizeof(dep));
-			char *sv2 = NULL;
-			for (char *w = strtok_r(dep, " \t", &sv2); w; w = strtok_r(NULL, " \t", &sv2))
-				if (!listed(done, w)) {
-					size_t off = (size_t)(p - todo);   /* todo moves when it grows */
-					todo = append(todo, w);
-					p = todo + off;
-				}
-			free(text);
-		}
-		free(name);
-	}
-	free(todo);
-	return done;
+	char *c = pkg_closure(s->share, names);
+	free(names);
+	return c;
 }
 
 /* the firmware files the install will select: the chosen drivers' files that linux-firmware

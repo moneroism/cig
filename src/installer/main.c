@@ -120,7 +120,7 @@ static void components_screen(struct state *s)
 		descs[i] = s->comps[i].desc;
 		on[i] = s->comps[i].on;
 	}
-	char *text = xasprintf("Always installed: %s\nNot available yet: PipeWire", s->base);
+	char *text = xasprintf("Always installed: %s\nSizes: installed, with what a component needs beyond these", s->base);
 	ui_catalog("Components", text, groups, names, descs, on, s->ncomp);
 	for (int i = 0; i < s->ncomp; i++)
 		s->comps[i].on = on[i];
@@ -282,8 +282,19 @@ static char *selected(const struct state *s)
 			out = t;
 			n++;
 		}
-	/* the count first: a long list is cut at the screen's edge */
-	char *t = xasprintf("%d of %d + base:%s", n, s->ncomp, out);
+	/* the count and size first: a long list is cut at the screen's edge. The size: everything
+	 * installed with the base, without the kernel and firmware (made for this machine) */
+	char *names = xasprintf("%s%s", s->base, out), *cl = pkg_closure(s->share, names);
+	int count = 0, unknown;
+	for (char *c = cl + 1; *c; c++)
+		count += *c == '\n';
+	long kib = pkg_size(cl, &unknown);
+	char *st = size_text(kib, unknown, count);
+	char *t = st ? xasprintf("%d of %d + base, %s:%s", n, s->ncomp, st, out)
+	             : xasprintf("%d of %d + base:%s", n, s->ncomp, out);
+	free(st);
+	free(cl);
+	free(names);
 	free(out);
 	return t;
 }

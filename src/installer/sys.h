@@ -34,6 +34,12 @@ struct comp {
 };
 /* components offered by the recipes (group= other than base); base packages in *base */
 int load_components(const char *share, struct comp **out, char **base);
+/* the named packages (space-separated) with every runtime dependency, "\n"-separated starting
+ * with "\n"; their installed KiB (*unknown: how many have no recorded size); a size as text
+ * (NULL when no size of the n packages is known) */
+char *pkg_closure(const char *share, const char *names);
+long pkg_size(const char *list, int *unknown);
+char *size_text(long kib, int unknown, int n);
 /* value of `key=` in a recipe's text, quotes removed ("" if missing) */
 void recipe_value(const char *text, const char *key, char *out, size_t n);
 
