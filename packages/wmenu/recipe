@@ -8,4 +8,5 @@ depends="pango cairo wayland libxkbcommon"
 makedepends="meson pkgconf wayland-protocols"
 style=meson
 group="wayland"
+default=on   # dwl's menu key (Super+p) runs wmenu-run, as its terminal key runs foot
 meson_args="-Dman-pages=disabled"
