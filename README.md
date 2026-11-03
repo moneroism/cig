@@ -261,9 +261,9 @@ entries on gnu.org's list that SPDX does not flag. A license on neither list is 
 licence and includes its source, or when `libre/firmware` names where its source is
 kept. Anything else is non-free, including firmware with a free licence but no source. The
 kernel counts as not free while it loads non-free firmware. Suggestions come first as
-software changes: a free replacement that loses no function (`libre/alternatives`, e.g. the
-open ath9k_htc firmware), which the installer uses only when you choose it
-(`free_firmware = yes` in an answers file). Leaving out a driver's firmware is possible on
+software changes. A non-free file with a free replacement that loses no function
+(`libre/alternatives`, e.g. ath9k_htc's open 1.4.0 firmware, which the driver tries first)
+is never installed: linux-firmware installs the free one instead. Leaving out a driver's firmware is possible on
 the firmware screen, at the cost of that device. What lies outside cig is named but not
 counted: the UEFI firmware, Intel ME / AMD PSP, firmware stored on the devices, and CPU
 microcode inside the UEFI firmware. `make -C src/libre test` checks the license logic.

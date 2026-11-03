@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-or-later */
 /* Copyright (C) 2026 moneroism */
 /* libreui.c - the libre-meter screen: how much of the system about to be installed is free
- * software (src/libre), and its one choice: free firmware replacements */
+ * software (src/libre) */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -69,7 +69,7 @@ static char *closure(const struct state *s)
 }
 
 /* the firmware files the install will select: the chosen drivers' files that linux-firmware
- * ships, each non-free one replaced by its free alternative when s->free_fw is set */
+ * ships, each non-free one with a free replacement replaced by it (linux-firmware does the same) */
 static char *libre_firmware_files(const struct state *s, const struct libre *l)
 {
 	char *list = xstrdup("\n");
@@ -81,7 +81,7 @@ static char *libre_firmware_files(const struct state *s, const struct libre *l)
 			const char *use = f, *alt;
 			if (l->nfw && !libre_fw_has(l, f))
 				continue;   /* not in linux-firmware: nothing is installed for it */
-			if (s->free_fw && (alt = libre_fw_alternative(l, f)) && libre_fw_has(l, alt))
+			if ((alt = libre_fw_alternative(l, f)) && libre_fw_has(l, alt))
 				use = alt;
 			if (!listed(list, use))
 				list = append(list, use);
@@ -149,22 +149,6 @@ static bool measure(const struct state *s, struct libre *l)
 	return true;
 }
 
-char *libre_install_firmware(const struct state *s)
-{
-	struct libre l;
-	char *idx = xasprintf("%s/firmware.licenses", s->share);
-	if (!libre_init(&l, s->share, idx)) {
-		free(idx);
-		return NULL;
-	}
-	free(idx);
-	char *list = libre_firmware_files(s, &l);
-	libre_free(&l);
-	char *out = xstrdup(list + 1);   /* without the leading "\n" */
-	free(list);
-	return out;
-}
-
 char *libre_value(const struct state *s)
 {
 	struct libre l;
@@ -173,7 +157,7 @@ char *libre_value(const struct state *s)
 	int ov, po, vs, nf, nn, nu;
 	libre_scores(&l, &ov, &po, &vs, &nf, &nn, &nu);
 	libre_free(&l);
-	return xasprintf("%d%% libre, %d%% of what is possible%s", ov, vs, s->free_fw ? ", free firmware" : "");
+	return xasprintf("%d%% libre, %d%% of what is possible", ov, vs);
 }
 
 void libre_screen(struct state *s)
@@ -184,14 +168,7 @@ void libre_screen(struct state *s)
 		return;
 	}
 	char *r = libre_report(&l);
-	/* replacements: those of the files selected now, or (once chosen) already in use */
-	int alts = 0;
-	for (int i = 0; i < l.n; i++)
-		alts += l.v[i].alt[0] && strcmp(l.v[i].kind, "kernel");
 	libre_free(&l);
 	ui_text("Libre-meter", r);
 	free(r);
-	if (alts || s->free_fw)
-		s->free_fw = ui_yesno("Libre-meter", "Use the free firmware replacements listed (no function is lost)?",
-		                      s->free_fw);
 }

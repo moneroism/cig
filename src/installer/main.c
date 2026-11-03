@@ -460,7 +460,6 @@ static void preflight(struct state *s)
  *   user = name           required; password = ... (required); root_password = ... (none: locked)
  *   components = -openssh +labwc   changes to the default selection
  *   firmware = detected | none
- *   free_firmware = yes | no   the libre-meter's free firmware replacements (default no)
  *   wifi_ssid = ...  wifi_psk = ...
  *   dns = tls | recursive | dhcp
  *   compile = yes | no    (no: the media's prebuilt packages)
@@ -558,8 +557,6 @@ static void read_answers(struct state *s, const char *path)
 				bad_answer(path, ln, "firmware: detected or none");
 			for (int i = 0; i < s->ndrv; i++)
 				s->drvs[i].on = s->drvs[i].on && !strcmp(v, "detected");
-		} else if (!strcmp(k, "free_firmware")) {
-			s->free_fw = yes_no(v, path, ln);
 		} else if (!strcmp(k, "wifi_ssid")) {
 			if (!*v || vn > 32)
 				bad_answer(path, ln, "a network name has 1 to 32 characters");

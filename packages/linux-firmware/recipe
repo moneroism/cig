@@ -34,6 +34,13 @@ _detect() {
     done | sort -u
 }
 
+# libre/alternatives: a non-free file whose free replacement the same driver loads instead
+# (ath9k_htc tries its open 1.4.0 firmware first) is never installed: the free one is
+_free_instead() {
+    awk 'NR == FNR { if ($1 == "firmware") alt[$2] = $3; next }
+         { print ($0 in alt) ? alt[$0] : $0 }' "$CIG_REPO/libre/alternatives" -
+}
+
 _wanted() {
     if [ -n "${CIG_FIRMWARE_LIST:-}" ]; then
         { grep -v '^#' "$CIG_FIRMWARE_LIST" || true; }
@@ -41,7 +48,7 @@ _wanted() {
         { grep -v '^#' /etc/cig/firmware.list || true; }
     else
         _detect
-    fi | sed '/^$/d' | { grep -v -E '^(intel-ucode|amd-ucode)/' || true; } | sort -u
+    fi | sed '/^$/d' | { grep -v -E '^(intel-ucode|amd-ucode)/' || true; } | _free_instead | sort -u
 }
 
 do_build() {
@@ -51,6 +58,10 @@ do_build() {
         ( cd "$WORK/$_top" && { sh copy-firmware.sh --ignore-duplicates "$WORK/out" 2>/dev/null \
                                 || sh copy-firmware.sh "$WORK/out"; } )
         rm -rf "$WORK/out/intel-ucode" "$WORK/out/amd-ucode"
+        # nor the non-free files that have a free replacement (libre/alternatives)
+        awk '$1 == "firmware" { print $2 }' "$CIG_REPO/libre/alternatives" | while read -r f; do
+            rm -f "$WORK/out/$f"
+        done
         return
     fi
 

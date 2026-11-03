@@ -445,7 +445,8 @@ char *libre_report(const struct libre *l)
 	int sug = 0;
 	for (int i = 0; i < l->n; i++)
 		if (l->v[i].cls != LIBRE_FREE && l->v[i].alt[0] && strcmp(l->v[i].kind, "kernel")) {
-			bprintf(&b, "  use %s instead of %s (free, same function)\n", l->v[i].alt, l->v[i].name);
+			bprintf(&b, "  use %s instead of %s (free, same function: rebuild linux-firmware)\n",
+			        l->v[i].alt, l->v[i].name);
 			sug++;
 		}
 	if (nn - sug > 0)

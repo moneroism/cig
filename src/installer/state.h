@@ -37,7 +37,6 @@ struct state {
 	enum dns { DNS_TLS, DNS_RECURSIVE, DNS_DHCP } dns;   /* DNS_TLS (0) is the default */
 
 	bool compile_pkgs;        /* compile everything (default) or prebuilt */
-	bool free_fw;             /* libre-meter: free firmware replacements instead (off) */
 	char warnings[1024];      /* optional steps that did not work (shown at the end) */
 	bool generic_kernel;      /* only if the media kernel finds root by name */
 };
