@@ -39,6 +39,8 @@ smoke autoremove              remove every orphaned dependency         (done)
 smoke audit [--quick]         check the system against the inventory    (done; --quick
                               skips checksums and unlisted package files)
 smoke hooks <pkg>... | --all  run a package's setup again               (done)
+smoke libre                   how much of the system is free software   (done; see README,
+                              (FSF's definition), with suggestions        "Libre-meter")
 ```
 
 There is no `smoke install`: adding an app *is* installing it.

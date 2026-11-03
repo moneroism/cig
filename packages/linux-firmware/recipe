@@ -5,7 +5,8 @@
 #   CIG_FIRMWARE_LIST=<file>     explicit list, one path per line (the installer)
 #   /etc/cig/firmware.list       explicit list on an installed system
 #   otherwise                    detect: firmware requested by the drivers in use now
-# What got installed is listed in /usr/share/cig/firmware.list
+# What got installed is listed in /usr/share/cig/firmware.list, and each file's licence (from
+# WHENCE: free or non-free, for the libre-meter) in /usr/share/cig/firmware.licenses
 name=linux-firmware
 version=20260916
 # license: per file, listed in WHENCE; many files are not free (redistributable only)
@@ -14,7 +15,7 @@ source="https://cdn.kernel.org/pub/linux/kernel/firmware/linux-firmware-$version
 signature="https://cdn.kernel.org/pub/linux/kernel/firmware/linux-firmware-$version.tar.sign"
 keys="4CDE8575E547BF835FE15807A31B6BD72486CFD6"
 sha256="-"
-rel=2
+rel=3
 style=custom
 nostrip=1
 noextract=1          # the archive is large; unpack only the selected files
@@ -93,5 +94,14 @@ do_install() {
     cp -R "$WORK/out/." "$DEST/usr/lib/firmware/"
     ( cd "$DEST/usr/lib/firmware" && find . -type f | sed 's#^\./##' | sort ) > "$DEST/usr/share/cig/firmware.list"
     echo "firmware files installed: $(wc -l < "$DEST/usr/share/cig/firmware.list")"
+    # the licence of each installed file (libre-meter): WHENCE, and libre/firmware for free
+    # firmware whose source is kept outside linux-firmware
+    : > "$DEST/usr/share/cig/firmware.licenses"
+    if [ -s "$DEST/usr/share/cig/firmware.list" ]; then
+        awk -f "$PKGDIR/files/whence-index.awk" "$CIG_REPO/libre/firmware" "$WORK/$_top/WHENCE" \
+            | awk -F'\t' 'NR == FNR { want[$0] = 1; next } $1 in want' \
+                  "$DEST/usr/share/cig/firmware.list" - | sort > "$DEST/usr/share/cig/firmware.licenses"
+        echo "free firmware files: $(awk -F'\t' '$2 == "free"' "$DEST/usr/share/cig/firmware.licenses" | wc -l)"
+    fi
 }
 group="base"

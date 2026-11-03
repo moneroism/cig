@@ -13,14 +13,15 @@ style=custom
 do_build() {
     [ -f "$CIG_REPO/src/installer/main.c" ] \
         || { echo "cig-installer is built from the cig repository (with src/installer), not from an installed system"; exit 1; }
-    rm -rf "$WORK/installer"
-    cp -R "$CIG_REPO/src/installer" "$WORK/installer"
-    make -C "$WORK/installer" clean    # copied from the checkout: drop any host build first
-    make -C "$WORK/installer" cig-install
+    rm -rf "$WORK/src"
+    mkdir -p "$WORK/src"   # with src/libre, the libre-meter it shares with smoke
+    cp -R "$CIG_REPO/src/installer" "$CIG_REPO/src/libre" "$WORK/src/"
+    make -C "$WORK/src/installer" clean    # copied from the checkout: drop any host build first
+    make -C "$WORK/src/installer" cig-install
 }
 do_install() {
     local s="$DEST/usr/share/cig/installer"
     mkdir -p "$s" "$DEST/usr/bin"
-    install -m 755 "$WORK/installer/cig-install" "$s/cig-install"
+    install -m 755 "$WORK/src/installer/cig-install" "$s/cig-install"
     ln -s ../share/cig/installer/cig-install "$DEST/usr/bin/cig-install"
 }

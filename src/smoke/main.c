@@ -12,6 +12,7 @@
 #include <unistd.h>
 
 #include "smoke.h"
+#include "../libre/libre.h"
 
 const char *ROOT, *PKGROOT, *INV, *CIG_VAR, *CIG_REPO, *CIGBUILD;
 
@@ -29,7 +30,8 @@ static const char usage_text[] =
 	"  smoke mark    <reason> <pkg>   set reason: explicit | dependency | build\n"
 	"  smoke hooks   <pkg>... | --all run a package's setup again (busybox first)\n"
 	"  smoke audit [--quick]          check the system against the inventory\n"
-	"                                 (--quick skips the package checksums)\n";
+	"                                 (--quick skips the package checksums)\n"
+	"  smoke libre                    how much of this system is free software (libre-meter)\n";
 
 static _Noreturn void usage(void)
 {
@@ -622,6 +624,84 @@ static int hooks(int argc, char **argv)
 	return failed;
 }
 
+/* ---------------- libre-meter ---------------- */
+
+/* value of key= in a PKGINFO or recipe text (quotes removed), "" if missing; caller frees */
+static char *text_value(const char *text, const char *key)
+{
+	size_t kl = strlen(key);
+	for (const char *l = text; l && *l; l = strchr(l, '\n') ? strchr(l, '\n') + 1 : NULL) {
+		if (strncmp(l, key, kl) || l[kl] != '=')
+			continue;
+		const char *v = l + kl + 1;
+		size_t len = strcspn(v, "\n");
+		if (len && v[0] == '"') {
+			v++;
+			len--;
+		}
+		if (len && v[len - 1] == '"')
+			len--;
+		return xasprintf("%.*s", (int)len, v);
+	}
+	return xstrdup("");
+}
+
+/* the license of an installed package: its PKGINFO, or (packages built before license= was
+ * recorded) its recipe */
+static char *installed_license(const struct inv_ent *e)
+{
+	char *p = xasprintf("%s/%s/%s/.meta/PKGINFO", PKGROOT, e->name, e->folder), *t = read_file(p), *v;
+	free(p);
+	v = t ? text_value(t, "license") : xstrdup("");
+	free(t);
+	if (!*v) {
+		free(v);
+		p = xasprintf("%s/packages/%s/recipe", CIG_REPO, e->name);
+		t = read_file(p);
+		free(p);
+		v = t ? text_value(t, "license") : xstrdup("");
+		free(t);
+	}
+	return v;
+}
+
+static int libre_cmd(void)
+{
+	struct libre l;
+	char *fwindex = xasprintf("%s/usr/share/cig/firmware.licenses", ROOT);
+	if (!libre_init(&l, CIG_REPO, is_file(fwindex) ? fwindex : NULL))
+		return 1;
+	inv_init();
+	for (size_t i = 0; i < inv_count(); i++) {
+		char *lic = installed_license(inv_at(i));
+		libre_add_package(&l, inv_at(i)->name, lic);
+		free(lic);
+	}
+	if (inv_get("linux-firmware") && !l.nfw)   /* built before its licences were recorded */
+		libre_add_item(&l, "firmware", "linux-firmware", LIBRE_NONFREE,
+		               "licences not recorded: rebuild linux-firmware (counted as non-free until then)");
+	for (size_t i = 0; i < l.nfw; i++) {   /* the index lists exactly the installed files */
+		char *path = xstrdup(l.fw[i]);
+		path[strcspn(path, "\t")] = '\0';
+		libre_add_firmware(&l, path);
+		free(path);
+	}
+	const struct inv_ent *k = inv_get("linux");
+	if (k) {
+		char *lic = installed_license(k);
+		libre_add_kernel(&l, "linux", lic);
+		free(lic);
+	}
+	char *r = libre_report(&l);
+	fputs(r, stdout);
+	if (!k)
+		puts("\n(no cig kernel package installed: the kernel is not counted)");
+	free(r);
+	libre_free(&l);
+	free(fwindex);
+	return 0;
+}
+
 /* ---------------- main ---------------- */
 
 static void settings(void)
@@ -654,7 +734,7 @@ int main(int argc, char **argv)
 	settings();
 	bool check_only = !strcmp(cmd, "update") && n > 0 && (!strcmp(args[0], "--check") || !strcmp(args[0], "-n"));
 	if (geteuid() != 0 && !*ROOT && !check_only && strcmp(cmd, "list") && strcmp(cmd, "why") && strcmp(cmd, "files") &&
-	    strcmp(cmd, "audit") && strcmp(cmd, "installed") && *cmd)
+	    strcmp(cmd, "audit") && strcmp(cmd, "installed") && strcmp(cmd, "libre") && *cmd)
 		die("run as root");
 
 	if (!strcmp(cmd, "add")) {
@@ -726,6 +806,8 @@ int main(int argc, char **argv)
 		return audit(n == 1);
 	} else if (!strcmp(cmd, "hooks") && n >= 1) {
 		return hooks(n, args);
+	} else if (!strcmp(cmd, "libre") && n == 0) {
+		return libre_cmd();
 	} else if (!strcmp(cmd, "installed") && n == 1) {   /* for cigbuild */
 		return inv_get(args[0]) ? 0 : 1;
 	} else {

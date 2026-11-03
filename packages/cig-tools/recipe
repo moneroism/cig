@@ -13,19 +13,20 @@ style=custom
 group="base"
 nostrip=1
 do_build() {
-    rm -rf "$WORK/smoke"
-    cp -R "$CIG_REPO/src/smoke" "$WORK/smoke"
-    make -C "$WORK/smoke" clean    # copied from the checkout: drop any host build first
-    make -C "$WORK/smoke" smoke
+    rm -rf "$WORK/src"
+    mkdir -p "$WORK/src"   # with src/libre, the libre-meter it shares with the installer
+    cp -R "$CIG_REPO/src/smoke" "$CIG_REPO/src/libre" "$WORK/src/"
+    make -C "$WORK/src/smoke" clean    # copied from the checkout: drop any host build first
+    make -C "$WORK/src/smoke" smoke
 }
 do_install() {
     local s="$DEST/usr/share/cig"
     mkdir -p "$s" "$DEST/usr/bin"
     cp "$CIG_REPO/VERSION" "$s/"
     cp "$CIG_REPO/cigbuild" "$s/"
-    install -m 755 "$WORK/smoke/smoke" "$s/smoke"
+    install -m 755 "$WORK/src/smoke/smoke" "$s/smoke"
     cp "$CIG_REPO/names" "$s/"
-    cp -R "$CIG_REPO/lib" "$CIG_REPO/packages" "$CIG_REPO/keys" "$CIG_REPO/src" "$CIG_REPO/assets" "$s/"   # keys: gpgv checks sources against them; src, assets: used by recipes
+    cp -R "$CIG_REPO/lib" "$CIG_REPO/packages" "$CIG_REPO/keys" "$CIG_REPO/src" "$CIG_REPO/assets" "$CIG_REPO/libre" "$s/"   # keys: gpgv checks sources against them; src, assets: used by recipes; libre: the libre-meter's data
     local d   # sources only: a build left in the checkout (on the host: glibc) must not ship
     for d in "$s"/src/*/; do [ ! -f "$d/Makefile" ] || make -C "$d" clean >/dev/null; done
     chmod -R u+rwX,go+rX,go-w "$s"          # readable for all, keep execute bits

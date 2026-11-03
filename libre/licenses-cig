@@ -1,0 +1,17 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 moneroism
+#
+# Licenses the libre-meter counts as free although the SPDX list does not mark them
+# isFsfLibre (libre/licenses-fsf): each one is, or matches, an entry of the FSF's list of free
+# licenses (https://www.gnu.org/licenses/license-list.html#anchor), reviewed by hand. A license
+# in neither file counts as "not reviewed" and is shown as such.
+# <SPDX id>          <the gnu.org entry it matches, and why>
+LGPL-2.0-only        #LGPL: the GNU Library GPL version 2, the LGPL's earlier version
+LGPL-2.0-or-later    #LGPL: as LGPL-2.0-only, or any later version
+GPL-1.0-or-later     #GNUGPL: "or any later version" includes GPLv2 and GPLv3
+PSF-2.0              #Python: the Python Software Foundation License 2.0.1 and newer
+curl                 #X11License: a lax permissive license of the same kind
+MIT-Modern-Variant   #Expat: the Expat (MIT) license with a reworded notice clause
+0BSD                 #GNUAllPermissive: permission without conditions
+libpng-2.0           #ZLib: a zlib-style lax permissive license
+SSH-OpenSSH          #ModifiedBSD: OpenSSH's files are under BSD-style and public-domain terms

@@ -11,6 +11,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include "libreui.h"
 #include "state.h"
 #include "ui.h"
 
@@ -551,7 +552,15 @@ void do_install(struct state *s)
 	{
 		char *list = xstrdup("");
 		int count = 0;
-		for (int i = 0; i < s->ndrv; i++) {
+		char *free_list = s->free_fw ? libre_install_firmware(s) : NULL;
+		if (free_list) {   /* the libre-meter's free replacements were chosen */
+			free(list);
+			list = free_list;
+			for (char *c = list; *c; c++)
+				count += *c == '\n';
+			logf_("firmware: free replacements used (libre-meter)\n");
+		}
+		for (int i = 0; i < s->ndrv && !free_list; i++) {
 			if (!s->drvs[i].on)
 				continue;
 			char *copy = xstrdup(s->drvs[i].files), *sv = NULL;

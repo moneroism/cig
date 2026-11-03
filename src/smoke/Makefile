@@ -8,12 +8,18 @@ CFLAGS  += -std=c17 -D_POSIX_C_SOURCE=200809L -D_DEFAULT_SOURCE \
            -fstack-protector-strong -D_FORTIFY_SOURCE=2 -fPIE
 LDFLAGS ?= -Wl,-z,relro,-z,now
 LDFLAGS += -pie
-OBJ     = main.o util.o sha256.o inventory.o install.o remove.o audit.o
+OBJ     = main.o util.o sha256.o inventory.o install.o remove.o audit.o libre.o
 
 smoke: $(OBJ)
 	$(CC) $(CFLAGS) -o $@ $(OBJ) $(LDFLAGS)
 
 $(OBJ): smoke.h
+
+# the libre-meter, shared with the installer
+libre.o: ../libre/libre.c ../libre/libre.h
+	$(CC) $(CFLAGS) -c -o $@ ../libre/libre.c
+
+main.o: ../libre/libre.h
 
 # debug build: AddressSanitizer + UndefinedBehaviorSanitizer
 asan:

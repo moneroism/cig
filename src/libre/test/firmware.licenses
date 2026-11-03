@@ -1,0 +1,3 @@
+amdgpu/polaris10_mc.bin	non-free	amdgpu	Redistributable. See LICENSE.amdgpu for details.
+ath9k_htc/htc_9271-1.4.0.fw	free	ath9k_htc	source: https://github.com/qca/open-ath9k-htc-firmware; Free software
+htc_9271.fw	non-free	ath9k_htc	Redistributable. See LICENCE.atheros_firmware for details

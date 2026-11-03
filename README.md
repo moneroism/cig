@@ -183,6 +183,7 @@ smoke files   <pkg>            files of a package
 smoke mark    <reason> <pkg>   explicit | dependency | build
 smoke audit [--quick]          check the system against the inventory
 smoke hooks   <pkg>... | --all run a package's setup again
+smoke libre                    how much of this system is free software (libre-meter)
 ```
 
 Install reasons: **explicit** (asked for), **dependency** (needed by another
@@ -240,6 +241,32 @@ The kernel is installed as `EFI/BOOT/BOOTX64.EFI`, the path every UEFI firmware 
 (some find no other), and the installer also adds a firmware boot entry "cig" for that
 file. The previous kernel stays as `EFI/cig/vmlinuz-old.efi` (choose it in the firmware's
 boot menu).
+
+### Libre-meter
+
+Before installing (main menu, "Libre-meter") and on an installed system (`smoke libre`),
+cig reports how much of the system is free software by the FSF's definition. Every
+package, every firmware file and the kernel count as one part each:
+
+- **Libre overall**: the share of free parts.
+- **Libre vs. possible**: that share compared with the best one this hardware can reach
+  with free software, so a machine that needs a blob is not judged against an ideal it
+  cannot meet.
+
+A package is free when its `license=` (SPDX) is on the FSF's list: the licenses the SPDX
+license list marks `isFsfLibre` (`libre/licenses-fsf`, written by
+`scripts/update-libre-licenses.sh <version>`), plus `libre/licenses-cig`, reviewed matches of
+entries on gnu.org's list that SPDX does not flag. A license on neither list is shown as
+"not reviewed". A firmware file is free when linux-firmware's WHENCE gives it a free
+licence and includes its source, or when `libre/firmware` names where its source is
+kept. Anything else is non-free, including firmware with a free licence but no source. The
+kernel counts as not free while it loads non-free firmware. Suggestions come first as
+software changes: a free replacement that loses no function (`libre/alternatives`, e.g. the
+open ath9k_htc firmware), which the installer uses only when you choose it
+(`free_firmware = yes` in an answers file). Leaving out a driver's firmware is possible on
+the firmware screen, at the cost of that device. What lies outside cig is named but not
+counted: the UEFI firmware, Intel ME / AMD PSP, firmware stored on the devices, and CPU
+microcode inside the UEFI firmware. `make -C src/libre test` checks the license logic.
 
 ### The install medium
 
@@ -313,7 +340,7 @@ See [`ROADMAP.md`](ROADMAP.md). In short:
 - [ ] Phase 3 – Install media (ISO), first bare-metal install, basic usability (ALSA, clipboard, screenshots, DNS);
   all done and VM-tested except the bare-metal install, which waits for a browser (Phase 6)
 - [ ] 0.3.x – GPU acceleration: Mesa without LLVM (RADV + Zink); built, not yet tested on an AMD GPU
-- [ ] Phase 4 – Optional components (PipeWire, Bluetooth, wmenu), UEFI boot entries, libre-meter
+- [ ] Phase 4 – Optional components (PipeWire, Bluetooth, wmenu), UEFI boot entries, libre-meter (first version done)
 - [ ] Phase 5 – Security layers (allowlisting), read-only root, own kernel base config
 - [ ] Phase 6 – Browser (then: cig as a daily system), hardened_malloc, sandboxing, smoke updates
 - [ ] Phase 7 – Code quality: sanitizers, strict flags, fuzzing

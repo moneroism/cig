@@ -238,6 +238,12 @@ is detected, and everything else renders with pixman. Not yet tested on the RX57
     (components, hardware) where they can be applied
   - needs `license=` in every recipe (done 2026-10-16: SPDX, also in .PKGINFO) and a list
     of free alternatives per non-free item
+  - first version done 2026-11-03 (developer's choices: the FSF's list, items not bytes, the
+    installer and `smoke libre`, the kernel not free while it loads blobs, a reviewed
+    supplement for licenses SPDX does not flag). Still to come: more free alternatives (the
+    list has only ath9k_htc's open firmware), firmware files a driver requests for other
+    hardware generations (amdgpu asks for every GPU's), and a VM test with a device whose
+    driver loads firmware
 
 **Exit criteria:** every component installs and works on the PC.
 

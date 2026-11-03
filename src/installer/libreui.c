@@ -1,0 +1,197 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 moneroism */
+/* libreui.c - the libre-meter screen: how much of the system about to be installed is free
+ * software (src/libre), and its one choice: free firmware replacements */
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "../libre/libre.h"
+#include "state.h"
+#include "sys.h"
+#include "ui.h"
+
+/* "\n" + a word + "\n" in a "\n"-separated list */
+static bool listed(const char *list, const char *w)
+{
+	char *needle = xasprintf("\n%s\n", w);
+	bool r = strstr(list, needle) != NULL;
+	free(needle);
+	return r;
+}
+
+static char *append(char *list, const char *w)
+{
+	char *n = xasprintf("%s%s\n", list, w);
+	free(list);
+	return n;
+}
+
+/* the packages to be installed: the base and the chosen components with every runtime
+ * dependency their recipes name ("\n"-separated, starting with "\n") */
+static char *closure(const struct state *s)
+{
+	char *todo = xstrdup("\n"), *done = xstrdup("\n");
+	char *b = xstrdup(s->base), *sv = NULL;
+	for (char *w = strtok_r(b, " ", &sv); w; w = strtok_r(NULL, " ", &sv))
+		todo = append(todo, w);
+	free(b);
+	for (int i = 0; i < s->ncomp; i++)
+		if (s->comps[i].on)
+			todo = append(todo, s->comps[i].name);
+	todo = append(todo, "linux");
+	for (char *p = todo + 1; *p;) {
+		size_t l = strcspn(p, "\n");
+		char *name = xasprintf("%.*s", (int)l, p);
+		p += l + (p[l] == '\n');
+		if (listed(done, name)) {
+			free(name);
+			continue;
+		}
+		done = append(done, name);
+		char *rp = xasprintf("%s/packages/%s/recipe", s->share, name), *text = read_text(rp), dep[1024];
+		free(rp);
+		if (text) {
+			recipe_value(text, "depends", dep, sizeof(dep));
+			char *sv2 = NULL;
+			for (char *w = strtok_r(dep, " \t", &sv2); w; w = strtok_r(NULL, " \t", &sv2))
+				if (!listed(done, w)) {
+					size_t off = (size_t)(p - todo);   /* todo moves when it grows */
+					todo = append(todo, w);
+					p = todo + off;
+				}
+			free(text);
+		}
+		free(name);
+	}
+	free(todo);
+	return done;
+}
+
+/* the firmware files the install will select: the chosen drivers' files that linux-firmware
+ * ships, each non-free one replaced by its free alternative when s->free_fw is set */
+static char *libre_firmware_files(const struct state *s, const struct libre *l)
+{
+	char *list = xstrdup("\n");
+	for (int i = 0; i < s->ndrv; i++) {
+		if (!s->drvs[i].on)
+			continue;
+		char *copy = xstrdup(s->drvs[i].files), *sv = NULL;
+		for (char *f = strtok_r(copy, " ", &sv); f; f = strtok_r(NULL, " ", &sv)) {
+			const char *use = f, *alt;
+			if (l->nfw && !libre_fw_has(l, f))
+				continue;   /* not in linux-firmware: nothing is installed for it */
+			if (s->free_fw && (alt = libre_fw_alternative(l, f)) && libre_fw_has(l, alt))
+				use = alt;
+			if (!listed(list, use))
+				list = append(list, use);
+		}
+		free(copy);
+	}
+	return list;
+}
+
+/* the meter for the current choices; false if the medium has no license data */
+static bool measure(const struct state *s, struct libre *l)
+{
+	char *idx = xasprintf("%s/firmware.licenses", s->share);
+	FILE *f = fopen(idx, "r");
+	bool have_idx = f != NULL;
+	if (f)
+		fclose(f);
+	if (!libre_init(l, s->share, have_idx ? idx : NULL)) {
+		free(idx);
+		return false;
+	}
+	free(idx);
+	char *pk = closure(s);
+	for (char *p = pk + 1; *p;) {
+		size_t n = strcspn(p, "\n");
+		char *name = xasprintf("%.*s", (int)n, p), lic[256] = "";
+		p += n + (p[n] == '\n');
+		char *rp = xasprintf("%s/packages/%s/recipe", s->share, name), *text = read_text(rp);
+		free(rp);
+		if (text) {
+			recipe_value(text, "license", lic, sizeof(lic));
+			free(text);
+		}
+		if (!strcmp(name, "linux") && !*lic)
+			snprintf(lic, sizeof(lic), "GPL-2.0-only");
+		if (strcmp(name, "linux"))
+			libre_add_package(l, name, lic);
+		free(name);
+	}
+	bool any_fw = false;
+	for (int i = 0; i < s->ndrv; i++)
+		any_fw |= s->drvs[i].on;
+	if (any_fw && !have_idx) {
+		libre_add_item(l, "firmware", "linux-firmware", LIBRE_NONFREE,
+		               "this medium has no firmware licences (counted as non-free)");
+	} else {
+		char *fw = libre_firmware_files(s, l);
+		for (char *p = fw + 1; *p;) {
+			size_t n = strcspn(p, "\n");
+			char *path = xasprintf("%.*s", (int)n, p);
+			p += n + (p[n] == '\n');
+			libre_add_firmware(l, path);
+			free(path);
+		}
+		free(fw);
+	}
+	char *rp = xasprintf("%s/packages/linux/recipe", s->share), *text = read_text(rp), lic[256] = "GPL-2.0-only";
+	free(rp);
+	if (text) {
+		recipe_value(text, "license", lic, sizeof(lic));
+		free(text);
+	}
+	libre_add_kernel(l, "linux", lic);
+	free(pk);
+	return true;
+}
+
+char *libre_install_firmware(const struct state *s)
+{
+	struct libre l;
+	char *idx = xasprintf("%s/firmware.licenses", s->share);
+	if (!libre_init(&l, s->share, idx)) {
+		free(idx);
+		return NULL;
+	}
+	free(idx);
+	char *list = libre_firmware_files(s, &l);
+	libre_free(&l);
+	char *out = xstrdup(list + 1);   /* without the leading "\n" */
+	free(list);
+	return out;
+}
+
+char *libre_value(const struct state *s)
+{
+	struct libre l;
+	if (!measure(s, &l))
+		return xstrdup("not available (no license data)");
+	int ov, po, vs, nf, nn, nu;
+	libre_scores(&l, &ov, &po, &vs, &nf, &nn, &nu);
+	libre_free(&l);
+	return xasprintf("%d%% libre, %d%% of what is possible%s", ov, vs, s->free_fw ? ", free firmware" : "");
+}
+
+void libre_screen(struct state *s)
+{
+	struct libre l;
+	if (!measure(s, &l)) {
+		ui_msg("Libre-meter", "This medium has no license data (libre/ in cig-tools).");
+		return;
+	}
+	char *r = libre_report(&l);
+	/* replacements: those of the files selected now, or (once chosen) already in use */
+	int alts = 0;
+	for (int i = 0; i < l.n; i++)
+		alts += l.v[i].alt[0] && strcmp(l.v[i].kind, "kernel");
+	libre_free(&l);
+	ui_text("Libre-meter", r);
+	free(r);
+	if (alts || s->free_fw)
+		s->free_fw = ui_yesno("Libre-meter", "Use the free firmware replacements listed (no function is lost)?",
+		                      s->free_fw);
+}

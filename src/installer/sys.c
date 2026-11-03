@@ -191,8 +191,10 @@ char *capture_input(char *const argv[], const char *input)
 
 /* ---------------- components ---------------- */
 
-/* value of `key=` in a recipe, quotes removed ("" if missing) */
-static void recipe_value(const char *text, const char *key, char *out, size_t n)
+/* value of `key=` in a recipe, quotes removed ("" if missing): a quoted value runs to its
+ * closing quote (it may span lines; newlines become spaces), an unquoted one to the first
+ * blank; a comment after it is not part of it */
+void recipe_value(const char *text, const char *key, char *out, size_t n)
 {
 	size_t kl = strlen(key);
 	out[0] = '\0';
@@ -200,14 +202,17 @@ static void recipe_value(const char *text, const char *key, char *out, size_t n)
 		if (strncmp(l, key, kl) || l[kl] != '=')
 			continue;
 		const char *v = l + kl + 1;
-		size_t len = strcspn(v, "\n");
-		if (len && v[0] == '"') {
+		size_t len;
+		if (*v == '"') {
 			v++;
-			len--;
+			len = strcspn(v, "\"");
+		} else {
+			len = strcspn(v, " \t\n");
 		}
-		if (len && v[len - 1] == '"')
-			len--;
 		snprintf(out, n, "%.*s", (int)len, v);
+		for (char *c = out; *c; c++)
+			if (*c == '\n')
+				*c = ' ';
 		return;
 	}
 }

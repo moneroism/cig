@@ -400,6 +400,74 @@ void ui_msg(const char *title, const char *text)
 	} while (k != '\n' && k != KEY_ESC);
 }
 
+void ui_text(const char *title, const char *text)
+{
+	if (!active) {
+		printf("\n== %s\n%s\n", title, text);
+		fflush(stdout);
+		return;
+	}
+	/* wrapped lines, as text_block wraps them */
+	const char **line = NULL;
+	int *len = NULL, n = 0, cap = 0, w = COLS - 3;
+	for (const char *p = text; p && *p;) {
+		int l = (int)strcspn(p, "\n");
+		if (l > w) {
+			int cut = w;
+			while (cut > 0 && p[cut] != ' ')
+				cut--;
+			l = cut > 0 ? cut : w;
+		}
+		if (n == cap) {
+			cap = cap ? cap * 2 : 64;
+			const char **nl = realloc(line, (size_t)cap * sizeof(*line));
+			int *nn = realloc(len, (size_t)cap * sizeof(*len));
+			if (!nl || !nn)
+				exit(1);
+			line = nl;
+			len = nn;
+		}
+		line[n] = p;
+		len[n++] = l;
+		p += l;
+		if (*p == '\n' || *p == ' ')
+			p++;
+	}
+	int top = 0, k;
+	for (;;) {
+		int rows = LINES - 7, last = n - rows > 0 ? n - rows : 0;
+		if (top > last)
+			top = last;
+		if (top < 0)
+			top = 0;
+		frame(title);
+		for (int i = 0; i < rows && top + i < n; i++)
+			mvprintw(4 + i, 2, "%.*s", len[top + i], line[top + i]);
+		footer(n > rows ? "Up/Down PgUp/PgDn scroll   Enter continue" : "Enter continue");
+		if (n > rows)
+			mvprintw(LINES - 1, COLS - 16, "%3d-%d of %d", top + 1, top + rows < n ? top + rows : n, n);
+		refresh();
+		k = key();
+		trace_screen(k);
+		if (k == '\n' || k == KEY_ESC)
+			break;
+		if (k == KEY_UP)
+			top--;
+		else if (k == KEY_DOWN)
+			top++;
+		else if (k == KEY_PPAGE)
+			top -= rows;
+		else if (k == KEY_NPAGE || k == ' ')
+			top += rows;
+		else if (k == KEY_HOME)
+			top = 0;
+		else if (k == KEY_END)
+			top = last;
+	}
+	free(line);
+	free(len);
+}
+
 void ui_wait(const char *title, const char *text)
 {
 	if (!active) {

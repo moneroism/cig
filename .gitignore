@@ -71,8 +71,9 @@ GEMINI.md
 # media build (scripts/build-media.sh): staging, media kernel, firmware
 /media-build
 
-# C build output (src/smoke, src/installer, src/pixel)
+# C build output (src/smoke, src/installer, src/pixel, src/libre tests)
 src/*/*.o
 src/installer/cig-install
 src/smoke/smoke
 src/pixel/pixel
+src/libre/libre-test

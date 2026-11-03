@@ -16,6 +16,7 @@
 #include <time.h>
 #include <unistd.h>
 
+#include "libreui.h"
 #include "state.h"
 #include "ui.h"
 
@@ -459,6 +460,7 @@ static void preflight(struct state *s)
  *   user = name           required; password = ... (required); root_password = ... (none: locked)
  *   components = -openssh +labwc   changes to the default selection
  *   firmware = detected | none
+ *   free_firmware = yes | no   the libre-meter's free firmware replacements (default no)
  *   wifi_ssid = ...  wifi_psk = ...
  *   dns = tls | recursive | dhcp
  *   compile = yes | no    (no: the media's prebuilt packages)
@@ -556,6 +558,8 @@ static void read_answers(struct state *s, const char *path)
 				bad_answer(path, ln, "firmware: detected or none");
 			for (int i = 0; i < s->ndrv; i++)
 				s->drvs[i].on = s->drvs[i].on && !strcmp(v, "detected");
+		} else if (!strcmp(k, "free_firmware")) {
+			s->free_fw = yes_no(v, path, ln);
 		} else if (!strcmp(k, "wifi_ssid")) {
 			if (!*v || vn > 32)
 				bad_answer(path, ln, "a network name has 1 to 32 characters");
@@ -608,8 +612,10 @@ static int install_answers(struct state *s, const char *path)
 		return 1;
 	}
 	char *pk = selected(s);
-	printf("cig %s: installing on /dev/%s (ERASED), host %s, user %s, root %s\ncomponents: %s\n",
-	       s->version, s->disk, s->host, s->user, s->root_lock ? "locked" : "with password", pk);
+	char *lv = libre_value(s);
+	printf("cig %s: installing on /dev/%s (ERASED), host %s, user %s, root %s\ncomponents: %s\nlibre-meter: %s\n",
+	       s->version, s->disk, s->host, s->user, s->root_lock ? "locked" : "with password", pk, lv);
+	free(lv);
 	free(pk);
 	fflush(stdout);
 	if (getenv("CIG_INSTALL_DEMO")) {
@@ -647,7 +653,7 @@ int main(int argc, char **argv)
 
 	int sel = 0;
 	for (;;) {
-		char *v[8];
+		char *v[9];
 		char *pk = selected(&s), *fw = xstrdup("");
 		for (int i = 0; i < s.ndrv; i++)
 			if (s.drvs[i].on) {
@@ -664,14 +670,15 @@ int main(int argc, char **argv)
 		v[4] = xstrdup("defaults (optional layers not available yet)");
 		v[5] = xasprintf("packages %s, kernel %s", s.compile_pkgs ? "compiled here" : "prebuilt",
 		                 s.generic_kernel ? "generic" : "compiled for this machine");
-		v[6] = xstrdup("");
+		v[6] = libre_value(&s);
 		v[7] = xstrdup("");
+		v[8] = xstrdup("");
 		static const char *const items[] = { "Disk", "Identity", "Components", "Hardware, network", "Security",
-		                                     "Build", "Install", "Quit without changes" };
+		                                     "Build", "Libre-meter", "Install", "Quit without changes" };
 		char *title = xasprintf("cig %s - choose a section, Install when everything is set", s.version);
-		int c = ui_menu(title, NULL, items, (const char *const *)v, 8, &sel);
+		int c = ui_menu(title, NULL, items, (const char *const *)v, 9, &sel);
 		free(title);
-		for (int i = 0; i < 8; i++)
+		for (int i = 0; i < 9; i++)
 			free(v[i]);
 		free(fw);
 		switch (c) {
@@ -682,7 +689,8 @@ int main(int argc, char **argv)
 		case 4: ui_msg("Security", "Optional security layers (allowlisting, kernel-enforced execution "
 		                           "control) come with cig 0.5. The defaults are already hardened."); break;
 		case 5: build_screen(&s); break;
-		case 6:
+		case 6: libre_screen(&s); break;
+		case 7:
 			if (!*s.disk || !s.layout_ok) {
 				ui_msg("Install", "Choose the disk and finish its layout first.");
 				break;
@@ -708,7 +716,7 @@ int main(int argc, char **argv)
 			}
 			ui_end();
 			return 0;
-		case 7: case -1:
+		case 8: case -1:
 			if (ui_yesno("Quit", "Quit without changes?", true)) {
 				ui_end();
 				puts("Nothing was changed.");

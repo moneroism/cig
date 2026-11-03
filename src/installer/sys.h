@@ -34,6 +34,8 @@ struct comp {
 };
 /* components offered by the recipes (group= other than base); base packages in *base */
 int load_components(const char *share, struct comp **out, char **base);
+/* value of `key=` in a recipe's text, quotes removed ("" if missing) */
+void recipe_value(const char *text, const char *key, char *out, size_t n);
 
 struct drv {
 	char name[64];

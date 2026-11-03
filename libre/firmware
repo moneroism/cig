@@ -1,0 +1,12 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 moneroism
+#
+# Firmware files that are free software although linux-firmware does not carry their source.
+# Every other file counts as free only when WHENCE gives it a free licence and its section names
+# the source inside linux-firmware ("Source:"); anything else is non-free (binary only).
+# <file in linux-firmware>        <where its source is>
+ath9k_htc/htc_7010-1.4.0.fw       https://github.com/qca/open-ath9k-htc-firmware (WHENCE: "Free software")
+ath9k_htc/htc_9271-1.4.0.fw       https://github.com/qca/open-ath9k-htc-firmware (WHENCE: "Free software")
+atusb/atusb-0.2.dfu               ben-wpan, GPLv2+ (atusb/ChangeLog in linux-firmware)
+atusb/atusb-0.3.dfu               ben-wpan, GPLv2+ (atusb/ChangeLog in linux-firmware)
+atusb/rzusb-0.3.bin               ben-wpan, GPLv2+ (atusb/ChangeLog in linux-firmware)

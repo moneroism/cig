@@ -1,0 +1,7 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 moneroism
+#
+# Free replacements the libre-meter can suggest: using one loses no function.
+# firmware <non-free file> <free file the same driver loads instead>
+firmware htc_9271.fw ath9k_htc/htc_9271-1.4.0.fw
+firmware htc_7010.fw ath9k_htc/htc_7010-1.4.0.fw

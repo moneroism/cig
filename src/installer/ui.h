@@ -35,6 +35,9 @@ bool ui_input(const char *title, const char *prompt, char *buf, size_t n, bool h
 bool ui_yesno(const char *title, const char *text, bool def);
 void ui_msg(const char *title, const char *text);
 
+/* a long text that scrolls (arrows, PgUp/PgDn, Home/End); Enter or Esc closes it */
+void ui_text(const char *title, const char *text);
+
 /* a message shown while something short runs (no key needed; the next screen replaces it) */
 void ui_wait(const char *title, const char *text);
 
