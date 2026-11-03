@@ -281,6 +281,14 @@ package for the installer. Logins: `root` and `cig`, password `ciglinux` (nothin
 live system listens on the network). Write it to a USB stick with
 `dd if=cig-<version>.iso of=/dev/<the stick> bs=4M conv=fsync`.
 
+On a USB stick the image also has a small writable FAT partition, `CIG-DATA`. `cig-check`
+(log in as root on the live system) checks the machine's hardware and stress-tests it:
+devices and drivers, kernel errors, firmware, graphics, storage (read only), WiFi, Bluetooth,
+sound, touchpad, backlight, battery, a 60 s CPU load, a memory pattern test and suspend. It
+asks a few yes/no questions at the keyboard (`--no-ask` skips them, `--quick` skips the stress
+and suspend tests) and saves its report to `CIG-DATA`, without MAC addresses, network names or
+serial numbers. It never writes to the machine's disks.
+
 ### Testing in QEMU
 
 ```

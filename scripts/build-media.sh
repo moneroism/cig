@@ -225,11 +225,19 @@ link "$generic/pkgs" "$STAGE/var/cig/generic/"
 # and as an appended GPT partition (the same file: UEFI finds it on a CD and on a USB stick)
 step "ISO $OUT ($LABEL)"
 rm -f "$OUT"
+# CIG-DATA: a small writable FAT partition on a USB stick (cig-check saves its report there;
+# read it on any computer). On a CD it is read-only, like the rest
+step "CIG-DATA partition"
+rm -f "$MEDIA_VAR/data.img"
+truncate -s 64M "$MEDIA_VAR/data.img"
+mkfs.fat -F 32 -n CIG-DATA "$MEDIA_VAR/data.img" > /dev/null
+
 xorriso -as mkisofs -o "$OUT" -V "$LABEL" -iso-level 3 -R \
     -append_partition 2 0xef "$MEDIA_VAR/esp.img" -appended_part_as_gpt \
+    -append_partition 3 ebd0a0a2-b9e5-4433-87c0-68b6b72699c7 "$MEDIA_VAR/data.img" \
     -e --interval:appended_partition_2:all:: -no-emul-boot \
     "$STAGE" 2> "$MEDIA_VAR/xorriso.log" || { tail -n 20 "$MEDIA_VAR/xorriso.log" >&2; die "xorriso failed"; }
-rm -f "$MEDIA_VAR/esp.img"
+rm -f "$MEDIA_VAR/esp.img" "$MEDIA_VAR/data.img"
 chown "$(stat -c %u:%g "$REPO")" "$OUT"    # QEMU runs as the developer, not as root
 sync
 step "Done: $OUT ($(du -h "$OUT" | cut -f1))"

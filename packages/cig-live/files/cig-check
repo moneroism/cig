@@ -1,0 +1,556 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 moneroism
+#
+# cig-check - checks this machine's hardware under cig from the live medium, stress-tests it,
+# and writes a detailed report. Never writes to internal disks (storage tests only read).
+#
+#   cig-check [--quick] [--no-ask] [--out <dir>]
+#     --quick   no stress tests and no suspend test (a few minutes less)
+#     --no-ask  no questions (sound, touchpad, backlight and suspend are not tried)
+#     --out     where the report goes (default: the medium's CIG-DATA partition, else /root)
+#
+# The report leaves out personal data: MAC addresses keep only their vendor half, WiFi network
+# names are not recorded (only how many and how strong), no serial numbers.
+set -u
+export LC_ALL=C PATH=/usr/sbin:/usr/bin:/sbin:/bin
+
+QUICK=0 ASK=1 OUT=
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --quick) QUICK=1 ;;
+        --no-ask) ASK=0 ;;
+        --out) OUT=${2:-}; shift ;;
+        -h|--help) sed -n '5,13p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        *) echo "cig-check: unknown option $1 (see --help)" >&2; exit 1 ;;
+    esac
+    shift
+done
+[ "$(id -u)" -eq 0 ] || { echo "cig-check: run it as root (log in as root, or: doas cig-check)" >&2; exit 1; }
+
+STAMP=$(date -u +%Y%m%d-%H%M%S)
+WORK=/root/cig-check-$STAMP
+mkdir -p "$WORK"
+REPORT=$WORK/report.log
+: > "$REPORT"
+NPASS=0 NWARN=0 NFAIL=0 NSKIP=0
+SUMMARY=
+
+# ---------------- output ----------------
+log()  { printf '%s\n' "$*" >> "$REPORT"; }
+say()  { printf '%s\n' "$*"; log "$*"; }
+section() { say ""; say "==== $* ===="; }
+result() {   # result PASS|WARN|FAIL|SKIP <text>
+    local r=$1; shift
+    say "  [$r] $*"
+    case $r in
+        PASS) NPASS=$((NPASS + 1)) ;;
+        WARN) NWARN=$((NWARN + 1)); SUMMARY="$SUMMARY
+  [WARN] $*" ;;
+        FAIL) NFAIL=$((NFAIL + 1)); SUMMARY="$SUMMARY
+  [FAIL] $*" ;;
+        SKIP) NSKIP=$((NSKIP + 1)) ;;
+    esac
+}
+info() { log "    $*"; }
+# a file's first line, or "-"
+rd() { local v; v=$(head -n1 "$1" 2>/dev/null) || v=; printf '%s' "${v:--}"; }
+# a file's first line as a number (0 if missing or not a number): safe in $(( ))
+num() { local v; v=$(rd "$1"); case $v in ''|*[!0-9-]*|-) echo 0 ;; *) echo "$v" ;; esac; }
+have() { command -v "$1" >/dev/null 2>&1; }
+# yes/no at the keyboard; no questions with --no-ask
+ask() {   # ask <question> -> 0 yes, 1 no
+    [ $ASK -eq 1 ] || return 1
+    local a
+    while :; do
+        printf '\n>>> %s [y/n] ' "$1"
+        read -r a < /dev/tty || return 1
+        case $a in y|Y|yes) log "  (asked: $1 -> yes)"; return 0 ;; n|N|no) log "  (asked: $1 -> no)"; return 1 ;; esac
+    done
+}
+mac_vendor() { printf '%s' "${1%:*:*:*}:xx:xx:xx"; }
+uptime_cs() { awk '{ printf "%d", $1 * 100 }' /proc/uptime; }   # centiseconds since boot
+
+# ---------------- sections ----------------
+s_system() {
+    section "System"
+    log "  cig-check run: $STAMP (UTC)"
+    log "  cig: $(sed -n 's/^PRETTY_NAME=//p' /etc/os-release 2>/dev/null | tr -d '"')"
+    log "  kernel: $(uname -r) $(uname -m)"
+    log "  command line: $(cat /proc/cmdline)"
+    log "  uptime: $(cut -d' ' -f1 /proc/uptime) s"
+    local d=/sys/class/dmi/id
+    log "  machine: $(rd $d/sys_vendor) / $(rd $d/product_name) / $(rd $d/product_version)"
+    log "  board: $(rd $d/board_vendor) $(rd $d/board_name)"
+    log "  firmware: $(rd $d/bios_vendor) $(rd $d/bios_version) ($(rd $d/bios_date))"
+    if [ -d /sys/firmware/efi ]; then
+        result PASS "booted with UEFI ($(rd /sys/firmware/efi/fw_platform_size)-bit firmware)"
+        local sb
+        sb=$(od -An -t u1 /sys/firmware/efi/efivars/SecureBoot-8be4df61-93ca-11d2-aa0d-00e098032b8c 2>/dev/null | awk '{ print $NF }')
+        log "  Secure Boot: ${sb:-unknown} (1 = on: cig's kernel is not signed for it)"
+    else
+        result WARN "not booted with UEFI (cig boots only by UEFI)"
+    fi
+    log "  CPU: $(sed -n 's/^model name[[:space:]]*: //p' /proc/cpuinfo | head -n1), $(nproc) threads"
+    local f
+    for f in avx2 aes sha_ni vmx svm; do
+        grep -qw "$f" /proc/cpuinfo && log "    has $f"
+    done
+    log "  microcode revision (from the firmware; cig never loads any): $(sed -n 's/^microcode[[:space:]]*: //p' /proc/cpuinfo | head -n1)"
+    log "  memory: $(awk '/MemTotal/ { printf "%d MiB", $2 / 1024 }' /proc/meminfo)"
+    log "  RAM in use now (live system, all in RAM: not the installed system's figure):"
+    free -m | sed 's/^/    /' >> "$REPORT"
+}
+
+s_kernel_log() {
+    section "Kernel messages"
+    dmesg > "$WORK/dmesg.txt" 2>/dev/null
+    local errs warns
+    errs=$(dmesg -r 2>/dev/null | grep -c '^<[0-3]>') || errs=0
+    warns=$(dmesg -r 2>/dev/null | grep -c '^<4>') || warns=0
+    log "  error lines: $errs, warnings: $warns (all in dmesg.txt)"
+    dmesg -r 2>/dev/null | grep '^<[0-3]>' | sed 's/^<[0-9]>/    /' | head -n 40 >> "$REPORT"
+    if grep -q -E 'Call Trace|BUG:|Oops|general protection' "$WORK/dmesg.txt"; then
+        result FAIL "the kernel logged a crash or a call trace (see dmesg.txt)"
+    else
+        result PASS "no kernel crash or call trace"
+    fi
+    [ "$errs" -eq 0 ] && result PASS "no kernel error messages" || result WARN "$errs kernel error message(s) (listed above)"
+    local fw
+    fw=$(grep -E 'Direct firmware load for .* failed|firmware: failed to load' "$WORK/dmesg.txt" | sed 's/.*load for //; s/ failed.*//; s/.*failed to load //' | sort -u)
+    if [ -n "$fw" ]; then
+        result WARN "firmware a driver asked for but did not find: $(echo $fw)"
+    else
+        result PASS "no missing firmware reported"
+    fi
+}
+
+s_devices() {
+    section "Devices and drivers"
+    local d cls ven dev drv n=0 nodrv=0
+    log "  PCI (class vendor:device driver):"
+    for d in /sys/bus/pci/devices/*; do
+        [ -e "$d" ] || continue
+        cls=$(rd "$d/class"); ven=$(rd "$d/vendor"); dev=$(rd "$d/device")
+        drv=$( [ -e "$d/driver" ] && basename "$(readlink "$d/driver")" || echo "-" )
+        log "    ${d##*/} $cls ${ven#0x}:${dev#0x} $drv"
+        n=$((n + 1))
+        # no driver: worth a look, except bridges (0x06), host/system peripherals (0x08) and
+        # signal processing/serial bus helpers many machines leave unused
+        case $cls in 0x06*|0x08*|0x11*) continue ;; esac
+        [ "$drv" = - ] && { nodrv=$((nodrv + 1)); log "      ^ no driver"; }
+    done
+    have lspci && lspci > "$WORK/lspci.txt" 2>&1
+    [ $nodrv -eq 0 ] && result PASS "all $n PCI devices that need one have a driver" \
+                     || result WARN "$nodrv PCI device(s) without a driver (marked above)"
+    log "  USB (vendor:product name, interface drivers):"
+    for d in /sys/bus/usb/devices/*; do
+        [ -f "$d/idVendor" ] || continue
+        drv=$(for i in "$d"/*:*; do [ -e "$i/driver" ] && basename "$(readlink "$i/driver")"; done 2>/dev/null | sort -u | tr '\n' ' ')
+        log "    $(rd "$d/idVendor"):$(rd "$d/idProduct") $(rd "$d/product") [${drv:-no driver}]"
+    done
+    log "  modules loaded: $(lsmod | tail -n +2 | wc -l)"
+    lsmod > "$WORK/lsmod.txt"
+}
+
+s_firmware() {
+    section "Firmware"
+    # which files the drivers load from now on (the install medium's kernel logs them from boot)
+    [ -w /proc/dynamic_debug/control ] && echo 'module firmware_class +p' > /proc/dynamic_debug/control 2>/dev/null
+    local m req have_n=0 miss_n=0 f loaded
+    loaded=$(grep -o 'Loaded FW: [^,]*' "$WORK/dmesg.txt" 2>/dev/null | sed 's/Loaded FW: //' | sort -u)
+    if [ -n "$loaded" ]; then
+        log "  loaded by the drivers since boot:"; printf '    %s\n' $loaded >> "$REPORT"
+    else
+        log "  (this kernel did not log loaded firmware from boot: a medium kernel built before the"
+        log "   firmware log; only missing files are reported)"
+    fi
+    for m in $(lsmod | awk 'NR > 1 { print $1 }'); do
+        req=$(modinfo -F firmware "$m" 2>/dev/null) || continue
+        [ -n "$req" ] || continue
+        local n_req n_have=0
+        n_req=$(echo "$req" | wc -l)
+        for f in $req; do [ -e "/lib/firmware/$f" ] && n_have=$((n_have + 1)); done
+        log "  $m: names $n_req file(s), $n_have of them in linux-firmware"
+        have_n=$((have_n + 1))
+    done
+    log "  firmware list of this medium: /usr/share/cig/firmware.list ($(wc -l < /usr/share/cig/firmware.list 2>/dev/null || echo 0) files)"
+    result PASS "$have_n loaded driver(s) use firmware (see above)"
+}
+
+s_graphics() {
+    section "Graphics"
+    local c n=0 conn
+    for c in /sys/class/drm/card[0-9]; do
+        [ -e "$c" ] || continue
+        n=$((n + 1))
+        log "  ${c##*/}: driver $(basename "$(readlink "$c/device/driver")" 2>/dev/null)"
+        for conn in "$c"-*; do
+            [ -e "$conn/status" ] || continue
+            log "    ${conn##*/}: $(rd "$conn/status"), $(rd "$conn/enabled"), first mode $(rd "$conn/modes")"
+        done
+    done
+    [ $n -gt 0 ] && result PASS "$n graphics device(s) with a kernel driver" || result FAIL "no DRM graphics device"
+    grep -q -E '^[^ ]+ connected' <(for c in /sys/class/drm/card*-*; do echo "${c##*/} $(rd "$c/status")"; done) \
+        && result PASS "a connected display" || result WARN "no connected display found by DRM"
+    [ -e /dev/fb0 ] && log "  framebuffer: $(rd /sys/class/graphics/fb0/name) $(rd /sys/class/graphics/fb0/virtual_size)"
+}
+
+s_storage() {
+    section "Storage (read only)"
+    local b dev size model t0 t1 mb
+    for b in /sys/block/*; do
+        dev=${b##*/}
+        case $dev in loop*|ram*|zram*|sr*|dm-*|*boot[0-9]|*rpmb) continue ;; esac
+        size=$(( $(num "$b/size") / 2048 ))
+        model=$(rd "$b/device/model"); [ "$model" = - ] && model=$(rd "$b/device/name")
+        log "  $dev: $size MiB, $model, removable $(rd "$b/removable"), rotational $(rd "$b/queue/rotational")"
+        case $dev in mmcblk*)
+            log "    eMMC: type $(rd "$b/device/type"), life time estimate $(rd "$b/device/life_time"), pre-EOL $(rd "$b/device/pre_eol_info")" ;;
+        esac
+        [ "$size" -gt 256 ] || continue
+        # read speed: 256 MiB from the start of the disk, caches dropped first; nothing is written
+        sync; echo 3 > /proc/sys/vm/drop_caches
+        t0=$(uptime_cs)
+        if dd if="/dev/$dev" of=/dev/null bs=1M count=256 2>/dev/null; then
+            t1=$(uptime_cs)
+            mb=$(( 256 * 100 / ( (t1 - t0) > 0 ? (t1 - t0) : 1 ) ))
+            result PASS "$dev reads ($mb MiB/s over 256 MiB)"
+        else
+            result FAIL "$dev: reading failed"
+        fi
+    done
+    have hdparm && for b in /sys/block/sd*; do [ -e "$b" ] && hdparm -I "/dev/${b##*/}" 2>/dev/null | grep -E 'Model|TRIM|Security' | sed 's/^/    /' >> "$REPORT"; done
+    grep -q -i -E 'I/O error|blk_update_request|mmc[0-9].*(error|timeout)' "$WORK/dmesg.txt" \
+        && result WARN "the kernel logged storage I/O errors" || result PASS "no storage I/O errors in the kernel log"
+}
+
+s_network() {
+    section "Network"
+    local i drv mac n_wifi=0
+    for i in /sys/class/net/*; do
+        i=${i##*/}
+        [ "$i" = lo ] && continue
+        drv=$(basename "$(readlink "/sys/class/net/$i/device/driver")" 2>/dev/null)
+        mac=$(rd "/sys/class/net/$i/address")
+        log "  $i: driver ${drv:--}, state $(rd "/sys/class/net/$i/operstate"), MAC $(mac_vendor "$mac")"
+        [ -d "/sys/class/net/$i/wireless" ] || [ -d "/sys/class/net/$i/phy80211" ] && n_wifi=$((n_wifi + 1))
+    done
+    local r
+    for r in /sys/class/rfkill/rfkill*; do
+        [ -e "$r" ] && log "  rfkill: $(rd "$r/type") $(rd "$r/name"): soft $(rd "$r/soft"), hard $(rd "$r/hard")"
+    done
+    if [ $n_wifi -eq 0 ]; then
+        result FAIL "no WiFi interface"
+        return
+    fi
+    result PASS "WiFi interface present"
+    # a scan through a temporary wpa_supplicant (network names are not recorded)
+    local w
+    w=$(for i in /sys/class/net/*; do [ -d "$i/wireless" ] || [ -d "$i/phy80211" ] && { echo "${i##*/}"; break; }; done)
+    if ! have wpa_supplicant || ! have wpa_cli; then
+        result SKIP "WiFi scan: wpa_supplicant not on this medium"
+        return
+    fi
+    have rfkill && rfkill unblock wifi 2>/dev/null
+    ip link set "$w" up 2>/dev/null
+    printf 'ctrl_interface=/run/cig-check-wpa\n' > "$WORK/wpa.conf"
+    wpa_supplicant -B -i "$w" -c "$WORK/wpa.conf" -P "$WORK/wpa.pid" >/dev/null 2>&1
+    sleep 2
+    wpa_cli -p /run/cig-check-wpa -i "$w" scan >/dev/null 2>&1
+    sleep 8
+    local res cnt best
+    res=$(wpa_cli -p /run/cig-check-wpa -i "$w" scan_results 2>/dev/null | tail -n +2)
+    cnt=$(printf '%s\n' "$res" | grep -c . || true)
+    best=$(printf '%s\n' "$res" | awk 'NF { print $3 }' | sort -n | tail -n1)
+    log "  scan: $cnt network(s), strongest ${best:--} dBm; bands seen: $(printf '%s\n' "$res" | awk 'NF { print ($2 > 4000 ? "5/6 GHz" : "2.4 GHz") }' | sort -u | tr '\n' ' ')"
+    [ "${cnt:-0}" -gt 0 ] && result PASS "WiFi scan finds $cnt network(s)" || result FAIL "WiFi scan finds no network"
+    if ask "Connect to a WiFi network now to test the connection (DHCP, DNS, HTTPS)?"; then
+        local ssid psk
+        printf 'Network name (SSID): '; read -r ssid < /dev/tty
+        printf 'Password: '; stty -echo < /dev/tty; read -r psk < /dev/tty; stty echo < /dev/tty; echo
+        local id
+        id=$(wpa_cli -p /run/cig-check-wpa -i "$w" add_network | tail -n1)
+        wpa_cli -p /run/cig-check-wpa -i "$w" set_network "$id" ssid "\"$ssid\"" >/dev/null
+        wpa_cli -p /run/cig-check-wpa -i "$w" set_network "$id" psk "\"$psk\"" >/dev/null
+        psk=
+        wpa_cli -p /run/cig-check-wpa -i "$w" enable_network "$id" >/dev/null
+        local k=0
+        while [ $k -lt 20 ] && ! wpa_cli -p /run/cig-check-wpa -i "$w" status 2>/dev/null | grep -q 'wpa_state=COMPLETED'; do sleep 1; k=$((k + 1)); done
+        if wpa_cli -p /run/cig-check-wpa -i "$w" status 2>/dev/null | grep -q 'wpa_state=COMPLETED'; then
+            result PASS "WiFi association ($(wpa_cli -p /run/cig-check-wpa -i "$w" status | sed -n 's/^key_mgmt=//p'), $(wpa_cli -p /run/cig-check-wpa -i "$w" status | sed -n 's/^freq=//p') MHz)"
+            if udhcpc -i "$w" -n -q -t 5 >/dev/null 2>&1; then
+                result PASS "DHCP address"
+                if have curl && curl -fsS -o /dev/null --max-time 15 https://www.kernel.org/; then
+                    result PASS "DNS and HTTPS (www.kernel.org)"
+                else
+                    result FAIL "DNS or HTTPS (www.kernel.org) failed"
+                fi
+            else
+                result FAIL "no DHCP address"
+            fi
+        else
+            result FAIL "WiFi association failed (wrong password?)"
+        fi
+    fi
+    [ -f "$WORK/wpa.pid" ] && kill "$(cat "$WORK/wpa.pid")" 2>/dev/null
+    rm -f "$WORK/wpa.conf"
+}
+
+s_bluetooth() {
+    section "Bluetooth"
+    local h n=0
+    for h in /sys/class/bluetooth/hci*; do
+        [ -e "$h" ] || continue
+        n=$((n + 1))
+        log "  ${h##*/}: driver $(basename "$(readlink "$h/device/driver")" 2>/dev/null)"
+    done
+    [ $n -gt 0 ] && result PASS "$n Bluetooth controller(s)" || result WARN "no Bluetooth controller"
+    grep -i -E 'bluetooth: hci[0-9].*(fail|error|timeout)' "$WORK/dmesg.txt" | head -n 5 | sed 's/^/    /' >> "$REPORT"
+}
+
+s_sound() {
+    section "Sound"
+    if [ ! -e /proc/asound/cards ] || ! grep -q '^ *[0-9]' /proc/asound/cards; then
+        result FAIL "no sound card"
+        return
+    fi
+    sed 's/^/  /' /proc/asound/cards >> "$REPORT"
+    local c
+    for c in /proc/asound/card*/codec#*; do [ -e "$c" ] && log "  ${c#/proc/asound/}: $(head -n1 "$c")"; done
+    result PASS "$(grep -c '^ *[0-9]' /proc/asound/cards) sound card(s)"
+    if ! have speaker-test; then
+        result SKIP "sound output: alsa-utils not on this medium"
+        return
+    fi
+    have amixer && amixer -q sset Master 70% unmute 2>/dev/null; have amixer && amixer -q sset Speaker 70% unmute 2>/dev/null
+    if ask "Play a test tone on the speakers (about 4 seconds)?"; then
+        speaker-test -t sine -f 440 -c 2 -l 1 >/dev/null 2>&1 &
+        local p=$!; sleep 4; kill $p 2>/dev/null; wait $p 2>/dev/null
+        ask "Did you hear the tone from both speakers?" && result PASS "speakers (heard)" || result FAIL "speakers: no tone heard"
+    fi
+    if have arecord && have aplay && ask "Test the microphone: speak for 4 seconds after Enter, then it plays back?"; then
+        arecord -q -d 4 -f cd "$WORK/mic.wav" 2>/dev/null && aplay -q "$WORK/mic.wav" 2>/dev/null
+        rm -f "$WORK/mic.wav"
+        ask "Did you hear your voice played back?" && result PASS "microphone (heard)" || result FAIL "microphone: no playback heard"
+    fi
+}
+
+s_input() {
+    section "Input"
+    local names
+    names=$(sed -n 's/^N: Name="\(.*\)"/\1/p' /proc/bus/input/devices)
+    printf '%s\n' "$names" | sed 's/^/  /' >> "$REPORT"
+    printf '%s\n' "$names" | grep -q -i -E 'touchpad|synaptics|glidepoint|(^|[^a-z])(tpad|elan|alps)([^a-z]|$)' \
+        && result PASS "a touchpad" || result WARN "no device named like a touchpad"
+    printf '%s\n' "$names" | grep -q -i 'keyboard' && result PASS "a keyboard" || result WARN "no keyboard device"
+    printf '%s\n' "$names" | grep -q -i 'lid switch' && result PASS "a lid switch" || result WARN "no lid switch"
+    # the touchpad actually reports movement: count its events for a few seconds
+    local ev
+    ev=$(awk '/^N: Name=/ { n = tolower($0) } /^H: Handlers=/ { if (n ~ /touchpad|synaptics|glidepoint|(^|[^a-z])(tpad|elan|alps)([^a-z]|$)/) { for (i = 1; i <= NF; i++) if ($i ~ /^event/) print $i } }' /proc/bus/input/devices | head -n1)
+    if [ -n "$ev" ] && have python3 && ask "Touchpad test: answer y, then move a finger on the touchpad for 5 seconds"; then
+        local cnt
+        cnt=$(python3 -I -c '
+import os, select, sys, time
+fd = os.open(sys.argv[1], os.O_RDONLY | os.O_NONBLOCK); n = 0; end = time.time() + 5
+while time.time() < end:
+    if select.select([fd], [], [], 0.2)[0]:
+        n += len(os.read(fd, 4096)) // 24
+print(n)' "/dev/input/$ev" 2>/dev/null)
+        [ "${cnt:-0}" -gt 20 ] && result PASS "touchpad reports movement ($cnt events)" || result FAIL "touchpad: no movement seen (${cnt:-0} events)"
+    fi
+}
+
+s_backlight() {
+    section "Backlight"
+    local b
+    b=$(ls -d /sys/class/backlight/* 2>/dev/null | head -n1)
+    if [ -z "$b" ]; then
+        result WARN "no backlight control (an external screen, or a missing driver)"
+        return
+    fi
+    local max cur
+    max=$(num "$b/max_brightness"); cur=$(num "$b/brightness")
+    log "  ${b##*/}: $cur of $max ($(rd "$b/type"))"
+    result PASS "backlight control ${b##*/}"
+    if ask "Backlight test: the screen dims for 3 seconds, then comes back. Go?"; then
+        echo $(( max / 10 > 0 ? max / 10 : 1 )) > "$b/brightness" 2>/dev/null
+        sleep 3
+        echo "$cur" > "$b/brightness" 2>/dev/null
+        ask "Did the screen dim and come back?" && result PASS "backlight changes (seen)" || result FAIL "backlight did not change"
+    fi
+}
+
+s_power() {
+    section "Power"
+    local p n=0
+    for p in /sys/class/power_supply/*; do
+        [ -e "$p" ] || continue
+        case $(rd "$p/type") in
+            Battery)
+                n=$((n + 1))
+                local full design
+                full=$(num "$p/energy_full"); [ "$full" -gt 0 ] || full=$(num "$p/charge_full")
+                design=$(num "$p/energy_full_design"); [ "$design" -gt 0 ] || design=$(num "$p/charge_full_design")
+                log "  ${p##*/}: $(rd "$p/status"), $(rd "$p/capacity")%, cycles $(rd "$p/cycle_count"), technology $(rd "$p/technology")"
+                if [ "$full" -gt 0 ] && [ "$design" -gt 0 ]; then
+                    log "    health: $(( full * 100 / design ))% of its design capacity"
+                fi
+                result PASS "battery ${p##*/} readable" ;;
+            Mains) log "  ${p##*/} (AC): online $(rd "$p/online")" ;;
+        esac
+    done
+    [ $n -gt 0 ] || result WARN "no battery found"
+    log "  CPU frequency: driver $(rd /sys/devices/system/cpu/cpu0/cpufreq/scaling_driver), governor $(rd /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor), $(( $(num /sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_min_freq) / 1000 ))-$(( $(num /sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq) / 1000 )) MHz"
+    local z
+    for z in /sys/class/thermal/thermal_zone*; do [ -e "$z" ] && log "  thermal ${z##*/} $(rd "$z/type"): $(( $(num "$z/temp") / 1000 )) C"; done
+    log "  sleep states: $(rd /sys/power/state); mem_sleep: $(rd /sys/power/mem_sleep)"
+}
+
+max_temp() {   # the hottest thermal zone now, in C
+    local z t m=0
+    for z in /sys/class/thermal/thermal_zone*/temp; do
+        t=$(num "$z")
+        [ "$t" -gt "$m" ] && m=$t
+    done
+    echo $(( m / 1000 ))
+}
+
+s_stress() {
+    section "Stress tests"
+    if [ $QUICK -eq 1 ]; then result SKIP "stress tests (--quick)"; return; fi
+    # CPU: every thread hashes zeroes for 60 s; temperature and clock every 5 s
+    local n i pids= t0 hot=0 t fmin=999999 f
+    n=$(nproc)
+    say "  CPU stress: $n threads for 60 s (the fans may get loud)"
+    t0=$(max_temp)
+    local lines0
+    lines0=$(dmesg | wc -l)
+    for i in $(seq "$n"); do sha256sum /dev/zero >/dev/null 2>&1 & pids="$pids $!"; done
+    for i in $(seq 12); do
+        sleep 5
+        t=$(max_temp); [ "$t" -gt "$hot" ] && hot=$t
+        f=$(( $(num /sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq) / 1000 ))
+        [ "$f" -gt 0 ] && [ "$f" -lt "$fmin" ] && fmin=$f
+        log "    ${i}x5 s: $t C, cpu0 $f MHz"
+    done
+    kill $pids 2>/dev/null; wait $pids 2>/dev/null
+    if ls /sys/class/thermal/thermal_zone*/temp >/dev/null 2>&1; then
+        log "  temperature: $t0 C idle -> $hot C hottest"
+        if [ "$hot" -ge 95 ]; then result WARN "CPU reached $hot C under load"; else result PASS "CPU load for 60 s, hottest $hot C"; fi
+    else
+        result PASS "CPU load for 60 s (no temperature sensor)"
+    fi
+    # only what the kernel said during the test: throttling or overheating
+    dmesg | tail -n +"$((lines0 + 1))" | grep -i -E 'throttl|critical temperature|temperature above threshold|thermal.*(shutdown|trip)' \
+        > "$WORK/dmesg-stress.txt"
+    [ -s "$WORK/dmesg-stress.txt" ] && result WARN "the kernel reported throttling or overheating under load (dmesg-stress.txt)"
+    # memory: half of what is free, written with a pattern and read back
+    if have python3; then
+        local mib
+        mib=$(awk '/MemAvailable/ { printf "%d", $2 / 1024 / 2 }' /proc/meminfo)
+        [ "$mib" -gt 2048 ] && mib=2048
+        say "  memory test: $mib MiB, three patterns"
+        if python3 -I -c '
+import sys
+n = int(sys.argv[1]) << 20
+b = bytearray(n)
+for pat in (b"\x55\xaa" * 32, b"\xff\x00" * 32, bytes(range(64))):
+    blk = pat * (1 << 14)
+    for o in range(0, n, len(blk)):
+        b[o:o + len(blk)] = blk[: n - o]
+    for o in range(0, n, len(blk)):
+        if b[o:o + len(blk)] != blk[: n - o]:
+            sys.exit(1)
+' "$mib"; then
+            result PASS "memory pattern test ($mib MiB)"
+        else
+            result FAIL "memory pattern test found differences ($mib MiB)"
+        fi
+    fi
+}
+
+s_suspend() {
+    section "Suspend and resume"
+    if [ $QUICK -eq 1 ]; then result SKIP "suspend test (--quick)"; return; fi
+    grep -qw mem /sys/power/state 2>/dev/null || { result FAIL "the kernel offers no suspend to RAM"; return; }
+    have rtcwake || { result SKIP "suspend test: no rtcwake"; return; }
+    if ! ask "Suspend test: the machine sleeps for 20 seconds and wakes up by itself. Go?"; then
+        result SKIP "suspend test (not chosen)"
+        return
+    fi
+    local before after t0
+    before=$(dmesg | wc -l); t0=$(date +%s)
+    rtcwake -m mem -s 20 >/dev/null 2>&1
+    after=$(date +%s)
+    log "  slept and woke after $(( after - t0 )) s (wall clock)"
+    dmesg | tail -n +"$before" > "$WORK/dmesg-suspend.txt"
+    if grep -q -E 'PM: suspend exit|ACPI: PM: Waking up|PM: resume' "$WORK/dmesg-suspend.txt"; then
+        result PASS "suspend to RAM and resume ($(rd /sys/power/mem_sleep))"
+    else
+        result FAIL "no resume seen in the kernel log (see dmesg-suspend.txt)"
+    fi
+    grep -i -E 'error|fail' "$WORK/dmesg-suspend.txt" | head -n 10 | sed 's/^/    /' >> "$REPORT"
+    ask "Do the screen, keyboard and touchpad still work?" && result PASS "devices work after resume" || result FAIL "devices broken after resume"
+}
+
+# ---------------- run ----------------
+[ $QUICK -eq 1 ] && how="a few minutes, quick" || how="about 5 minutes"
+cat <<EOF
+cig-check: checking this machine ($how). Questions come up for
+the tests that need you (sound, touchpad, backlight, suspend); --no-ask skips them.
+Nothing is written to this machine's disks.
+EOF
+# one per line: a section that fails cannot skip the ones after it
+for s in s_system s_kernel_log s_devices s_firmware s_graphics s_storage s_network \
+         s_bluetooth s_sound s_input s_backlight s_power s_stress s_suspend; do
+    "$s"
+done
+
+section "Summary"
+say "  pass $NPASS, warn $NWARN, fail $NFAIL, skipped $NSKIP"
+[ -n "$SUMMARY" ] && say "$SUMMARY"
+dmesg > "$WORK/dmesg-end.txt" 2>/dev/null
+
+# ---------------- where the report goes ----------------
+dest=$OUT loopdev=
+if [ -z "$dest" ]; then
+    dev=$(findfs LABEL=CIG-DATA 2>/dev/null || true)
+    if [ -n "$dev" ]; then
+        mkdir -p /mnt/cig-data
+        mountpoint -q /mnt/cig-data || mount -t vfat "$dev" /mnt/cig-data 2>/dev/null
+        if ! mountpoint -q /mnt/cig-data; then
+            # the live system holds the whole stick (the ISO is mounted from it), so its
+            # partition cannot be opened on its own: a loop device at the partition's offset
+            # (the FAT area lies after the ISO data)
+            part=${dev##*/}
+            disk=$(basename "$(dirname "$(readlink -f "/sys/class/block/$part")")")
+            modprobe loop 2>/dev/null
+            loopdev=$(losetup -f 2>/dev/null)
+            if [ -n "$loopdev" ] && [ -b "/dev/$disk" ] &&
+               losetup -o $(( $(num "/sys/class/block/$part/start") * 512 )) "$loopdev" "/dev/$disk" 2>/dev/null; then
+                mount -t vfat "$loopdev" /mnt/cig-data 2>/dev/null || { losetup -d "$loopdev"; loopdev=; }
+            else
+                loopdev=
+            fi
+        fi
+        mountpoint -q /mnt/cig-data && dest=/mnt/cig-data
+    fi
+fi
+tar -C /root -czf "/root/cig-check-$STAMP.tar.gz" "cig-check-$STAMP" 2>/dev/null
+if [ -n "$dest" ] && cp "/root/cig-check-$STAMP.tar.gz" "$REPORT" "$dest/" 2>/dev/null; then
+    mv "$dest/report.log" "$dest/cig-check-$STAMP.log" 2>/dev/null
+    sync
+    [ "$dest" = /mnt/cig-data ] && umount /mnt/cig-data 2>/dev/null
+    [ -z "$loopdev" ] || losetup -d "$loopdev" 2>/dev/null
+    echo
+    echo "Report saved on the medium's CIG-DATA partition (or $dest):"
+    echo "  cig-check-$STAMP.log       (the report)"
+    echo "  cig-check-$STAMP.tar.gz    (report, dmesg, lspci, lsmod)"
+    echo "Power off (poweroff), then read it on another computer."
+else
+    echo
+    echo "No writable CIG-DATA partition (a CD, or the medium written another way)."
+    echo "The report is in /root/cig-check-$STAMP/ and /root/cig-check-$STAMP.tar.gz;"
+    echo "copy it to a USB stick: mount /dev/sdX1 /mnt && cp /root/cig-check-$STAMP.tar.gz /mnt/"
+fi
