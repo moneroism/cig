@@ -21,6 +21,7 @@ struct state {
 	bool layout_ok;
 	bool sep_home;
 	unsigned root_g, swap_g;  /* auto layout */
+	bool root_given;          /* root_size in an answers file: never shrunk to fit */
 
 	char host[64], user[33];
 	char userpass[256], rootpass[256];

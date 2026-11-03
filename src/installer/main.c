@@ -452,7 +452,8 @@ static void preflight(struct state *s)
 /* every answer the menus would ask, as "key = value" lines (# starts a comment line):
  *   disk = sda            required; ERASED (auto layout)
  *   erase = sda           required: the same disk again, so a wrong file can't erase another
- *   home = yes            separate /home (default yes); root_size = 40 (G, with home)
+ *   home = yes            separate /home (default yes); root_size = 40 (G, with home; default
+ *                         40, or half the disk when 40 leaves no room for /home, as the menu)
  *   swap = 0              G
  *   hostname = cig
  *   user = name           required; password = ... (required); root_password = ... (none: locked)
@@ -524,6 +525,7 @@ static void read_answers(struct state *s, const char *path)
 			if (!*v || *end || g > 1u << 20)
 				bad_answer(path, ln, "a size in G");
 			*(!strcmp(k, "swap") ? &s->swap_g : &s->root_g) = (unsigned)g;
+			s->root_given |= !strcmp(k, "root_size");
 		} else if (!strcmp(k, "hostname")) {
 			if (!valid_name(v, false))
 				bad_answer(path, ln, "a hostname is letters, digits and dashes, not starting with a dash");

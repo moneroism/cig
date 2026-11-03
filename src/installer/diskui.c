@@ -275,6 +275,13 @@ static bool editor(struct state *s)
 	}
 }
 
+/* the system partition's size to suggest: root_g, or half the disk (at least 20G) when root_g
+ * leaves nothing for /home (the default 40G on a 40G disk) */
+static unsigned root_fit(unsigned root_g, unsigned long long size_g)
+{
+	return root_g < size_g ? root_g : (unsigned)(size_g / 2 > 20 ? size_g / 2 : 20);
+}
+
 static bool auto_layout(struct state *s)
 {
 	char buf[16];
@@ -285,9 +292,7 @@ static bool auto_layout(struct state *s)
 		s->sep_home = false;
 	}
 	if (s->sep_home) {
-		/* the suggestion must fit: the default 40G on a 40G disk left nothing for /home */
-		unsigned sugg = s->root_g < size_g ? s->root_g : (unsigned)(size_g / 2 > 20 ? size_g / 2 : 20);
-		snprintf(buf, sizeof(buf), "%u", sugg);
+		snprintf(buf, sizeof(buf), "%u", root_fit(s->root_g, size_g));
 		char *q = xasprintf("Size of the system partition in G (rest goes to /home), 20 to %llu:", size_g - 1);
 		bool ok = ui_input("Auto layout", q, buf, sizeof(buf), false);
 		free(q);
@@ -325,6 +330,8 @@ char *disk_auto(struct state *s)
 	unsigned long long size_g = sectors_of(s->disk) * sect_of(s->disk) >> 30;
 	if (!size_g)
 		return xasprintf("no disk /dev/%s", s->disk);
+	if (s->sep_home && !s->root_given)
+		s->root_g = root_fit(s->root_g, size_g);
 	if (s->sep_home && (s->root_g < 20 || s->root_g >= size_g))
 		return xasprintf("/dev/%s has %lluG: the system partition needs 20G or more and must leave room for "
 		                 "/home (home = no for one partition)", s->disk, size_g);
