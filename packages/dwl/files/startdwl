@@ -4,4 +4,12 @@
 [ -d "$XDG_RUNTIME_DIR" ] || { echo "no $XDG_RUNTIME_DIR - reboot once so rc.init creates it"; exit 1; }
 export LIBSEAT_BACKEND=seatd
 export WLR_RENDERER=pixman
-exec dwl "$@" 2> "$XDG_RUNTIME_DIR/dwl.log"
+# sound for the session when PipeWire is installed; it stops with dwl
+pw=
+if command -v pipewire-launcher >/dev/null; then
+    pipewire-launcher & pw=$!
+fi
+dwl "$@" 2> "$XDG_RUNTIME_DIR/dwl.log"
+status=$?
+[ -z "$pw" ] || kill "$pw" 2>/dev/null
+exit $status

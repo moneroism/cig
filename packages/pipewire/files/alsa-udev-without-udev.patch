@@ -1,0 +1,25 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 moneroism
+# cig has no udev: PipeWire's ALSA monitor finds sound cards through libudev-zero.
+--- a/spa/plugins/alsa/alsa-udev.c
++++ b/spa/plugins/alsa/alsa-udev.c
+@@ -165,15 +165,16 @@
+ 	if ((str = udev_device_get_property_value(udev_device, "SOUND_CLASS")) && spa_streq(str, "modem"))
+ 		return SPA_ID_INVALID;
+ 
+-	if (udev_device_get_property_value(udev_device, "SOUND_INITIALIZED") == NULL)
+-		return SPA_ID_INVALID;
+-
+ 	if ((str = udev_device_get_property_value(udev_device, "DEVPATH")) == NULL)
+ 		return SPA_ID_INVALID;
+ 
+ 	if ((e = strrchr(str, '/')) == NULL)
+ 		return SPA_ID_INVALID;
+ 
++	/* libudev-zero lists only devices with a node: a card is found by its control device */
++	if (strncmp(e, "/controlC", 9) == 0 && e[9] >= '0' && e[9] <= '9')
++		return atoi(e + 9);
++
+ 	if (strlen(e) <= 5 || strncmp(e, "/card", 5) != 0)
+ 		return SPA_ID_INVALID;
+ 

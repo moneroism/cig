@@ -3,7 +3,7 @@
 # (Arch AUR package for 0.9).
 name=dwl
 version=0.9
-rel=2
+rel=3
 license="GPL-3.0-or-later AND MIT AND CC0-1.0"
 source="https://codeberg.org/dwl/dwl/releases/download/v$version/dwl-v$version.tar.gz"
 sha256="51ed5da49942ca3272b6f2c4f1d7641b0b947a6eb1c264dce8a65b4d245596af"

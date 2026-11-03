@@ -1,0 +1,42 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 moneroism
+#
+# pipewire-launcher - PipeWire, its session manager (WirePlumber) and its PulseAudio server for
+# one desktop session. cig has no systemd user units, which upstream uses to start them:
+# startdwl, sway (/etc/sway/config.d/pipewire.conf) and labwc (/etc/xdg/labwc/autostart) call
+# this instead. Does nothing when PipeWire already runs for this user. The three stop when the
+# launcher gets TERM (startdwl, at the end of the session) or when the session's Wayland socket
+# is gone (sway, labwc). Their output: $XDG_RUNTIME_DIR/pipewire.log
+[ -n "${XDG_RUNTIME_DIR:-}" ] || { echo "pipewire-launcher: XDG_RUNTIME_DIR is not set" >&2; exit 1; }
+# a running PipeWire holds its lock file
+lock=$XDG_RUNTIME_DIR/pipewire-0.lock
+if [ -e "$lock" ] && ! flock -n "$lock" true; then exit 0; fi
+exec >"$XDG_RUNTIME_DIR/pipewire.log" 2>&1
+
+pids=
+stop() {
+    [ -z "$pids" ] || kill $pids 2>/dev/null
+    exit 0
+}
+trap stop INT TERM HUP
+
+pipewire & pids=$!
+# the session manager and the PulseAudio server connect to PipeWire: wait for its socket
+i=0
+while [ ! -S "$XDG_RUNTIME_DIR/pipewire-0" ] && [ $i -lt 50 ]; do
+    sleep 0.1; i=$((i + 1))
+done
+wireplumber & pids="$pids $!"
+pipewire-pulse & pids="$pids $!"
+
+if [ -n "${WAYLAND_DISPLAY:-}" ]; then
+    case $WAYLAND_DISPLAY in
+        /*) sock=$WAYLAND_DISPLAY ;;
+        *)  sock=$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY ;;
+    esac
+    # sleep in the background and wait for it, so a TERM is handled at once
+    while [ -S "$sock" ]; do sleep 5 & wait $!; done
+    stop
+fi
+wait

@@ -47,6 +47,7 @@ machine.
 | TLS | OpenSSL 3.5 LTS |
 | Desktop | Wayland: dwl, foot (sway, labwc optional); CPU rendering (pixman) for now. No X11. |
 | D-Bus | only with optional Bluetooth (BlueZ, off by default); its service runs only then |
+| Sound | ALSA; PipeWire optional (off by default): WirePlumber, PulseAudio and ALSA compatibility, started per desktop session by `pipewire-launcher` (no systemd user units, no D-Bus); with it installed, ALSA programs play through PipeWire, so they need a running session |
 | Time | chrony with NTS (authenticated) to Netnod and PTB; Cloudflare only if neither answers within 60 s. Optional: off, no time server sees the machine |
 
 ### Hardening
@@ -310,7 +311,7 @@ See [`ROADMAP.md`](ROADMAP.md). In short:
 - [x] Phase 1 – smoke: symlink farm, inventory with install reasons, autoremove, audit
 - [x] Phase 2 – Installer (shell TUI), tested in QEMU (0.2.0)
 - [ ] Phase 3 – Install media (ISO), first bare-metal install, basic usability (ALSA, clipboard, screenshots, DNS);
-  the medium, clipboard and screenshots are done
+  all done and VM-tested except the bare-metal install, which waits for a browser (Phase 6)
 - [ ] 0.3.x – GPU acceleration: Mesa without LLVM (RADV + Zink); built, not yet tested on an AMD GPU
 - [ ] Phase 4 – Optional components (PipeWire, Bluetooth, wmenu), UEFI boot entries, libre-meter
 - [ ] Phase 5 – Security layers (allowlisting), read-only root, own kernel base config

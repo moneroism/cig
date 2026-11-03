@@ -182,6 +182,10 @@ Work:
 installed system with dwl uses ≤ 100 MB RAM after boot (measured with `free -m`); the bugs
 found are the input for 0.3.x.
 
+Status (2026-11-03): every VM test of the ISO passes (CD, USB disk, compiled and generic
+kernel installs). The laptop install waits for a web browser (Phase 6): without one a test on
+real hardware says too little. Phase 4 and later work goes on meanwhile, tested in QEMU.
+
 ### 0.3.x – GPU acceleration (after the first bare-metal install)
 
 Mesa **without LLVM**: RADV (Vulkan, ACO shader compiler) for AMD, Zink for OpenGL on
@@ -208,7 +212,8 @@ is detected, and everything else renders with pixman. Not yet tested on the RX57
   component list marks packages whose upstream signs nothing (done 2026-10-16)
 
 - components as recipes, offered in the installer:
-  PipeWire (optional), Bluetooth = BlueZ + D-Bus (optional, off by default: done
+  PipeWire (optional, off by default: done 2026-11-03, with WirePlumber and its PulseAudio
+  server, no D-Bus; Bluetooth audio still to come), Bluetooth = BlueZ + D-Bus (optional, off by default: done
   2026-10-16), network time = chrony with NTS (on by default: done 2026-10-16),
   wmenu (default on, uncheckable); ALSA moves to Phase 3
 - ~~UEFI boot entries instead of only the fallback path~~ (done 2026-10-07: the installer writes

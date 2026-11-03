@@ -1,0 +1,76 @@
+# pipewire - sound server: several programs play at once, with per-program volume; also serves
+# programs written for PulseAudio (pipewire-pulse) and ALSA (pipewire-alsa). Its session
+# manager, WirePlumber, is built in the same package (upstream's session-managers subproject),
+# with Lua linked in statically.
+# Release tags are lightweight and the tarballs unsigned: pinned by SHA256 (flagged in
+# docs/sources.md). Both tarballs hold exactly their tag's tree, whose git archive matches the
+# BLAKE2 sums in Arch's PKGBUILDs for the same releases (checked 2026-11-03).
+name=pipewire
+version=1.6.11
+_wpver=0.5.19
+license="MIT AND LGPL-2.1-or-later"
+source="pipewire-$version.tar.gz::https://gitlab.freedesktop.org/pipewire/pipewire/-/archive/$version/pipewire-$version.tar.gz
+    wireplumber-$_wpver.tar.gz::https://gitlab.freedesktop.org/pipewire/wireplumber/-/archive/$_wpver/wireplumber-$_wpver.tar.gz"
+sha256="f3f70c4af173cc93d05070a9d412efe3ef5889bdf4ac32298e2c0d9ae1350559 f9454eae3a5a6ca903c05ead2a7e47d7d3957fb0ffac3ebb11d92842603ae80f"
+depends="alsa-lib glib libudev-zero ncurses"
+makedepends="meson pkgconf lua"
+style=meson
+wrksrc="pipewire-$version"
+group="sound"
+# No D-Bus (cig has no session bus: no Bluetooth audio, device reservation or portals yet), no
+# systemd/logind, JACK, video (V4L2, libcamera), network audio (RAOP, ROC, AVB, Avahi), X11,
+# GStreamer, FFmpeg, libsndfile (so no pw-cat/pw-play), PAM limits or rtkit; tests and docs off.
+# ncurses: pw-top.
+meson_args="-Ddocs=disabled -Dman=disabled -Dexamples=disabled -Dtests=disabled -Dinstalled_tests=disabled
+    -Dgstreamer=disabled -Dgstreamer-device-provider=disabled -Dlibsystemd=disabled -Dlogind=disabled
+    -Dsystemd-system-service=disabled -Dsystemd-user-service=disabled -Dselinux=disabled
+    -Dpipewire-alsa=enabled -Dpipewire-jack=disabled -Dpipewire-v4l2=disabled -Djack-devel=false
+    -Dspa-plugins=enabled -Dalsa=enabled -Daudiomixer=enabled -Daudioconvert=enabled -Dcontrol=enabled
+    -Dsupport=enabled -Dvolume=enabled -Daudiotestsrc=disabled -Dvideotestsrc=disabled
+    -Dvideoconvert=disabled -Dbluez5=disabled -Dffmpeg=disabled -Dpw-cat-ffmpeg=disabled -Djack=disabled
+    -Devl=disabled -Dtest=disabled -Dv4l2=disabled -Ddbus=disabled -Dlibcamera=disabled -Dvulkan=disabled
+    -Dpw-cat=disabled -Dudev=enabled -Dsdl2=disabled -Dsndfile=disabled -Dlibmysofa=disabled
+    -Dlibpulse=disabled -Droc=disabled -Davahi=disabled -Decho-cancel-webrtc=disabled -Dlibusb=disabled
+    -Dsession-managers=wireplumber -Draop=disabled -Dlv2=disabled -Dx11=disabled -Dx11-xfixes=disabled
+    -Dlibcanberra=disabled -Dlegacy-rtkit=false -Davb=disabled -Dflatpak=disabled -Dreadline=disabled
+    -Dgsettings=disabled -Dgsettings-pulse-schema=disabled -Dcompress-offload=disabled
+    -Dpam-defaults-install=false -Drlimits-install=false -Dopus=disabled -Dlibffado=disabled
+    -Dsnap=disabled -Debur128=disabled -Dfftw=disabled -Donnxruntime=disabled
+    -Dwireplumber:system-lua=true -Dwireplumber:introspection=disabled -Dwireplumber:doc=disabled
+    -Dwireplumber:tests=false -Dwireplumber:dbus-tests=false -Dwireplumber:elogind=disabled
+    -Dwireplumber:systemd=disabled -Dwireplumber:systemd-system-service=false
+    -Dwireplumber:systemd-user-service=false"
+config_files="etc/sway/config.d/pipewire.conf etc/alsa/conf.d/50-pipewire.conf etc/alsa/conf.d/99-pipewire-default.conf"
+
+# WirePlumber as the subproject upstream's wireplumber.wrap names (an existing folder is used
+# as it is: nothing is downloaded)
+pre_build() {
+    rm -rf subprojects/wireplumber
+    mv "$WORK/src/wireplumber-$_wpver" subprojects/wireplumber
+    # conf.pot is a template for translators (never installed); its rule runs PipeWire's
+    # spa-json-dump-native without depending on it, so as a subproject it can run before the
+    # tool is built ("No such file or directory"): not built by default
+    sed -i 's/build_by_default : true/build_by_default : false/' subprojects/wireplumber/po/meson.build
+    grep -q 'build_by_default : false' subprojects/wireplumber/po/meson.build \
+        || die "pipewire: wireplumber's po/meson.build changed: check the conf.pot rule"
+    # sound cards without udev (files/alsa-udev-without-udev.patch): the ALSA monitor took a
+    # card only once udev's rules set SOUND_INITIALIZED, and only by its cardN device, which has
+    # no device node and so is never listed by libudev-zero. Now a card is also found by its
+    # controlCN device, and the udev-rule property is not required: without the patch PipeWire
+    # sees no sound card on cig (VM, 2026-11-03)
+    patch -p1 < "$PKGDIR/files/alsa-udev-without-udev.patch"
+}
+
+do_install() {
+    style_install
+    install -D -m 755 "$PKGDIR/files/pipewire-launcher" "$DEST/usr/bin/pipewire-launcher"
+    # ALSA programs play through PipeWire: alsa-lib reads /etc/alsa/conf.d, not the folder
+    # upstream installs these to (as other distributions do; delete them to undo)
+    mkdir -p "$DEST/etc/alsa/conf.d"
+    cp "$DEST/usr/share/alsa/alsa.conf.d/50-pipewire.conf" "$DEST/usr/share/alsa/alsa.conf.d/99-pipewire-default.conf" \
+        "$DEST/etc/alsa/conf.d/"
+    # sway's default config includes /etc/sway/config.d/*
+    mkdir -p "$DEST/etc/sway/config.d"
+    printf '%s\n' '# PipeWire for this session (from the pipewire package)' \
+        'exec pipewire-launcher' > "$DEST/etc/sway/config.d/pipewire.conf"
+}

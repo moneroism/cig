@@ -3,6 +3,7 @@
 # the SHA-512 of Alpine's aports (community/labwc) for the same release.
 name=labwc
 version=0.20.2
+rel=2
 license="GPL-2.0-only"
 source="labwc-$version.tar.gz::https://github.com/labwc/labwc/archive/refs/tags/$version.tar.gz"
 sha256="fae023b6fe022f7057556707a17cdb2d98e0138c5dffaedaa1dade975699f9e8"
@@ -14,6 +15,18 @@ group="desktop"
 # systemd session files, no translations; the man pages need scdoc
 meson_args="-Dxwayland=disabled -Dsvg=disabled -Dicon=disabled -Dsystemd-session=disabled
     -Dnls=disabled -Dman-pages=disabled"
+
+config_files="etc/xdg/labwc/autostart"
+
+# a system autostart (labwc reads /etc/xdg/labwc when ~/.config/labwc has no such file): sound
+# for the session when PipeWire is installed
+do_install() {
+    style_install
+    mkdir -p "$DEST/etc/xdg/labwc"
+    printf '%s\n' '# Run when labwc starts. Your own ~/.config/labwc/autostart is used instead of this file.' \
+        '# PipeWire for this session, if it is installed' \
+        'command -v pipewire-launcher >/dev/null && pipewire-launcher &' > "$DEST/etc/xdg/labwc/autostart"
+}
 
 post_install() {
     # the seat daemon it needs (/etc/sv/seatd, from cig-base), as dwl and sway do

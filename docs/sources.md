@@ -44,7 +44,7 @@ on first download (trust on first use), and `smoke add` warns about it on every 
 | libxml2 | GNOME does not sign tarballs; its sha256sum file is on the same host (the pin matches it) | signed git tags with an independently published key |
 | glib | GNOME's release tarball is not the signed tag's tree (it bundles subprojects); GNOME does not sign tarballs | build from the signed tag with its subprojects pinned |
 | pango, fontconfig, tllist, wmenu, seatd, pkgconf, perl | tags are signed, but the keys are not on public keyservers (or the signatures are SSH, which is not checked yet) | find the keys on an independent source; SSH tag signatures |
-| json-c, libxkbcommon, tmux, libffi, samurai, vulkan-headers, labwc | tags unsigned (labwc: matches Alpine's SHA-512) (vulkan-headers: annotated but not verifiable), releases unsigned | none upstream |
+| json-c, libxkbcommon, tmux, libffi, samurai, vulkan-headers, labwc, pipewire (+ wireplumber) | tags unsigned (labwc: matches Alpine's SHA-512; pipewire, wireplumber: each tarball is its tag's tree, whose git archive matches Arch's BLAKE2 sum) (vulkan-headers: annotated but not verifiable), releases unsigned | none upstream |
 | glslang, fastfetch, wl-clipboard, jq, htop, dwl, vulkan-loader | lightweight tags (cannot be signed), releases unsigned (jq: Sigstore attestation, htop: a SHA256 file on the same host) | Sigstore verification for jq |
 | python-mako, -markupsafe, -packaging, -pyyaml | PyPI: no GPG signatures | Sigstore (PEP 740) attestations |
 | linux (Alpine config), elfutils (musl patch) | files from Alpine's aports at a pinned commit; the commit's authenticity is not checked | signed aports commits, or cig's own reviewed config (Phase 5) |
@@ -152,6 +152,8 @@ on first download (trust on first use), and `smoke add` warns about it on every 
 | pango | download.gnome.org | **UNVERIFIED** (pinned SHA256 only, trusted on first use) |
 | pcre2 | github.com | upstream GPG signature |
 | perl | www.cpan.org | **UNVERIFIED** (pinned SHA256 only, trusted on first use) |
+| pipewire | gitlab.freedesktop.org | **UNVERIFIED** (pinned SHA256 only, trusted on first use) |
+| pipewire | gitlab.freedesktop.org | **UNVERIFIED** (pinned SHA256 only, trusted on first use) |
 | pixman | www.x.org | signed checksum file |
 | pkgconf | distfiles.ariadne.space | **UNVERIFIED** (pinned SHA256 only, trusted on first use) |
 | python-mako | files.pythonhosted.org | **UNVERIFIED** (pinned SHA256 only, trusted on first use) |
@@ -188,4 +190,4 @@ on first download (trust on first use), and `smoke add` warns about it on every 
 | zlib | github.com | upstream GPG signature |
 | zstd | github.com | upstream GPG signature |
 
-88 sources verified, 42 flagged.
+88 sources verified, 44 flagged.
