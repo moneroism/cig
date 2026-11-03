@@ -1,0 +1,11 @@
+# sbc - the Bluetooth SBC audio codec (library only), for PipeWire's Bluetooth audio
+name=sbc
+version=2.2
+license="LGPL-2.1-or-later"
+source="https://cdn.kernel.org/pub/linux/bluetooth/sbc-$version.tar.xz"
+signature="https://cdn.kernel.org/pub/linux/bluetooth/sbc-$version.tar.sign"
+keys="E932D120BC2AEC444E558F0106CA9F5D1DCF2659"
+sha256="-"
+style=gnu
+# the library only: no sbcenc/sbcdec/sbcinfo tools, no tester (libsndfile)
+configure_args="--disable-tools --disable-tester"

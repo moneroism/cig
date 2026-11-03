@@ -213,7 +213,7 @@ is detected, and everything else renders with pixman. Not yet tested on the RX57
 
 - components as recipes, offered in the installer:
   PipeWire (optional, off by default: done 2026-11-03, with WirePlumber and its PulseAudio
-  server, no D-Bus; Bluetooth audio still to come), Bluetooth = BlueZ + D-Bus (optional, off by default: done
+  server, no D-Bus; Bluetooth audio: `pipewire-bluetooth`, optional, with SBC, 2026-11-03), Bluetooth = BlueZ + D-Bus (optional, off by default: done
   2026-10-16), network time = chrony with NTS (on by default: done 2026-10-16),
   wmenu (default on, uncheckable); ALSA moves to Phase 3
 - ~~UEFI boot entries instead of only the fallback path~~ (done 2026-10-07: the installer writes

@@ -1,7 +1,7 @@
 # bluez - Bluetooth (bluetoothd, bluetoothctl); needs the D-Bus system bus
 name=bluez
 version=5.87
-rel=2
+rel=3
 license="GPL-2.0-or-later AND LGPL-2.1-or-later"
 source="https://cdn.kernel.org/pub/linux/bluetooth/bluez-$version.tar.xz"
 keys="E932D120BC2AEC444E558F0106CA9F5D1DCF2659"
@@ -11,9 +11,10 @@ depends="dbus glib readline"
 makedepends="pkgconf"
 style=gnu
 group="network"
-# no systemd, udev, CUPS printing or OBEX file transfer (libical); bluetoothctl uses readline
+# no systemd, udev, CUPS printing or OBEX file transfer (libical); bluetoothctl uses readline;
+# libbluetooth (--enable-library) for PipeWire's Bluetooth audio (pipewire-bluetooth)
 configure_args="--libexecdir=/usr/lib --disable-systemd --disable-udev --disable-cups --disable-obex
-    --disable-manpages"
+    --disable-manpages --enable-library"
 do_install() {
     style_install
     cp -R "$PKGDIR/files/etc" "$DEST/"

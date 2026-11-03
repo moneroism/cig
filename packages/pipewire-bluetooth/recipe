@@ -1,0 +1,56 @@
+# pipewire-bluetooth - Bluetooth audio for PipeWire: headphones and speakers (A2DP, SBC codec)
+# and headsets with their microphone (HFP/HSP, built in: no oFono). PipeWire's own Bluetooth
+# plugin, kept out of the pipewire package because it needs D-Bus (cig: D-Bus only with
+# Bluetooth). The same source as pipewire, built with only these parts; installs the plugin
+# folder and the D-Bus support plugin it uses.
+# Release tags are lightweight and the tarballs unsigned: see the pipewire recipe.
+name=pipewire-bluetooth
+# always pipewire's version: the plugin must match the PipeWire it loads into (checked)
+version=1.6.11
+license="MIT AND LGPL-2.1-or-later"
+source="pipewire-$version.tar.gz::https://gitlab.freedesktop.org/pipewire/pipewire/-/archive/$version/pipewire-$version.tar.gz"
+sha256="f3f70c4af173cc93d05070a9d412efe3ef5889bdf4ac32298e2c0d9ae1350559"
+depends="pipewire bluez dbus sbc glib"
+makedepends="meson pkgconf"
+style=meson
+wrksrc="pipewire-$version"
+group="sound"
+# only the SBC codec (aptX, LDAC, AAC, Opus and LC3 need libraries cig does not have), no
+# ModemManager/oFono/hsphfpd, no sound-card or session-manager parts (in pipewire)
+meson_args="-Ddocs=disabled -Dman=disabled -Dexamples=disabled -Dtests=disabled -Dinstalled_tests=disabled
+    -Dgstreamer=disabled -Dgstreamer-device-provider=disabled -Dlibsystemd=disabled -Dlogind=disabled
+    -Dsystemd-system-service=disabled -Dsystemd-user-service=disabled -Dselinux=disabled
+    -Dpipewire-alsa=disabled -Dpipewire-jack=disabled -Dpipewire-v4l2=disabled -Djack-devel=false
+    -Dspa-plugins=enabled -Dalsa=disabled -Daudiomixer=disabled -Daudioconvert=enabled -Dcontrol=disabled
+    -Dsupport=enabled -Dvolume=disabled -Daudiotestsrc=disabled -Dvideotestsrc=disabled
+    -Dvideoconvert=disabled -Dffmpeg=disabled -Dpw-cat-ffmpeg=disabled -Djack=disabled
+    -Devl=disabled -Dtest=disabled -Dv4l2=disabled -Dlibcamera=disabled -Dvulkan=disabled
+    -Dpw-cat=disabled -Dudev=disabled -Dsdl2=disabled -Dsndfile=disabled -Dlibmysofa=disabled
+    -Dlibpulse=disabled -Droc=disabled -Davahi=disabled -Decho-cancel-webrtc=disabled -Dlibusb=disabled
+    -Dsession-managers=[] -Draop=disabled -Dlv2=disabled -Dx11=disabled -Dx11-xfixes=disabled
+    -Dlibcanberra=disabled -Dlegacy-rtkit=false -Davb=disabled -Dflatpak=disabled -Dreadline=disabled
+    -Dgsettings=disabled -Dgsettings-pulse-schema=disabled -Dcompress-offload=disabled
+    -Dpam-defaults-install=false -Drlimits-install=false -Dopus=disabled -Dlibffado=disabled
+    -Dsnap=disabled -Debur128=disabled -Dfftw=disabled -Donnxruntime=disabled
+    -Ddbus=enabled -Dbluez5=enabled -Dbluez5-backend-hsp-native=enabled -Dbluez5-backend-hfp-native=enabled
+    -Dbluez5-backend-native-mm=disabled -Dbluez5-backend-ofono=disabled -Dbluez5-backend-hsphfpd=disabled
+    -Dbluez5-codec-aptx=disabled -Dbluez5-codec-ldac=disabled -Dbluez5-codec-ldac-dec=disabled
+    -Dbluez5-codec-aac=disabled -Dbluez5-codec-lc3plus=disabled -Dbluez5-codec-opus=disabled
+    -Dbluez5-codec-lc3=disabled -Dbluez5-codec-g722=disabled -Dbluez5-plc-spandsp=disabled"
+
+pre_build() {
+    local pw
+    pw=$(sed -n 's/^version=//p' "$CIG_REPO/packages/pipewire/recipe")
+    [ "$pw" = "$version" ] || die "pipewire-bluetooth $version does not match pipewire $pw: bump both together"
+}
+
+# only the Bluetooth parts: the rest is the pipewire package's
+do_install() {
+    local all="$WORK/all"
+    rm -rf "$all"; mkdir -p "$all"
+    DESTDIR="$all" meson install -C build --no-rebuild
+    mkdir -p "$DEST/usr/lib/spa-0.2/support" "$DEST/usr/share/spa-0.2"
+    cp -R "$all/usr/lib/spa-0.2/bluez5" "$DEST/usr/lib/spa-0.2/"
+    cp "$all/usr/lib/spa-0.2/support/libspa-dbus.so" "$DEST/usr/lib/spa-0.2/support/"
+    [ ! -d "$all/usr/share/spa-0.2/bluez5" ] || cp -R "$all/usr/share/spa-0.2/bluez5" "$DEST/usr/share/spa-0.2/"
+}

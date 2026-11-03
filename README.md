@@ -46,7 +46,7 @@ machine.
 | Packages | `cigbuild` builds, `smoke` installs: every package in its own folder under `/usr/pkg` |
 | TLS | OpenSSL 3.5 LTS |
 | Desktop | Wayland: dwl, foot (sway, labwc optional); CPU rendering (pixman) for now. No X11. |
-| D-Bus | only with optional Bluetooth (BlueZ, off by default); its service runs only then |
+| D-Bus | only with optional Bluetooth (BlueZ, off by default); its service runs only then. PipeWire's Bluetooth audio is its own optional component (`pipewire-bluetooth`) for the same reason |
 | Sound | ALSA; PipeWire optional (off by default): WirePlumber, PulseAudio and ALSA compatibility, started per desktop session by `pipewire-launcher` (no systemd user units, no D-Bus); with it installed, ALSA programs play through PipeWire, so they need a running session |
 | Time | chrony with NTS (authenticated) to Netnod and PTB; Cloudflare only if neither answers within 60 s. Optional: off, no time server sees the machine |
 
