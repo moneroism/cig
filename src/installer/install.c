@@ -675,6 +675,11 @@ void do_install(struct state *s)
 			snprintf(s->warnings + strlen(s->warnings), sizeof(s->warnings) - strlen(s->warnings),
 			         "Not every prebuilt package could be kept for later (see the log).\n");
 		}
+		/* their installed sizes, for smoke list -a */
+		char *sz = xasprintf("%s/pkgs/sizes", media_var);
+		if (file_exists(sz))
+			RUN("cp", sz, TARGET "/var/cig/prebuilt/sizes");
+		free(sz);
 	}
 	RUN("sh", "-c", "rm -rf " TARGET "/var/cig/build/*");
 

@@ -94,6 +94,14 @@ static void list_available(const char *word)
 {
 	char *dir = xasprintf("%s/packages", CIG_REPO);
 	struct strv names = { 0 }, groups = { 0 }, descs = { 0 };
+	/* installed sizes of the prebuilt packages (the installer keeps the medium's list) */
+	char *sp = xasprintf("%s/prebuilt/sizes", CIG_VAR), *sizes = read_file(sp);
+	if (!sizes) {
+		free(sp);
+		sp = xasprintf("%s/pkgs/sizes", CIG_VAR);   /* the install medium */
+		sizes = read_file(sp);
+	}
+	free(sp);
 	DIR *d = opendir(dir);
 	struct dirent *de;
 	if (!d)
@@ -114,6 +122,27 @@ static void list_available(const char *word)
 				desc = xasprintf("%.*s", (int)(n - (size_t)(dash + 3 - text)), dash + 3);
 			}
 		}
+		/* the size first (a long description is cut at the screen's edge), then whether its
+		 * upstream signs anything (signature= other than "-") */
+		char *sig = text ? recipe_var(text, "signature") : xstrdup(""), *size = xstrdup(""), *w, *sv = NULL;
+		bool signed_up = false;
+		for (w = strtok_r(sig, " \t", &sv); w && !signed_up; w = strtok_r(NULL, " \t", &sv))
+			signed_up = strcmp(w, "-") != 0;
+		if (sizes) {
+			char *needle = xasprintf("\n%s ", names.v[i]), *hay = xasprintf("\n%s", sizes), *hit = strstr(hay, needle);
+			if (hit) {
+				long kib = atol(hit + strlen(needle));
+				free(size);
+				size = kib >= 1024 ? xasprintf("%.1f MiB", (double)kib / 1024) : xasprintf("%ld KiB", kib);
+			}
+			free(needle);
+			free(hay);
+		}
+		char *full = xasprintf("%9s  %s%s", size, desc, signed_up ? "" : " (unsigned upstream)");
+		free(desc);
+		desc = full;
+		free(size);
+		free(sig);
 		sv_push(&groups, group);
 		sv_push(&descs, desc);
 		free(group);
@@ -140,7 +169,8 @@ static void list_available(const char *word)
 			printf(" %c %-22s %s\n", inv_get(names.v[i]) ? '*' : ' ', names.v[i], descs.v[i]);
 		}
 	}
-	puts("\n* installed");
+	puts(sizes ? "\n* installed; sizes: installed size of the package itself" : "\n* installed");
+	free(sizes);
 	sv_free(&names);
 	sv_free(&groups);
 	sv_free(&descs);

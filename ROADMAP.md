@@ -204,7 +204,8 @@ is detected, and everything else renders with pixman. Not yet tested on the RX57
 
 - **package catalog** in the installer (a Packages screen: categories such as desktop,
   window managers, terminals, editors, development, network, sound; each package with its
-  description, size and whether its upstream signs releases; sizes done 2026-11-03) and the same catalog in smoke
+  description, size and whether its upstream signs releases; sizes done 2026-11-03) and the same catalog in smoke (`smoke list -a`: sizes and the
+  unsigned marker too, 2026-11-03)
   on installed systems. Categories come from the recipes. **Wayland only** (decided
   2026-10-05): sway, labwc, wayfire and friends instead of X11 window managers; X11 may come
   later as an optional recipe. First wave of easy recipes: sway, labwc, nano, vim, htop
