@@ -34,7 +34,7 @@ All checks run once, on the host, when a source is pinned (`cigbuild pin`, `cigb
 devices then check the pinned SHA256. Every other source is **flagged**: its SHA256 was pinned
 on first download (trust on first use), and `smoke add` warns about it on every install.
 
-`scripts/audit-sources.sh` prints the current table (below, as of 2026-10-05).
+`scripts/audit-sources.sh` prints the current table (below, as of 2026-11-03).
 
 ## Flagged sources and why
 
@@ -49,6 +49,8 @@ on first download (trust on first use), and `smoke add` warns about it on every 
 | python-mako, -markupsafe, -packaging, -pyyaml | PyPI: no GPG signatures | Sigstore (PEP 740) attestations |
 | linux (Alpine config), elfutils (musl patch) | files from Alpine's aports at a pinned commit; the commit's authenticity is not checked | signed aports commits, or cig's own reviewed config (Phase 5) |
 | ca-certificates | curl.se's extract of Mozilla's CA store, unsigned | build from Mozilla's certdata at a verified revision |
+| freetype | signed (2.14.3), but the key E3067470…BE6C3AAC63AD8E3F ("Werner Lemberg <wl@gnu.org>", 2019) carries only its own signatures: his older key 58E0C111…C1A60EACE707FDA5, the one keys.openpgp.org verified for that address, does not certify it, and freetype.org names no key; trusted by the developer on 2026-11-03 (long-time maintainer, same address) | the maintainer cross-certifies the key or freetype.org publishes it |
+| rsync | signed (3.5.1), but by C0E10545…6A64E8AA2EFBCF5D ("Zen Dodd", created 2026-04), a key rsync.samba.org does not name (it names Wayne Davison and Andrew Tridgell); not trusted, the SHA256 pin stays (2026-11-03) | rsync announces the new signer on its own site |
 | lua, mandoc, sinit, tree, mtdev, font-jetbrains-mono, libudev-zero, musl-fts, musl-obstack, argp-standalone | no signature and no independently published checksum | none upstream |
 
 ## Current table
@@ -63,12 +65,14 @@ on first download (trust on first use), and `smoke add` warns about it on every 
 | bash | ftp.gnu.org | upstream GPG signature |
 | binutils | ftp.gnu.org | upstream GPG signature |
 | bison | ftp.gnu.org | upstream GPG signature |
+| bluez | cdn.kernel.org | upstream GPG signature |
 | busybox | busybox.net | upstream GPG signature |
 | ca-certificates | curl.se | **UNVERIFIED** (pinned SHA256 only, trusted on first use) |
 | cairo | cairographics.org | signed git tag (archive = tag tree) |
 | chrony | chrony-project.org | upstream GPG signature |
 | cmake | github.com | signed checksum file |
 | curl | curl.se | upstream GPG signature |
+| dbus | dbus.freedesktop.org | upstream GPG signature |
 | dosfstools | github.com | upstream GPG signature |
 | dwl | codeberg.org | **UNVERIFIED** (pinned SHA256 only, trusted on first use) |
 | e2fsprogs | cdn.kernel.org | upstream GPG signature |
@@ -155,7 +159,8 @@ on first download (trust on first use), and `smoke add` warns about it on every 
 | python-packaging | files.pythonhosted.org | **UNVERIFIED** (pinned SHA256 only, trusted on first use) |
 | python-pyyaml | files.pythonhosted.org | **UNVERIFIED** (pinned SHA256 only, trusted on first use) |
 | python | www.python.org | upstream GPG signature |
-| rsync | download.samba.org | upstream GPG signature |
+| readline | ftp.gnu.org | upstream GPG signature |
+| rsync | download.samba.org | **UNVERIFIED** (signed, but no trusted key: pinned SHA256 only) |
 | samurai | github.com | **UNVERIFIED** (pinned SHA256 only, trusted on first use) |
 | seatd | git.sr.ht | **UNVERIFIED** (pinned SHA256 only, trusted on first use) |
 | sinit | dl.suckless.org | **UNVERIFIED** (pinned SHA256 only, trusted on first use) |
@@ -183,4 +188,4 @@ on first download (trust on first use), and `smoke add` warns about it on every 
 | zlib | github.com | upstream GPG signature |
 | zstd | github.com | upstream GPG signature |
 
-86 sources verified, 41 flagged.
+88 sources verified, 42 flagged.

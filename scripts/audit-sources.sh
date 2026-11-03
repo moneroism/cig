@@ -17,6 +17,7 @@ for r in packages/*/recipe; do
     p=$(basename "$(dirname "$r")")
     src=$(CIG_REPO=$REPO bash -c 'source= signature=; . "$1" 2>/dev/null; echo $source' _ "$r")
     sig=$(CIG_REPO=$REPO bash -c 'source= signature=; . "$1" 2>/dev/null; echo $signature' _ "$r")
+    keys=$(CIG_REPO=$REPO bash -c 'keys=; . "$1" 2>/dev/null; echo $keys' _ "$r")
     [ -n "$src" ] || continue
     read -r -a sigs <<< "$sig"
     i=0
@@ -30,6 +31,8 @@ for r in packages/*/recipe; do
             tag=*)   how="signed git tag (archive = tag tree)" ;;
             *)       how="upstream GPG signature" ;;
         esac
+        # without keys= nothing checks the signature: the pin decides
+        [ "$s" = - ] || [ -n "$keys" ] || how="**UNVERIFIED** (signed, but no trusted key: pinned SHA256 only)"
         case "$host" in
             *sourceforge*|*sf.net*|*mirror*) how="**MIRROR** ($host) - $how" ;;
         esac
