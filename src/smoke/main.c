@@ -698,16 +698,22 @@ static char *installed_license(const struct inv_ent *e)
 static int libre_cmd(void)
 {
 	struct libre l;
-	char *fwindex = xasprintf("%s/usr/share/cig/firmware.licenses", ROOT);
-	if (!libre_init(&l, CIG_REPO, is_file(fwindex) ? fwindex : NULL))
-		return 1;
 	inv_init();
+	/* the index in linux-firmware's own folder: the /usr link is absolute, wrong under SMOKE_ROOT */
+	const struct inv_ent *fwp = inv_get("linux-firmware");
+	char *fwindex = fwp ? xasprintf("%s/linux-firmware/%s/share/cig/firmware.licenses", PKGROOT, fwp->folder)
+	                    : xstrdup("");
+	if (!libre_init(&l, CIG_REPO, is_file(fwindex) ? fwindex : NULL)) {
+		free(fwindex);
+		return 1;
+	}
 	for (size_t i = 0; i < inv_count(); i++) {
 		char *lic = installed_license(inv_at(i));
 		libre_add_package(&l, inv_at(i)->name, lic);
 		free(lic);
 	}
-	if (inv_get("linux-firmware") && !l.nfw)   /* built before its licences were recorded */
+	/* built before its licences were recorded (an empty index = no firmware files: nothing to count) */
+	if (fwp && !is_file(fwindex))
 		libre_add_item(&l, "firmware", "linux-firmware", LIBRE_NONFREE,
 		               "licences not recorded: rebuild linux-firmware (counted as non-free until then)");
 	for (size_t i = 0; i < l.nfw; i++) {   /* the index lists exactly the installed files */
