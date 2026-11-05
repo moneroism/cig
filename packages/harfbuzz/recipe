@@ -1,6 +1,7 @@
 # harfbuzz - text shaping (for pango)
 name=harfbuzz
 version=14.6.0
+rel=2
 license="MIT-Modern-Variant"
 source="harfbuzz-$version.tar.gz::https://github.com/harfbuzz/harfbuzz/archive/refs/tags/$version.tar.gz"
 signature="tag=https://github.com/harfbuzz/harfbuzz.git#$version"
@@ -9,5 +10,9 @@ sha256="eca8581e5ad8e21dbda31556c0363f764b1a754c9c1bb33ca7cd56ca1c07ddc9"
 depends="freetype glib"
 makedepends="meson pkgconf"
 style=meson
+# every optional library off: "auto" links whatever the building machine has (libpng was found
+# by the audit of an on-device install); raster/vector/gpu are unused by pango
 meson_args="-Dtests=disabled -Ddocs=disabled -Dintrospection=disabled -Dfreetype=enabled -Dglib=enabled
-    -Dgobject=disabled -Dcairo=disabled -Dicu=disabled -Dutilities=disabled -Dbenchmark=disabled"
+    -Dgobject=disabled -Dcairo=disabled -Dicu=disabled -Dutilities=disabled -Dbenchmark=disabled
+    -Dpng=disabled -Dzlib=disabled -Dchafa=disabled -Draster=disabled -Dvector=disabled -Dgpu=disabled
+    -Dgpu_demo=disabled"

@@ -1,12 +1,15 @@
 # bash - shell (also /bin/sh)
 name=bash
 version=5.3
+rel=2
 license="GPL-3.0-or-later"
 source="https://ftp.gnu.org/gnu/bash/bash-$version.tar.gz"
 signature="https://ftp.gnu.org/gnu/bash/bash-$version.tar.gz.sig"
 keys="7C0135FB088AAF6C66C650B9BB5869F064EA74AB"
 sha256="-"
 style=custom
-do_build()   { ./configure --prefix=/usr --without-bash-malloc --disable-nls; make; }
+# bundled termcap, never ncurses (not in the base): configure would link ncurses when the
+# building machine happens to have it (found by the audit of an on-device install)
+do_build()   { bash_cv_termcap_lib=gnutermcap ./configure --prefix=/usr --without-bash-malloc --disable-nls; make; }
 do_install() { make DESTDIR="$DEST" install; ln -sf bash "$DEST/usr/bin/sh"; }
 group="base"
