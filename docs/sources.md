@@ -184,6 +184,7 @@ on first download (trust on first use), and `smoke add` warns about it on every 
 | vulkan-loader | github.com | **UNVERIFIED** (pinned SHA256 only, trusted on first use) |
 | wayland-protocols | gitlab.freedesktop.org | upstream GPG signature |
 | wayland | gitlab.freedesktop.org | upstream GPG signature |
+| wireless-regdb | cdn.kernel.org | upstream GPG signature |
 | wl-clipboard | github.com | **UNVERIFIED** (pinned SHA256 only, trusted on first use) |
 | wlroots | gitlab.freedesktop.org | upstream GPG signature |
 | wmenu | codeberg.org | **UNVERIFIED** (pinned SHA256 only, trusted on first use) |
@@ -194,4 +195,4 @@ on first download (trust on first use), and `smoke add` warns about it on every 
 | zlib | github.com | upstream GPG signature |
 | zstd | github.com | upstream GPG signature |
 
-89 sources verified, 45 flagged.
+90 sources verified, 45 flagged.

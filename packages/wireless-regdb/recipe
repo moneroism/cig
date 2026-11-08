@@ -1,0 +1,16 @@
+# wireless-regdb - the WiFi regulatory database (which channels and power each country allows),
+# loaded by cfg80211 as firmware; the kernel checks regulatory.db.p7s against the certificate
+# compiled into it. Without it WiFi falls back to the restrictive world domain (5 GHz limited).
+name=wireless-regdb
+version=2026.09.03
+license="ISC"
+source="https://cdn.kernel.org/pub/software/network/wireless-regdb/wireless-regdb-$version.tar.xz"
+signature="https://cdn.kernel.org/pub/software/network/wireless-regdb/wireless-regdb-$version.tar.sign"
+keys="B3F2469D78D78BD09D366F37C94035C21B4F2AEB"
+sha256="-"
+style=custom
+do_build()   { :; }
+do_install() {
+    install -D -m 644 regulatory.db "$DEST/usr/lib/firmware/regulatory.db"
+    install -D -m 644 regulatory.db.p7s "$DEST/usr/lib/firmware/regulatory.db.p7s"
+}

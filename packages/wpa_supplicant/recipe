@@ -1,12 +1,13 @@
 # wpa_supplicant - WiFi (WPA2/WPA3-Personal only: no WPS, no D-Bus, no EAP)
 name=wpa_supplicant
 version=2.12
+rel=2
 license="BSD-3-Clause"
 source="https://w1.fi/releases/wpa_supplicant-$version.tar.gz"
 signature="https://w1.fi/releases/wpa_supplicant-$version.tar.gz.asc"
 keys="EC4AA0A991A5F2464582D52D2B6EF432EFC895FA"
 sha256="-"
-depends="libnl openssl"
+depends="libnl openssl wireless-regdb"
 style=custom
 do_build() {
     cd wpa_supplicant
