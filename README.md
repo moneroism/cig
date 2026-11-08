@@ -287,7 +287,9 @@ devices and drivers, kernel errors, firmware, graphics, storage (read only), WiF
 sound, touchpad, backlight, battery, a 60 s CPU load, a memory pattern test and suspend. It
 asks a few yes/no questions at the keyboard (`--no-ask` skips them, `--quick` skips the stress
 and suspend tests) and saves its report to `CIG-DATA`, without MAC addresses, network names or
-serial numbers. It never writes to the machine's disks.
+serial numbers. It never writes to the machine's disks. The installer runs it once before
+partitioning (`--quick --no-ask`) and keeps the report in its log. cig-check is temporary, its
+own media-only package (`packages/cig-check`): installed systems never get it.
 
 ### Testing in QEMU
 

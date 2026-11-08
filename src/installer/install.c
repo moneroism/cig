@@ -424,6 +424,18 @@ void do_install(struct state *s)
 	run_tick = redraw;
 	put_file(LOG, "", 0600);
 
+	/* ---- the machine's hardware: the medium's cig-check (a temporary, removable package), quick
+	 * and without questions, read only; its report goes into this log, a failure is no reason
+	 * to stop ---- */
+	if (file_exists("/usr/bin/cig-check") && !getenv("CIG_INSTALL_DEMO")) {
+		step("Checking this machine's hardware (cig-check, read only)");
+		char *argv[] = { "sh", "-c",
+			"d=$(mktemp -d) || exit 1; cig-check --quick --no-ask --out \"$d\" > /dev/null 2>&1;"
+			" cat \"$d\"/cig-check-*.log; rm -rf \"$d\"", NULL };
+		if (run(argv) != 0)
+			logf_("    ! cig-check did not finish (the install goes on)\n");
+	}
+
 	/* ---- partitioning ---- */
 	step("Partitioning /dev/%s", s->disk);
 	cleanup_mounts();
@@ -663,7 +675,7 @@ void do_install(struct state *s)
 	{
 		char *argv[] = { "sh", "-c",
 			"for r in \"$0\"/packages/*/recipe; do p=${r%/recipe}; p=${p##*/};"
-			" case $p in linux|linux-firmware|cig-installer|cig-live) continue ;; esac;"
+			" case $p in linux|linux-firmware|cig-installer|cig-live|cig-check) continue ;; esac;"
 			" f=$(CIG_VAR=\"$1\" \"$0\"/cigbuild pkgfile \"$p\" 2>/dev/null) && [ -f \"$f\" ] || continue;"
 			" [ ! -e \"$3/${f##*/}\" ] || continue; b=\"$2/${f##*/}\"; [ -e \"$b\" ] || cp \"$f\" \"$b\" || exit 1;"
 			" [ ! -f \"$f.sha256\" ] || [ -e \"$b.sha256\" ] || cp \"$f.sha256\" \"$b.sha256\" || exit 1;"

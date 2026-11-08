@@ -252,6 +252,11 @@ s_network() {
         result SKIP "WiFi scan: wpa_supplicant not on this medium"
         return
     fi
+    # never next to the live system's own (the installer runs cig-check while WiFi may be in use)
+    if pgrep -x wpa_supplicant >/dev/null 2>&1; then
+        result SKIP "WiFi scan: a wpa_supplicant is already running"
+        return
+    fi
     have rfkill && rfkill unblock wifi 2>/dev/null
     ip link set "$w" up 2>/dev/null
     printf 'ctrl_interface=/run/cig-check-wpa\n' > "$WORK/wpa.conf"

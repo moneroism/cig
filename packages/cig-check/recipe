@@ -1,0 +1,15 @@
+# cig-check - hardware check and stress test of the machine the install medium runs on, with a
+# report (CIG-DATA partition, see scripts/build-media.sh). Temporary, media only: no group=, so
+# installed systems never get it (the installer also skips it); the installer runs it once in
+# quick, no-questions mode and keeps the report in its log. Removing it: delete this folder and
+# its name in build-media.sh and in the installer's media-only list (install.c).
+name=cig-check
+version=$(cat "$CIG_REPO/VERSION")
+license="GPL-3.0-or-later"
+source=""
+sha256=""
+depends="alsa-utils"   # it plays and records sound
+style=custom
+nostrip=1
+do_build() { :; }
+do_install() { install -D -m 755 "$PKGDIR/files/cig-check" "$DEST/usr/bin/cig-check"; }

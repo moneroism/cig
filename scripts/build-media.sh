@@ -78,7 +78,7 @@ done
 stale=
 for r in "$REPO"/packages/*/recipe; do
     p=${r%/recipe}; p=${p##*/}
-    case " linux linux-firmware cig-base cig-tools cig-installer cig-live pixel " in *" $p "*) continue ;; esac
+    case " linux linux-firmware cig-base cig-tools cig-installer cig-live cig-check pixel " in *" $p "*) continue ;; esac
     if ! grep -q '^group=' "$r" && ! ls "$DEV_VAR/pkgs/$p"-[0-9]*.tar.gz >/dev/null 2>&1; then continue; fi
     [ -f "$("$CIGBUILD" pkgfile "$p")" ] || stale="$stale $p"
 done
@@ -128,7 +128,7 @@ touch "$STAGE/etc/cig/efi-fallback"     # the kernel also goes to EFI/BOOT/BOOTX
 step "Building the media's cig packages"
 # always fresh: they are built from this repository, and their version does not change
 # with every edit (an existing package file would otherwise be reused)
-REPO_PKGS="cig-base cig-tools cig-installer cig-live pixel"
+REPO_PKGS="cig-base cig-tools cig-installer cig-live cig-check pixel"
 for p in $REPO_PKGS; do
     rm -f "$(CIG_VAR=$MEDIA_VAR "$CIGBUILD" pkgfile "$p")"
     CIG_VAR=$MEDIA_VAR CIG_SOURCE_MIRROR=$DEV_VAR/sources "$CIGBUILD" build "$p"
@@ -155,7 +155,7 @@ done
 step "Installing packages into the live system"
 pkgs=$(SMOKE_ROOT= "$SMOKE" list | awk 'NR > 1 { print $1 }' | grep -vx 'linux\|linux-firmware' || true)
 export CIG_VAR=$MEDIA_VAR CIG_PKG_MIRROR=$DEV_VAR/pkgs CIG_SOURCE_MIRROR=$DEV_VAR/sources
-for p in linux linux-firmware $pkgs cig-installer cig-live; do
+for p in linux linux-firmware $pkgs cig-installer cig-live cig-check; do
     SMOKE_ROOT=$STAGE "$SMOKE" add -p -y "$p" > /dev/null || die "could not install $p"
 done
 unset CIG_VAR CIG_PKG_MIRROR CIG_SOURCE_MIRROR

@@ -3,11 +3,11 @@
 # installed systems never get it. The live logins are created by scripts/build-media.sh.
 name=cig-live
 version=$(cat "$CIG_REPO/VERSION")
-rel=4
+rel=5
 license="GPL-3.0-or-later"
 source=""
 sha256=""
-depends="cig-base cig-installer alsa-utils"   # alsa-utils: cig-check plays and records sound
+depends="cig-base cig-installer"
 style=custom
 nostrip=1
 do_build() { :; }
@@ -18,8 +18,6 @@ do_install() {
     sed -e 's/\\/\\\\/g' -e "s/{VERSION}/$version/g" "$CIG_REPO/assets/live-issue.txt" \
         > "$DEST/usr/share/cig-live/issue"
     chmod 644 "$DEST/etc/cig/live" "$DEST/usr/share/cig-live/issue"
-    # cig-check: hardware check and stress test of the machine the medium runs on
-    install -D -m 755 "$PKGDIR/files/cig-check" "$DEST/usr/bin/cig-check"
 }
 post_install() {
     cp /usr/share/cig-live/issue /etc/issue
