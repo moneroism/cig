@@ -52,8 +52,8 @@ struct drv {
 };
 /* loaded drivers that request firmware (no CPU microcode); lsmod copied to lsmod_out. A
  * driver keeps only the files the kernel logged as loaded ("Loaded FW: <name>", the install
- * medium's firmware_class.dyndbg=+p); one that loaded none yet (e.g. Bluetooth, on first use)
- * keeps its whole list */
+ * medium's firmware_class.dyndbg=+p); one that loaded none is off (checking it installs its
+ * whole list) */
 int detect_hardware(struct drv **out, const char *lsmod_out);
 
 #endif

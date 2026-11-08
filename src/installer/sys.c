@@ -521,6 +521,9 @@ static void keep_loaded(struct drv *dv, int n)
 		} else {
 			free(kept);
 		}
+		/* with the log, a driver that loaded nothing needs nothing: off (it can be checked) */
+		if (dv[i].loaded == 0)
+			dv[i].on = false;
 		free(copy);
 	}
 	free(got);
