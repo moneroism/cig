@@ -157,7 +157,7 @@ s_firmware() {
     section "Firmware"
     # which files the drivers load from now on (the install medium's kernel logs them from boot)
     [ -w /proc/dynamic_debug/control ] && echo 'module firmware_class +p' > /proc/dynamic_debug/control 2>/dev/null
-    local m req have_n=0 miss_n=0 f loaded
+    local m have_n=0 loaded
     loaded=$(grep -o 'Loaded FW: [^,]*' "$WORK/dmesg.txt" 2>/dev/null | sed 's/Loaded FW: //' | sort -u)
     if [ -n "$loaded" ]; then
         log "  loaded by the drivers since boot:"; printf '    %s\n' $loaded >> "$REPORT"
@@ -165,17 +165,17 @@ s_firmware() {
         log "  (this kernel did not log loaded firmware from boot: a medium kernel built before the"
         log "   firmware log; only missing files are reported)"
     fi
-    for m in $(lsmod | awk 'NR > 1 { print $1 }'); do
-        req=$(modinfo -F firmware "$m" 2>/dev/null) || continue
-        [ -n "$req" ] || continue
-        local n_req n_have=0
-        n_req=$(echo "$req" | wc -l)
-        for f in $req; do [ -e "/lib/firmware/$f" ] && n_have=$((n_have + 1)); done
-        log "  $m: names $n_req file(s), $n_have of them in linux-firmware"
-        have_n=$((have_n + 1))
-    done
+    # per driver, from the same log ("<driver> <device>: Loaded FW: <file>, sha256: ...")
+    local per
+    per=$(sed -n 's/^\[[^]]*\] \([^ ]*\) [^ ]*: Loaded FW: \([^,]*\).*/\1 \2/p' "$WORK/dmesg.txt" 2>/dev/null | sort -u)
+    if [ -n "$per" ]; then
+        for m in $(echo "$per" | awk '{ print $1 }' | sort -u); do
+            log "  $m: $(echo "$per" | awk -v m="$m" '$1 == m' | wc -l) file(s)"
+            have_n=$((have_n + 1))
+        done
+    fi
     log "  firmware list of this medium: /usr/share/cig/firmware.list ($(wc -l < /usr/share/cig/firmware.list 2>/dev/null || echo 0) files)"
-    result PASS "$have_n loaded driver(s) use firmware (see above)"
+    result PASS "$have_n driver(s) loaded $(echo "$loaded" | grep -c . || true) firmware file(s) (see above)"
 }
 
 s_graphics() {
@@ -323,14 +323,31 @@ s_sound() {
         result SKIP "sound output: alsa-utils not on this medium"
         return
     fi
-    have amixer && amixer -q sset Master 70% unmute 2>/dev/null; have amixer && amixer -q sset Speaker 70% unmute 2>/dev/null
+    # the first card that is not the PC speaker or HDMI-only, directly: ALSA's "default" is
+    # PipeWire when pipewire-alsa is installed, and nothing runs PipeWire on a root console
+    local card dev
+    card=$(awk '/^ *[0-9]+ \[/ && !/pcsp|PC-Speaker|HDMI/ { print $1; exit }' /proc/asound/cards)
+    [ -n "$card" ] || card=0
+    dev="plughw:$card,0"
+    log "  playback/recording device: $dev"
+    if have amixer; then
+        local ctl
+        for ctl in Master Speaker Headphone PCM Capture "Internal Mic Boost"; do
+            amixer -q -c "$card" sset "$ctl" 70% unmute cap 2>/dev/null || true
+        done
+    fi
     if ask "Play a test tone on the speakers (about 4 seconds)?"; then
-        speaker-test -t sine -f 440 -c 2 -l 1 >/dev/null 2>&1 &
+        speaker-test -D "$dev" -t sine -f 440 -c 2 -l 1 > "$WORK/speaker-test.txt" 2>&1 &
         local p=$!; sleep 4; kill $p 2>/dev/null; wait $p 2>/dev/null
+        grep -i -E 'error|fail|unable' "$WORK/speaker-test.txt" | head -n 3 | sed 's/^/    speaker-test: /' >> "$REPORT"
         ask "Did you hear the tone from both speakers?" && result PASS "speakers (heard)" || result FAIL "speakers: no tone heard"
     fi
     if have arecord && have aplay && ask "Test the microphone: speak for 4 seconds after Enter, then it plays back?"; then
-        arecord -q -d 4 -f cd "$WORK/mic.wav" 2>/dev/null && aplay -q "$WORK/mic.wav" 2>/dev/null
+        if arecord -D "$dev" -q -d 4 -f cd "$WORK/mic.wav" 2> "$WORK/arecord.txt"; then
+            aplay -D "$dev" -q "$WORK/mic.wav" 2> "$WORK/aplay.txt" || sed 's/^/    aplay: /' "$WORK/aplay.txt" | head -n 3 >> "$REPORT"
+        else
+            sed 's/^/    arecord: /' "$WORK/arecord.txt" | head -n 3 >> "$REPORT"
+        fi
         rm -f "$WORK/mic.wav"
         ask "Did you hear your voice played back?" && result PASS "microphone (heard)" || result FAIL "microphone: no playback heard"
     fi
@@ -490,7 +507,7 @@ s_suspend() {
     else
         result FAIL "no resume seen in the kernel log (see dmesg-suspend.txt)"
     fi
-    grep -i -E 'error|fail' "$WORK/dmesg-suspend.txt" | head -n 10 | sed 's/^/    /' >> "$REPORT"
+    grep -i -E 'error|fail' "$WORK/dmesg-suspend.txt" | { grep -v 'failed for no such file or directory' || true; } | head -n 10 | sed 's/^/    /' >> "$REPORT"
     ask "Do the screen, keyboard and touchpad still work?" && result PASS "devices work after resume" || result FAIL "devices broken after resume"
 }
 

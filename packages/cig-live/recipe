@@ -3,7 +3,7 @@
 # installed systems never get it. The live logins are created by scripts/build-media.sh.
 name=cig-live
 version=$(cat "$CIG_REPO/VERSION")
-rel=3
+rel=4
 license="GPL-3.0-or-later"
 source=""
 sha256=""
