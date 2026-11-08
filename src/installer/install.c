@@ -514,7 +514,7 @@ void do_install(struct state *s)
 	step("Base layout");
 	{
 		static const char *dirs[] = { "usr/bin", "usr/lib", "usr/sbin", "etc/cig", "var/log", "var/tmp",
-		                              "dev", "proc", "sys", "run", "tmp", "root" };
+		                              "dev", "proc", "sys", "run", "tmp", "root", "mnt" };
 		for (size_t i = 0; i < sizeof(dirs) / sizeof(*dirs); i++) {
 			char *p = xasprintf("%s/%s", TARGET, dirs[i]);
 			mkdirs(p);
