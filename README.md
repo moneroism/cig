@@ -5,7 +5,7 @@ of GrapheneOS but for the PC: as little code as possible, every source
 verified, nothing running that isn't needed, and nothing hardcoded to one
 machine.
 
-> **Status:** 0.2.1 (beta), on the way to 0.3.0. A bootable install medium (hybrid ISO: CD/DVD or USB stick)
+> **Status:** 0.3.0 (beta): Phase 3 reached, on the way to 0.4.0. A bootable install medium (hybrid ISO: CD/DVD or USB stick)
 > runs a live system, and its installer installs a system that boots on its own with
 > its own linux-hardened kernel, signed modules and lockdown, and a Wayland desktop
 > (dwl + foot, or sway): tested in QEMU (UEFI). smoke and the installer are C; everything
@@ -295,8 +295,8 @@ own media-only package (`packages/cig-check`): installed systems never get it.
 
 ```
 qemu-img create -f raw ~/cig-target.img 40G
-CIG_CDROM=~/cig/cig-0.2.1.iso CIG_TARGET=~/cig-target.img scripts/run-vm.sh   # the ISO as a CD
-CIG_IMG=~/cig/cig-0.2.1.iso CIG_TARGET=~/cig-target.img scripts/run-vm.sh     # as a disk (like a USB stick)
+CIG_CDROM=~/cig/cig-0.3.0.iso CIG_TARGET=~/cig-target.img scripts/run-vm.sh   # the ISO as a CD
+CIG_IMG=~/cig/cig-0.3.0.iso CIG_TARGET=~/cig-target.img scripts/run-vm.sh     # as a disk (like a USB stick)
 # in the VM, as root:  cig-install
 CIG_IMG=~/cig-target.img scripts/run-vm.sh      # boot the installed disk alone
 ```

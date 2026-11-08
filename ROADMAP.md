@@ -34,8 +34,8 @@ into `/usr/lib/os-release` of every installed system.
 |---|---|
 | 0.1.0 | Phase 0 + 1: boots in QEMU, fully managed by smoke |
 | 0.2.0 | Phase 2: the installer installs a bootable system |
-| 0.2.1 | partition editor and swap, signature URLs, fixes ← current |
-| 0.3.0 | Phase 3: install media (ISO) and first bare-metal install |
+| 0.2.1 | partition editor and swap, signature URLs, fixes |
+| 0.3.0 | Phase 3: install media (ISO) and first bare-metal install ← current |
 | 0.4.0 | Phase 4: optional components |
 | 0.5.0 | Phase 5: security layers |
 | 1.0.0 | stable on real hardware |
@@ -102,7 +102,7 @@ Testing: in QEMU, the running VM installs onto a second, empty disk.
 
 **Exit criteria:** an install onto an empty VM disk boots on its own.
 
-### Phase 3 – Install media (ISO) and first bare-metal install ⏭ next (0.3.0)
+### Phase 3 – Install media (ISO) and first bare-metal install ✅ done (0.3.0)
 
 Decisions (after Phase 2):
 - **Installer default: compile everything on the machine.** Kernel: compiled for this
@@ -185,6 +185,12 @@ found are the input for 0.3.x.
 Status (2026-11-03): every VM test of the ISO passes (CD, USB disk, compiled and generic
 kernel installs). The laptop install waits for a web browser (Phase 6): without one a test on
 real hardware says too little. Phase 4 and later work goes on meanwhile, tested in QEMU.
+
+Status (2026-11-08, 0.3.0): installed from the ISO on the laptop (ASUS E210MA, eMMC):
+kernel compiled for the machine, prebuilt packages, audit clean, boots on its own, dwl runs;
+cig-check on the medium found WiFi, Bluetooth, display, touchpad, keyboard; 6 firmware files. Open for 0.3.x: 118 MB
+RAM used with dwl + foot (over the 100 MB target), sound and suspend not yet tested there,
+the WiFi password is asked twice and there is no list of networks to pick from.
 
 ### 0.3.x – GPU acceleration (after the first bare-metal install)
 
