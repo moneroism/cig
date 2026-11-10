@@ -179,9 +179,12 @@ s_firmware() {
     loaded=$(grep -o 'Loaded FW: [^,]*' "$WORK/dmesg.txt" 2>/dev/null | sed 's/Loaded FW: //' | sort -u)
     if [ -n "$loaded" ]; then
         log "  loaded by the drivers since boot:"; printf '    %s\n' $loaded >> "$REPORT"
-    else
+    elif [ -e /etc/cig/live ]; then
         log "  (this kernel did not log loaded firmware from boot: a medium kernel built before the"
         log "   firmware log; only missing files are reported)"
+    else
+        log "  (an installed system's kernel does not log loaded firmware: only missing files are"
+        log "   reported; firmware files installed: $(find -L /usr/lib/firmware -type f 2>/dev/null | wc -l))"
     fi
     # per driver, from the same log ("<driver> <device>: Loaded FW: <file>, sha256: ...")
     local per
@@ -192,8 +195,10 @@ s_firmware() {
             have_n=$((have_n + 1))
         done
     fi
-    log "  firmware list of this medium: /usr/share/cig/firmware.list ($(wc -l < /usr/share/cig/firmware.list 2>/dev/null || echo 0) files)"
-    result PASS "$have_n driver(s) loaded $(echo "$loaded" | grep -c . || true) firmware file(s) (see above)"
+    if [ -e /etc/cig/live ]; then
+        log "  firmware list of this medium: /usr/share/cig/firmware.list ($(wc -l < /usr/share/cig/firmware.list 2>/dev/null || echo 0) files)"
+        result PASS "$have_n driver(s) loaded $(echo "$loaded" | grep -c . || true) firmware file(s) (see above)"
+    fi
 }
 
 s_graphics() {
@@ -383,20 +388,47 @@ s_sound() {
         local p=$!; sleep 4; kill $p 2>/dev/null; wait $p 2>/dev/null
         grep -i -E 'error|fail|unable' "$WORK/speaker-test.txt" | head -n 3 | sed 's/^/    speaker-test: /' >> "$REPORT"
         ask "Did you hear the tone from both speakers?" && result PASS "speakers (heard)" || result FAIL "speakers: no tone heard"
-    fi
-    if have arecord && have aplay && ask "Test the microphone: speak for 4 seconds after Enter, then it plays back?"; then
-        # -vv: a level meter on stderr; its highest value shows a silent recording (muted, or
-        # the wrong input) without anyone listening
-        if arecord -D "$dev" -vv -d 4 -f cd "$WORK/mic.wav" 2> "$WORK/arecord.txt"; then
-            local peak
-            peak=$(tr '\r' '\n' < "$WORK/arecord.txt" | sed -n 's/.*[^0-9]\([0-9][0-9]*\)%.*/\1/p' | sort -n | tail -n1)
-            log "  microphone: loudest level ${peak:-?}% (0 = silence: muted or the wrong input)"
-            aplay -D "$dev" -q "$WORK/mic.wav" 2> "$WORK/aplay.txt" || sed 's/^/    aplay: /' "$WORK/aplay.txt" | head -n 3 >> "$REPORT"
+        # what programs use: ALSA's default (PipeWire when pipewire-alsa is installed); only
+        # whether it opens and plays, no question (one short period)
+        if timeout 10 speaker-test -D default -t sine -f 440 -c 2 -l 1 -p 100000 -P 2 > "$WORK/speaker-test-default.txt" 2>&1; then
+            result PASS "ALSA default device plays (what programs use)"
         else
-            grep -i 'error\|fail\|busy\|cannot' "$WORK/arecord.txt" | sed 's/^/    arecord: /' | head -n 3 >> "$REPORT"
+            result FAIL "ALSA default device does not play (see below; programs get no sound)"
+            grep -i -E 'error|fail|unable|refused|no such' "$WORK/speaker-test-default.txt" | head -n 3 | sed 's/^/    speaker-test default: /' >> "$REPORT"
         fi
-        rm -f "$WORK/mic.wav"
-        ask "Did you hear your voice played back?" && result PASS "microphone (heard)" || result FAIL "microphone: no playback heard"
+        log "  ALSA default: $([ -e /etc/alsa/conf.d/99-pipewire-default.conf ] && echo PipeWire || echo "the first card"); PipeWire $(pgrep -x pipewire >/dev/null 2>&1 && echo running || echo "not running")"
+    fi
+    if have arecord && have aplay && ask "Test the microphone: after Enter, speak without a pause for about 10 seconds; then it plays back?"; then
+        # every capture input in turn (laptops often have several: the right one is not always
+        # selected), 2 s each, with every boost control at 70%; -vv prints a level meter: its
+        # median shows silence (0 = muted or the wrong input), a click does not count
+        local src srcs best= bestlvl=-1 lvl c
+        if have amixer; then
+            amixer -c "$card" scontrols 2>/dev/null | sed -n "s/^Simple mixer control '\(.*Boost\)',\([0-9]*\)$/\1,\2/p" |
+                while IFS= read -r c; do amixer -q -c "$card" sset "$c" 70% 2>/dev/null; done
+            srcs=$(amixer -c "$card" sget 'Capture Source' 2>/dev/null | sed -n "s/^ *Items: //p" | sed "s/' '/\n/g; s/'//g")
+        fi
+        [ -n "$srcs" ] || srcs=-
+        while IFS= read -r src; do
+            [ "$src" = - ] || amixer -q -c "$card" sset 'Capture Source' "$src" 2>/dev/null
+            arecord -D "$dev" -vv -d 2 -f cd /dev/null 2> "$WORK/arecord.txt" || true
+            lvl=$(tr '\r' '\n' < "$WORK/arecord.txt" | sed -n 's/.*[^0-9]\([0-9][0-9]*\)%.*/\1/p' | sed 1,3d | sort -n |
+                  awk '{ v[NR] = $1 } END { print NR ? v[int((NR + 1) / 2)] : -1 }')
+            log "  microphone input '$src': typical level ${lvl}%"
+            [ "$lvl" -le "$bestlvl" ] || { bestlvl=$lvl best=$src; }
+        done <<< "$srcs"
+        grep -i 'error\|fail\|busy\|cannot' "$WORK/arecord.txt" | sed 's/^/    arecord: /' | head -n 3 >> "$REPORT"
+        if [ "$bestlvl" -le 0 ]; then
+            result FAIL "microphone: every input records silence"
+        else
+            [ "$best" = - ] || amixer -q -c "$card" sset 'Capture Source' "$best" 2>/dev/null
+            log "  playing back 4 s from '$best' (speak now if you stopped)"
+            arecord -D "$dev" -q -d 4 -f cd "$WORK/mic.wav" 2>/dev/null &&
+                { aplay -D "$dev" -q "$WORK/mic.wav" 2> "$WORK/aplay.txt" || sed 's/^/    aplay: /' "$WORK/aplay.txt" | head -n 3 >> "$REPORT"; }
+            rm -f "$WORK/mic.wav"
+            ask "Did you hear your voice played back?" && result PASS "microphone (heard, input '$best')" \
+                || result FAIL "microphone: not heard (input '$best', typical level ${bestlvl}%)"
+        fi
     fi
 }
 
