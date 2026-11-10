@@ -190,7 +190,8 @@ Status (2026-11-08, 0.3.0): installed from the ISO on the laptop (ASUS E210MA, e
 kernel compiled for the machine, prebuilt packages, audit clean, boots on its own, dwl runs;
 cig-check on the medium found WiFi, Bluetooth, display, touchpad, keyboard; 6 firmware files. Open for 0.3.x: 118 MB
 RAM used with dwl + foot (over the 100 MB target), sound and suspend not yet tested there,
-the WiFi password is asked twice and there is no list of networks to pick from.
+~~the WiFi password is asked twice and there is no list of networks to pick from~~ (0.3.1:
+networks from a scan, hidden ones typed, the password once; WPA3-only networks not yet).
 
 ### 0.3.x – GPU acceleration (after the first bare-metal install)
 

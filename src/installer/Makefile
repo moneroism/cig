@@ -9,12 +9,12 @@ CFLAGS  += -std=c17 -D_POSIX_C_SOURCE=200809L -D_DEFAULT_SOURCE \
 LDFLAGS ?= -Wl,-z,relro,-z,now
 LDFLAGS += -pie
 LIBS    = -lncursesw
-OBJ     = main.o ui.o diskui.o disk.o install.o sys.o libreui.o libre.o
+OBJ     = main.o ui.o diskui.o disk.o install.o sys.o libreui.o wifi.o libre.o
 
 cig-install: $(OBJ)
 	$(CC) $(CFLAGS) -o $@ $(OBJ) $(LDFLAGS) $(LIBS)
 
-$(OBJ): disk.h state.h sys.h ui.h libreui.h ../libre/libre.h
+$(OBJ): disk.h state.h sys.h ui.h libreui.h wifi.h ../libre/libre.h
 
 # the libre-meter, shared with smoke
 libre.o: ../libre/libre.c ../libre/libre.h

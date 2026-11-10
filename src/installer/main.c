@@ -19,6 +19,7 @@
 #include "libreui.h"
 #include "state.h"
 #include "ui.h"
+#include "wifi.h"
 
 static bool valid_name(const char *s, bool user)
 {
@@ -167,6 +168,82 @@ static void dns_screen(struct state *s)
 		s->dns = (enum dns)c;
 }
 
+/* a network from a scan (or typed: hidden ones), then its password, typed once: a wrong
+ * one only means no connection, and wpa_passphrase can be run again after the first boot */
+static void wifi_screen(struct state *s)
+{
+	static struct wifi_net nets[WIFI_MAX];
+	char ssid[64] = "", shown[136] = "";
+	for (int sel = 0;;) {
+		ui_wait("Hardware: WiFi", "Looking for WiFi networks (up to 10 seconds)...");
+		int n = wifi_scan("wlan0", nets, WIFI_MAX);
+		const char **items = xmalloc((size_t)(n > 0 ? n + 2 : 2) * sizeof(char *));
+		const char **values = xmalloc((size_t)(n > 0 ? n + 2 : 2) * sizeof(char *));
+		int k = 0;
+		for (int i = 0; i < n; i++, k++) {
+			items[k] = nets[i].shown;
+			values[k] = xasprintf("%s  %d dBm", nets[i].wpa2 && nets[i].wpa3 ? "WPA2/WPA3"
+			                      : nets[i].wpa2 ? "WPA2" : "WPA3 only", nets[i].signal);
+			if (!strcmp(nets[i].ssid, s->ssid))
+				sel = i;
+		}
+		items[k] = "Other network (hidden: type its name)";
+		values[k++] = NULL;
+		items[k] = "Scan again";
+		values[k++] = NULL;
+		if (sel >= k)
+			sel = 0;
+		int c = ui_menu("Hardware: WiFi", n < 0 ? "No scan was possible (see the install log). Type the name of the network."
+		                                  : n == 0 ? "No WPA2/WPA3-Personal network found."
+		                                           : "WPA2/WPA3-Personal networks in range, strongest first.",
+		                items, values, k, &sel);
+		for (int i = 0; i < k; i++)
+			free((char *)values[i]);
+		free(items);
+		free(values);
+		if (c < 0)
+			return;
+		if (c == k - 1)
+			continue;
+		if (c == k - 2) {
+			snprintf(ssid, sizeof(ssid), "%s", s->ssid);
+			if (!ui_input("Hardware: WiFi", "Network name (SSID):", ssid, sizeof(ssid), false) || !*ssid)
+				continue;
+			if (strlen(ssid) > 32) {
+				ui_msg("Hardware: WiFi", "A network name has at most 32 characters.");
+				continue;
+			}
+			snprintf(shown, sizeof(shown), "%s", ssid);
+		} else if (!nets[c].wpa2) {
+			ui_msg("Hardware: WiFi", "This network uses WPA3 only. The installer sets up WPA2 for now: "
+			                         "choose another network, or set it up after the first boot.");
+			continue;
+		} else {
+			snprintf(ssid, sizeof(ssid), "%s", nets[c].ssid);
+			snprintf(shown, sizeof(shown), "%s", nets[c].shown);
+		}
+		break;
+	}
+	char *q = xasprintf("Password for %s:", shown);
+	for (;;) {
+		char psk[256] = "";
+		if (!ui_input("Hardware: WiFi", q, psk, sizeof(psk), true))
+			break;
+		/* WPA2/WPA3-Personal: 8 to 63 printable ASCII characters (as wpa_passphrase wants);
+		 * ui_input only takes printable ASCII */
+		size_t len = strlen(psk);
+		if (len >= 8 && len <= 63) {
+			snprintf(s->psk, sizeof(s->psk), "%s", psk);
+			snprintf(s->ssid, sizeof(s->ssid), "%s", ssid);
+			memset(psk, 0, sizeof(psk));
+			break;
+		}
+		memset(psk, 0, sizeof(psk));
+		ui_msg("Hardware: WiFi", "A WiFi password has 8 to 63 characters (letters, digits, symbols).");
+	}
+	free(q);
+}
+
 static void hardware_screen(struct state *s)
 {
 	if (s->ndrv) {
@@ -191,27 +268,13 @@ static void hardware_screen(struct state *s)
 		free(items);
 		free(on);
 	}
-	if (file_exists("/sys/class/net/wlan0") &&
-	    ui_yesno("Hardware: WiFi", "Set up a WiFi network for the new system? (WPA2/WPA3-Personal)", !!*s->ssid)) {
-		char ssid[64];
-		snprintf(ssid, sizeof(ssid), "%s", s->ssid);
-		if (ui_input("Hardware: WiFi", "Network name (SSID):", ssid, sizeof(ssid), false) && *ssid &&
-		    password("Hardware: WiFi", ssid, s->psk, sizeof(s->psk))) {
-			/* WPA2/WPA3-Personal: 8 to 63 printable ASCII characters (as wpa_passphrase wants) */
-			size_t n = strlen(s->psk);
-			bool ok = n >= 8 && n <= 63 && strlen(ssid) <= 32;
-			for (size_t i = 0; i < n && ok; i++)
-				ok = s->psk[i] >= 32 && s->psk[i] < 127;
-			if (ok) {
-				snprintf(s->ssid, sizeof(s->ssid), "%s", ssid);
-			} else {
-				memset(s->psk, 0, sizeof(s->psk));
-				ui_msg("Hardware: WiFi", "A WiFi password has 8 to 63 characters (letters, digits, symbols), "
-				                         "and a network name at most 32. The network was not set.");
-			}
-		}
-	} else if (!file_exists("/sys/class/net/wlan0")) {
+	if (!file_exists("/sys/class/net/wlan0")) {
 		ui_msg("Hardware", s->ndrv ? "No WiFi device found." : "No driver of this machine requests firmware.\nNo WiFi device found.");
+	} else if (ui_yesno("Hardware: WiFi", "Set up a WiFi network for the new system? (WPA2-Personal)", !!*s->ssid)) {
+		wifi_screen(s);
+	} else {   /* no: also forget a network chosen on an earlier visit */
+		s->ssid[0] = '\0';
+		memset(s->psk, 0, sizeof(s->psk));
 	}
 	dns_screen(s);
 }
