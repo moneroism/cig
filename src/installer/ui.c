@@ -52,7 +52,8 @@ static void trace_screen(int key)
 		return;
 	fprintf(trace_f, "---- key %d\n", key);
 	for (int y = 0; y < LINES; y++) {
-		mvinnstr(y, 0, line, COLS < 511 ? COLS : 511);
+		if (mvinnstr(y, 0, line, COLS < 511 ? COLS : 511) == ERR)
+			line[0] = '\0';
 		size_t n = strlen(line);
 		while (n && line[n - 1] == ' ')
 			line[--n] = '\0';
