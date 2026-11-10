@@ -5,14 +5,15 @@ of GrapheneOS but for the PC: as little code as possible, every source
 verified, nothing running that isn't needed, and nothing hardcoded to one
 machine.
 
-> **Status:** 0.3.0 (beta): Phase 3 reached, on the way to 0.4.0. A bootable install medium (hybrid ISO: CD/DVD or USB stick)
-> runs a live system, and its installer installs a system that boots on its own with
-> its own linux-hardened kernel, signed modules and lockdown, and a Wayland desktop
-> (dwl + foot, or sway): tested in QEMU (UEFI). smoke and the installer are C; everything
-> is built from recipes with `cigbuild`, and every source's authenticity is audited
-> ([`docs/sources.md`](docs/sources.md)). Mesa without LLVM (RADV + Zink) is built for AMD
-> GPUs but not yet tested on the hardware. Next: the first install on real hardware, a
-> kernel with all drivers for the medium. Not for daily use. See [`ROADMAP.md`](ROADMAP.md).
+> **Status:** 0.3.0 (beta): Phase 3 reached, on the way to 0.4.0. A bootable install medium
+> (hybrid ISO: CD/DVD or USB stick) runs a live system, and its installer installs a system that
+> boots on its own with its own linux-hardened kernel, signed modules and lockdown, and a Wayland
+> desktop (dwl + foot, or sway): tested in QEMU (UEFI) and installed on a laptop (ASUS E210MA,
+> eMMC). smoke and the installer are C; everything is built from recipes with `cigbuild`, and
+> every source's authenticity is audited ([`docs/sources.md`](docs/sources.md)). Mesa without
+> LLVM (RADV + Zink) is built for AMD GPUs but not yet tested on the hardware. Next: 0.3.x fixes
+> from the laptop (RAM with dwl, installer WiFi, sound, suspend), then Phase 4. Not for daily
+> use. See [`ROADMAP.md`](ROADMAP.md).
 
 ## Principles
 
@@ -347,8 +348,7 @@ See [`ROADMAP.md`](ROADMAP.md). In short:
 - [x] Phase 0 – Foundation: toolchain, userland, init, desktop, cigbuild, kernel, firmware
 - [x] Phase 1 – smoke: symlink farm, inventory with install reasons, autoremove, audit
 - [x] Phase 2 – Installer (shell TUI), tested in QEMU (0.2.0)
-- [ ] Phase 3 – Install media (ISO), first bare-metal install, basic usability (ALSA, clipboard, screenshots, DNS);
-  all done and VM-tested except the bare-metal install, which waits for a browser (Phase 6)
+- [x] Phase 3 – Install media (ISO), first bare-metal install, basic usability (ALSA, clipboard, screenshots, DNS) (0.3.0)
 - [ ] 0.3.x – GPU acceleration: Mesa without LLVM (RADV + Zink); built, not yet tested on an AMD GPU
 - [ ] Phase 4 – Optional components (PipeWire, Bluetooth, wmenu), UEFI boot entries, libre-meter (first version done)
 - [ ] Phase 5 – Security layers (allowlisting), read-only root, own kernel base config
