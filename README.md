@@ -290,7 +290,10 @@ asks a few yes/no questions at the keyboard (`--no-ask` skips them, `--quick` sk
 and suspend tests) and saves its report to `CIG-DATA`, without MAC addresses, network names or
 serial numbers. It never writes to the machine's disks. The installer runs it once before
 partitioning (`--quick --no-ask`) and keeps the report in its log. cig-check is temporary, its
-own media-only package (`packages/cig-check`): installed systems never get it.
+own package (`packages/cig-check`). For the 0.3.x tests it is also a component (Tools, on by
+default), so an installed system can check itself (`doas cig-check`: RAM with a breakdown, the
+WiFi connection, sound, suspend); the report goes to `CIG-DATA` when the stick is plugged in,
+else to /root. Before a release it goes back to the medium only.
 
 ### Testing in QEMU
 

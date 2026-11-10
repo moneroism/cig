@@ -675,7 +675,7 @@ void do_install(struct state *s)
 	{
 		char *argv[] = { "sh", "-c",
 			"for r in \"$0\"/packages/*/recipe; do p=${r%/recipe}; p=${p##*/};"
-			" case $p in linux|linux-firmware|cig-installer|cig-live|cig-check) continue ;; esac;"
+			" case $p in linux|linux-firmware|cig-installer|cig-live) continue ;; esac;"
 			" f=$(CIG_VAR=\"$1\" \"$0\"/cigbuild pkgfile \"$p\" 2>/dev/null) && [ -f \"$f\" ] || continue;"
 			" [ ! -e \"$3/${f##*/}\" ] || continue; b=\"$2/${f##*/}\"; [ -e \"$b\" ] || cp \"$f\" \"$b\" || exit 1;"
 			" [ ! -f \"$f.sha256\" ] || [ -e \"$b.sha256\" ] || cp \"$f.sha256\" \"$b.sha256\" || exit 1;"

@@ -2,8 +2,8 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 moneroism
 #
-# cig-check - checks this machine's hardware under cig from the live medium, stress-tests it,
-# and writes a detailed report. Never writes to internal disks (storage tests only read).
+# cig-check - checks this machine's hardware under cig (the live medium or an installed system),
+# stress-tests it, and writes a detailed report. Never writes to internal disks (storage tests only read).
 #
 #   cig-check [--quick] [--no-ask] [--out <dir>]
 #     --quick   no stress tests and no suspend test (a few minutes less)
@@ -98,13 +98,26 @@ s_system() {
     done
     log "  microcode revision (from the firmware; cig never loads any): $(sed -n 's/^microcode[[:space:]]*: //p' /proc/cpuinfo | head -n1)"
     log "  memory: $(awk '/MemTotal/ { printf "%d MiB", $2 / 1024 }' /proc/meminfo)"
-    log "  RAM in use now (live system, all in RAM: not the installed system's figure):"
+    if [ -e /etc/cig/live ]; then
+        log "  RAM in use now (live system, all in RAM: not the installed system's figure):"
+    else
+        log "  RAM in use now (installed system; dwl: $(pgrep -x dwl >/dev/null && echo running || echo not running)):"
+    fi
     free -m | sed 's/^/    /' >> "$REPORT"
     # free pages each CPU keeps for fast allocation: not in MemFree, so free counts them as
     # used (the dev VM: 21-29 MiB of its ~100). 4 KiB pages (x86_64)
     log "  of that, free pages kept per CPU: $(awk '$1 == "count:" { n += $2 } END { printf "%d MiB", n * 4 / 1024 }' /proc/zoneinfo) (vm.percpu_pagelist_high_fraction=$(rd /proc/sys/vm/percpu_pagelist_high_fraction))"
     log "  used without them: $(awk 'FNR == NR { m[$1] = $2; next } $1 == "count:" { n += $2 }
         END { printf "%d MiB", (m["MemTotal:"] - m["MemFree:"] - m["Buffers:"] - m["Cached:"] - m["SReclaimable:"] - n * 4) / 1024 }' /proc/meminfo /proc/zoneinfo)"
+    log "  where it goes (MiB): $(awk '/^(AnonPages|Shmem|SUnreclaim|KernelStack|PageTables|VmallocUsed|Percpu):/ { printf "%s %d  ", $1, $2 / 1024 }' /proc/meminfo)"
+    log "  largest kernel caches (MiB, name):"
+    awk 'NR > 2 { printf "%d %s\n", $3 * $4 / 1048576, $1 }' /proc/slabinfo 2>/dev/null | sort -rn | head -n 6 | sed 's/^/    /' >> "$REPORT"
+    # kmalloc caches: many small ones (with random kmalloc caches, several copies of each size)
+    log "  all kmalloc caches together: $(awk 'NR > 2 && $1 ~ /^kmalloc/ { k += $3 * $4 } END { printf "%d MiB", k / 1048576 }' /proc/slabinfo 2>/dev/null); all caches: $(awk 'NR > 2 { k += $3 * $4 } END { printf "%d MiB", k / 1048576 }' /proc/slabinfo 2>/dev/null)"
+    log "  largest programs (resident MiB, name):"
+    for f in /proc/[0-9]*/status; do
+        awk '/^Name:/ { n = $2 } /^VmRSS:/ { printf "%d %s\n", $2 / 1024, n }' "$f" 2>/dev/null
+    done | sort -rn | head -n 6 | sed 's/^/    /' >> "$REPORT"
 }
 
 s_kernel_log() {
@@ -259,7 +272,21 @@ s_network() {
     fi
     # never next to the live system's own (the installer runs cig-check while WiFi may be in use)
     if pgrep -x wpa_supplicant >/dev/null 2>&1; then
-        result SKIP "WiFi scan: a wpa_supplicant is already running"
+        # an installed system's own (or the live one in use): its connection, through its socket
+        if [ -S "/run/wpa_supplicant/$w" ]; then
+            local st
+            st=$(wpa_cli -p /run/wpa_supplicant -i "$w" status 2>/dev/null)
+            log "  running wpa_supplicant: $(printf '%s\n' "$st" | grep -E '^(wpa_state|key_mgmt|freq|pairwise_cipher)=' | tr '\n' ' ')"
+            if printf '%s\n' "$st" | grep -q '^wpa_state=COMPLETED'; then
+                result PASS "WiFi connected ($(printf '%s\n' "$st" | sed -n 's/^key_mgmt=//p'))"
+                ip -4 addr show "$w" 2>/dev/null | grep -q 'inet ' && result PASS "WiFi has an IPv4 address" \
+                    || result FAIL "WiFi connected but no IPv4 address (DHCP)"
+            else
+                result WARN "WiFi not connected ($(printf '%s\n' "$st" | sed -n 's/^wpa_state=//p'))"
+            fi
+        else
+            result SKIP "WiFi scan: a wpa_supplicant is already running"
+        fi
         return
     fi
     have rfkill && rfkill unblock wifi 2>/dev/null
@@ -345,6 +372,11 @@ s_sound() {
         for ctl in Master Speaker Headphone PCM Capture "Internal Mic Boost"; do
             amixer -q -c "$card" sset "$ctl" 70% unmute cap 2>/dev/null || true
         done
+        amixer -c "$card" contents > "$WORK/amixer.txt" 2>&1 || true
+    fi
+    if pgrep -x pipewire >/dev/null 2>&1; then
+        log "  PipeWire is running (a desktop session): it may hold the card, so the tests below can"
+        log "  fail with 'busy'; programs play through it (ALSA's default is PipeWire when installed)"
     fi
     if ask "Play a test tone on the speakers (about 4 seconds)?"; then
         speaker-test -D "$dev" -t sine -f 440 -c 2 -l 1 > "$WORK/speaker-test.txt" 2>&1 &
@@ -353,10 +385,15 @@ s_sound() {
         ask "Did you hear the tone from both speakers?" && result PASS "speakers (heard)" || result FAIL "speakers: no tone heard"
     fi
     if have arecord && have aplay && ask "Test the microphone: speak for 4 seconds after Enter, then it plays back?"; then
-        if arecord -D "$dev" -q -d 4 -f cd "$WORK/mic.wav" 2> "$WORK/arecord.txt"; then
+        # -vv: a level meter on stderr; its highest value shows a silent recording (muted, or
+        # the wrong input) without anyone listening
+        if arecord -D "$dev" -vv -d 4 -f cd "$WORK/mic.wav" 2> "$WORK/arecord.txt"; then
+            local peak
+            peak=$(tr '\r' '\n' < "$WORK/arecord.txt" | sed -n 's/.*[^0-9]\([0-9][0-9]*\)%.*/\1/p' | sort -n | tail -n1)
+            log "  microphone: loudest level ${peak:-?}% (0 = silence: muted or the wrong input)"
             aplay -D "$dev" -q "$WORK/mic.wav" 2> "$WORK/aplay.txt" || sed 's/^/    aplay: /' "$WORK/aplay.txt" | head -n 3 >> "$REPORT"
         else
-            sed 's/^/    arecord: /' "$WORK/arecord.txt" | head -n 3 >> "$REPORT"
+            grep -i 'error\|fail\|busy\|cannot' "$WORK/arecord.txt" | sed 's/^/    arecord: /' | head -n 3 >> "$REPORT"
         fi
         rm -f "$WORK/mic.wav"
         ask "Did you hear your voice played back?" && result PASS "microphone (heard)" || result FAIL "microphone: no playback heard"
@@ -541,6 +578,7 @@ dmesg > "$WORK/dmesg-end.txt" 2>/dev/null
 
 # ---------------- where the report goes ----------------
 dest=$OUT loopdev=
+[ -z "$dest" ] || mkdir -p "$dest"
 if [ -z "$dest" ]; then
     dev=$(findfs LABEL=CIG-DATA 2>/dev/null || true)
     if [ -n "$dev" ]; then

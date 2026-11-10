@@ -1,14 +1,17 @@
-# cig-check - hardware check and stress test of the machine the install medium runs on, with a
-# report (CIG-DATA partition, see scripts/build-media.sh). Temporary, media only: no group=, so
-# installed systems never get it (the installer also skips it); the installer runs it once in
-# quick, no-questions mode and keeps the report in its log. Removing it: delete this folder and
-# its name in build-media.sh and in the installer's media-only list (install.c).
+# cig-check - hardware check and stress test of the machine it runs on, with a report (on the
+# medium's CIG-DATA partition when it is plugged in, else /root; see scripts/build-media.sh).
+# Temporary: on the medium, and for now also a component (default on) so test installs can
+# measure themselves (RAM, sound, suspend); before a release: default off or no group=. The
+# installer also runs the medium's copy once in quick, no-questions mode and keeps the report in
+# its log. Removing it: delete this folder and its name in build-media.sh and in install.c.
 name=cig-check
 version=$(cat "$CIG_REPO/VERSION")
 license="GPL-3.0-or-later"
 source=""
 sha256=""
 depends="alsa-utils"   # it plays and records sound
+group="tools"
+default=on
 style=custom
 nostrip=1
 do_build() { :; }
