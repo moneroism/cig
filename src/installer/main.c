@@ -169,7 +169,7 @@ static void dns_screen(struct state *s)
 }
 
 /* a network from a scan (or typed: hidden ones), then its password, typed once: a wrong
- * one only means no connection, and wpa_passphrase can be run again after the first boot */
+ * one only means no connection, and the network can be set up again after the first boot */
 static void wifi_screen(struct state *s)
 {
 	static struct wifi_net nets[WIFI_MAX];
@@ -183,7 +183,7 @@ static void wifi_screen(struct state *s)
 		for (int i = 0; i < n; i++, k++) {
 			items[k] = nets[i].shown;
 			values[k] = xasprintf("%s  %d dBm", nets[i].wpa2 && nets[i].wpa3 ? "WPA2/WPA3"
-			                      : nets[i].wpa2 ? "WPA2" : "WPA3 only", nets[i].signal);
+			                      : nets[i].wpa2 ? "WPA2" : "WPA3", nets[i].signal);
 			if (!strcmp(nets[i].ssid, s->ssid))
 				sel = i;
 		}
@@ -214,10 +214,6 @@ static void wifi_screen(struct state *s)
 				continue;
 			}
 			snprintf(shown, sizeof(shown), "%s", ssid);
-		} else if (!nets[c].wpa2) {
-			ui_msg("Hardware: WiFi", "This network uses WPA3 only. The installer sets up WPA2 for now: "
-			                         "choose another network, or set it up after the first boot.");
-			continue;
 		} else {
 			snprintf(ssid, sizeof(ssid), "%s", nets[c].ssid);
 			snprintf(shown, sizeof(shown), "%s", nets[c].shown);
@@ -229,7 +225,7 @@ static void wifi_screen(struct state *s)
 		char psk[256] = "";
 		if (!ui_input("Hardware: WiFi", q, psk, sizeof(psk), true))
 			break;
-		/* WPA2/WPA3-Personal: 8 to 63 printable ASCII characters (as wpa_passphrase wants);
+		/* WPA2/WPA3-Personal: 8 to 63 printable ASCII characters (as wpa_supplicant wants);
 		 * ui_input only takes printable ASCII */
 		size_t len = strlen(psk);
 		if (len >= 8 && len <= 63) {
@@ -270,7 +266,7 @@ static void hardware_screen(struct state *s)
 	}
 	if (!file_exists("/sys/class/net/wlan0")) {
 		ui_msg("Hardware", s->ndrv ? "No WiFi device found." : "No driver of this machine requests firmware.\nNo WiFi device found.");
-	} else if (ui_yesno("Hardware: WiFi", "Set up a WiFi network for the new system? (WPA2-Personal)", !!*s->ssid)) {
+	} else if (ui_yesno("Hardware: WiFi", "Set up a WiFi network for the new system? (WPA2/WPA3-Personal)", !!*s->ssid)) {
 		wifi_screen(s);
 	} else {   /* no: also forget a network chosen on an earlier visit */
 		s->ssid[0] = '\0';

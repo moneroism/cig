@@ -191,7 +191,7 @@ kernel compiled for the machine, prebuilt packages, audit clean, boots on its ow
 cig-check on the medium found WiFi, Bluetooth, display, touchpad, keyboard; 6 firmware files. Open for 0.3.x: 118 MB
 RAM used with dwl + foot (over the 100 MB target), sound and suspend not yet tested there,
 ~~the WiFi password is asked twice and there is no list of networks to pick from~~ (0.3.1:
-networks from a scan, hidden ones typed, the password once; WPA3-only networks not yet).
+networks from a scan, hidden ones typed, the password once; WPA2 and WPA3).
 
 ### 0.3.x – GPU acceleration (after the first bare-metal install)
 
