@@ -127,7 +127,10 @@ struct parser {
 	const struct libre *l;
 	const char *s;
 	char tok[128];
+	int depth;   /* open parentheses: deeper than MAX_DEPTH is not a license anyone wrote */
+	bool deep;
 };
+#define MAX_DEPTH 64
 
 static void next_tok(struct parser *p)
 {
@@ -166,8 +169,16 @@ static enum libre_class expr_atom(struct parser *p)
 {
 	enum libre_class c;
 	if (!strcmp(p->tok, "(")) {
+		if (p->depth == MAX_DEPTH) {   /* stop before the recursion exhausts the stack */
+			p->deep = true;
+			p->tok[0] = '\0';
+			p->s += strlen(p->s);
+			return LIBRE_UNREVIEWED;
+		}
+		p->depth++;
 		next_tok(p);
 		c = expr_or(p);
+		p->depth--;
 		if (!strcmp(p->tok, ")"))
 			next_tok(p);
 		return c;
@@ -210,7 +221,8 @@ enum libre_class libre_license(const struct libre *l, const char *expr)
 {
 	struct parser p = { .l = l, .s = expr ? expr : "" };
 	next_tok(&p);
-	return expr_or(&p);
+	enum libre_class c = expr_or(&p);
+	return p.deep ? LIBRE_UNREVIEWED : c;
 }
 
 /* ---------------- items ---------------- */

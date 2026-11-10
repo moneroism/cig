@@ -35,6 +35,20 @@ int main(int argc, char **argv)
 	expect(&l, "(MIT OR Artistic-1.0-Perl) AND (BSD-3-Clause)", LIBRE_FREE);
 	expect(&l, "LicenseRef-foo", LIBRE_UNREVIEWED);
 	expect(&l, "", LIBRE_UNREVIEWED);
+	/* nesting: 64 levels parse; deeper is not reviewed (and must not exhaust the stack) */
+	static char deep[200001];
+	memset(deep, '(', 64);
+	strcpy(deep + 64, "MIT");
+	memset(deep + 67, ')', 64);
+	expect(&l, deep, LIBRE_FREE);
+	memset(deep, '(', 65);
+	strcpy(deep + 65, "MIT");
+	memset(deep + 68, ')', 65);
+	deep[133] = '\0';
+	expect(&l, deep, LIBRE_UNREVIEWED);
+	memset(deep, '(', 200000);
+	deep[200000] = '\0';
+	expect(&l, deep, LIBRE_UNREVIEWED);
 
 	/* a system: two packages, free and non-free firmware, one with a free replacement */
 	libre_add_package(&l, "musl", "MIT");
