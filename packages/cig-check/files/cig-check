@@ -100,6 +100,11 @@ s_system() {
     log "  memory: $(awk '/MemTotal/ { printf "%d MiB", $2 / 1024 }' /proc/meminfo)"
     log "  RAM in use now (live system, all in RAM: not the installed system's figure):"
     free -m | sed 's/^/    /' >> "$REPORT"
+    # free pages each CPU keeps for fast allocation: not in MemFree, so free counts them as
+    # used (the dev VM: 21-29 MiB of its ~100). 4 KiB pages (x86_64)
+    log "  of that, free pages kept per CPU: $(awk '$1 == "count:" { n += $2 } END { printf "%d MiB", n * 4 / 1024 }' /proc/zoneinfo) (vm.percpu_pagelist_high_fraction=$(rd /proc/sys/vm/percpu_pagelist_high_fraction))"
+    log "  used without them: $(awk 'FNR == NR { m[$1] = $2; next } $1 == "count:" { n += $2 }
+        END { printf "%d MiB", (m["MemTotal:"] - m["MemFree:"] - m["Buffers:"] - m["Cached:"] - m["SReclaimable:"] - n * 4) / 1024 }' /proc/meminfo /proc/zoneinfo)"
 }
 
 s_kernel_log() {
