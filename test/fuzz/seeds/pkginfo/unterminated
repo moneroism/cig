@@ -1,0 +1,5 @@
+name=x
+version=1
+rel=1
+depends="a
+link_dirs=lib/modules

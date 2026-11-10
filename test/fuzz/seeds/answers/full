@@ -1,0 +1,17 @@
+# every key once
+disk = sda
+erase = sda
+home = yes
+root_size = 20
+swap = 1
+hostname = cigtest
+user = tester
+password = tester-pass
+root_password = root-pass
+components = +labwc -wmenu +bluez
+firmware = detected
+wifi_ssid = home net
+wifi_psk = 12345678abc
+dns = tls
+compile = no
+kernel = generic

@@ -1,0 +1,4 @@
+disk=sda
+erase=sda
+user=a
+password=x
