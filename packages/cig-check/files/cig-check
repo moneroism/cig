@@ -62,10 +62,14 @@ have() { command -v "$1" >/dev/null 2>&1; }
 ask() {   # ask <question> -> 0 yes, 1 no
     [ $ASK -eq 1 ] || return 1
     local a
+    # drop lines typed before the question (Enter pressed to wake the screen after suspend,
+    # keys tried during a test): each one would repeat the question
+    while read -r -t 0.1 a < /dev/tty; do :; done
+    printf '\n>>> %s [y/n] ' "$1"
     while :; do
-        printf '\n>>> %s [y/n] ' "$1"
         read -r a < /dev/tty || return 1
         case $a in y|Y|yes) log "  (asked: $1 -> yes)"; return 0 ;; n|N|no) log "  (asked: $1 -> no)"; return 1 ;; esac
+        printf '>>> y or n: '
     done
 }
 mac_vendor() { printf '%s' "${1%:*:*:*}:xx:xx:xx"; }
@@ -390,6 +394,7 @@ s_sound() {
         ask "Did you hear the tone from both speakers?" && result PASS "speakers (heard)" || result FAIL "speakers: no tone heard"
         # what programs use: ALSA's default (PipeWire when pipewire-alsa is installed); only
         # whether it opens and plays, no question (one short period)
+        say "  a second short tone now: the same through ALSA's default device (what programs use)"
         if timeout 10 speaker-test -D default -t sine -f 440 -c 2 -l 1 -p 100000 -P 2 > "$WORK/speaker-test-default.txt" 2>&1; then
             result PASS "ALSA default device plays (what programs use)"
         else
@@ -398,37 +403,50 @@ s_sound() {
         fi
         log "  ALSA default: $([ -e /etc/alsa/conf.d/99-pipewire-default.conf ] && echo PipeWire || echo "the first card"); PipeWire $(pgrep -x pipewire >/dev/null 2>&1 && echo running || echo "not running")"
     fi
-    if have arecord && have aplay && ask "Test the microphone: after Enter, speak without a pause for about 10 seconds; then it plays back?"; then
+    if have arecord && have aplay && ask "Test the microphone: after Enter, speak without a pause until it plays back (about 10 seconds)?"; then
         # every capture input in turn (laptops often have several: the right one is not always
-        # selected), 2 s each, with every boost control at 70%; -vv prints a level meter: its
-        # median shows silence (0 = muted or the wrong input), a click does not count
-        local src srcs best= bestlvl=-1 lvl c
+        # selected), 3 s each, with every boost control at 70%; the level is the recording's
+        # RMS (arecord's -vv meter shows a held peak, not the level: a click looked like a voice);
+        # then the loudest recording itself is played back, so nothing depends on speaking again
+        local src srcs best= bestlvl=-1 lvl c i=0
+        # the card's own controls (amixer contents), not the simple mixer: alsa-lib renames
+        # 'Capture Source' there, so on the laptop no input list was found and only the
+        # selected 'Internal Mic' was tried
         if have amixer; then
-            amixer -c "$card" scontrols 2>/dev/null | sed -n "s/^Simple mixer control '\(.*Boost\)',\([0-9]*\)$/\1,\2/p" |
-                while IFS= read -r c; do amixer -q -c "$card" sset "$c" 70% 2>/dev/null; done
-            srcs=$(amixer -c "$card" sget 'Capture Source' 2>/dev/null | sed -n "s/^ *Items: //p" | sed "s/' '/\n/g; s/'//g")
+            amixer -c "$card" contents 2>/dev/null | sed -n "s/^numid=\([0-9]*\),iface=MIXER,name='[^']*Boost Volume'.*/\1/p" |
+                while IFS= read -r c; do amixer -q -c "$card" cset "numid=$c" 70% 2>/dev/null || true; done
+            srcs=$(amixer -c "$card" cget "iface=MIXER,name=Capture Source" 2>/dev/null | sed -n "s/^ *; Item #\([0-9]*\) '\(.*\)'$/\1 \2/p")
         fi
-        [ -n "$srcs" ] || srcs=-
+        [ -n "$srcs" ] || srcs="- default"   # no 'Capture Source' control: the card's only input
         while IFS= read -r src; do
-            [ "$src" = - ] || amixer -q -c "$card" sset 'Capture Source' "$src" 2>/dev/null
-            arecord -D "$dev" -vv -d 2 -f cd /dev/null 2> "$WORK/arecord.txt" || true
-            lvl=$(tr '\r' '\n' < "$WORK/arecord.txt" | sed -n 's/.*[^0-9]\([0-9][0-9]*\)%.*/\1/p' | sed 1,3d | sort -n |
-                  awk '{ v[NR] = $1 } END { print NR ? v[int((NR + 1) / 2)] : -1 }')
-            log "  microphone input '$src': typical level ${lvl}%"
-            [ "$lvl" -le "$bestlvl" ] || { bestlvl=$lvl best=$src; }
+            i=$((i + 1))
+            [ "${src%% *}" = - ] || amixer -q -c "$card" cset "iface=MIXER,name=Capture Source" "${src%% *}" 2>/dev/null || true
+            say "  recording from '${src#* }' (3 s)..."
+            lvl=-1
+            if arecord -D "$dev" -q -d 3 -f cd "$WORK/mic-$i.wav" 2> "$WORK/arecord.txt"; then
+                # RMS in tenths of a percent of full scale, without the header and the first 0.25 s
+                lvl=$(od -An -v -j 44144 -t d2 "$WORK/mic-$i.wav" |
+                      awk '{ for (k = 1; k <= NF; k++) { s += $k * $k; n++ } } END { printf "%d", n ? sqrt(s / n) / 32.768 : -1 }')
+            else
+                sed 's/^/    arecord: /' "$WORK/arecord.txt" | head -n 3 >> "$REPORT"
+            fi
+            log "  microphone input '${src#* }': level $([ "$lvl" -ge 0 ] && echo "$((lvl / 10)).$((lvl % 10))%" || echo "- (recording failed)")"
+            [ "$lvl" -le "$bestlvl" ] || { bestlvl=$lvl best="$i $src"; }
         done <<< "$srcs"
-        grep -i 'error\|fail\|busy\|cannot' "$WORK/arecord.txt" | sed 's/^/    arecord: /' | head -n 3 >> "$REPORT"
-        if [ "$bestlvl" -le 0 ]; then
-            result FAIL "microphone: every input records silence"
+        have amixer && amixer -c "$card" contents > "$WORK/amixer-mic.txt" 2>&1 || true
+        # 0.2% and less: silence or noise (speech is a few percent and more)
+        if [ "$bestlvl" -le 2 ]; then
+            result FAIL "microphone: every input records silence (loudest $((bestlvl / 10)).$((bestlvl % 10))%)"
         else
-            [ "$best" = - ] || amixer -q -c "$card" sset 'Capture Source' "$best" 2>/dev/null
-            log "  playing back 4 s from '$best' (speak now if you stopped)"
-            arecord -D "$dev" -q -d 4 -f cd "$WORK/mic.wav" 2>/dev/null &&
-                { aplay -D "$dev" -q "$WORK/mic.wav" 2> "$WORK/aplay.txt" || sed 's/^/    aplay: /' "$WORK/aplay.txt" | head -n 3 >> "$REPORT"; }
-            rm -f "$WORK/mic.wav"
+            set -- $best   # recording number, Capture Source item (or -), name
+            [ "$2" = - ] || amixer -q -c "$card" cset "iface=MIXER,name=Capture Source" "$2" 2>/dev/null || true
+            best=${best#* }; best=${best#* }
+            say "  playing back what '$best' recorded"
+            aplay -D "$dev" -q "$WORK/mic-$1.wav" 2> "$WORK/aplay.txt" || sed 's/^/    aplay: /' "$WORK/aplay.txt" | head -n 3 >> "$REPORT"
             ask "Did you hear your voice played back?" && result PASS "microphone (heard, input '$best')" \
-                || result FAIL "microphone: not heard (input '$best', typical level ${bestlvl}%)"
+                || result FAIL "microphone: not heard (input '$best', level $((bestlvl / 10)).$((bestlvl % 10))%)"
         fi
+        rm -f "$WORK"/mic-*.wav   # the voice recordings never go into the report
     fi
 }
 
@@ -576,9 +594,13 @@ s_suspend() {
         return
     fi
     local before after t0
+    # wait for the Enter key to be released first: a key held down while the machine sleeps
+    # can repeat after it wakes (a guess for the laptop's question shown about 20 times)
+    sleep 1
     before=$(dmesg | wc -l); t0=$(date +%s)
     rtcwake -m mem -s 20 >/dev/null 2>&1
     after=$(date +%s)
+    sleep 2   # let the screen and input come back before the question
     log "  slept and woke after $(( after - t0 )) s (wall clock)"
     dmesg | tail -n +"$before" > "$WORK/dmesg-suspend.txt"
     if grep -q -E 'PM: suspend exit|ACPI: PM: Waking up|PM: resume' "$WORK/dmesg-suspend.txt"; then
