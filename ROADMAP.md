@@ -258,10 +258,11 @@ is detected, and everything else renders with pixman. Not yet tested on the RX57
     of free alternatives per non-free item
   - first version done 2026-11-03 (developer's choices: the FSF's list, items not bytes, the
     installer and `smoke libre`, the kernel not free while it loads blobs, a reviewed
-    supplement for licenses SPDX does not flag). Still to come: more free alternatives (the
-    list has only ath9k_htc's open firmware), firmware files a driver requests for other
-    hardware generations (amdgpu asks for every GPU's), and a VM test with a device whose
-    driver loads firmware
+    supplement for licenses SPDX does not flag). Firmware a driver names for other hardware
+    generations (amdgpu names every GPU's) is left out: the installer keeps only the files the
+    medium's kernel logged as loaded (826a1cf, tested with a fake log; QEMU emulates no device
+    whose driver loads firmware, so a real test needs hardware). Still to come: more free
+    alternatives (the list has only ath9k_htc's open firmware)
 
 **Exit criteria:** every component installs and works on the PC.
 
