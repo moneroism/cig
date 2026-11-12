@@ -57,9 +57,7 @@ for f in /etc/sysctl.d/*.conf; do [ -f "$f" ] && sysctl -q -p "$f"; done
 
 # hardware: hotplug daemon, then drivers for devices already present
 mdev -d
-for m in $(find /sys/devices -name modalias -exec cat {} + 2>/dev/null | sort -u); do
-    modprobe -q "$m" 2>/dev/null
-done
+cig-modload $(find /sys/devices -name modalias -exec cat {} + 2>/dev/null | sort -u)
 mdev -s
 
 # sound: the saved mixer state, or ALSA's unmuted defaults the first time

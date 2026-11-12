@@ -1,7 +1,9 @@
 #!/bin/sh
 # no Bluetooth in this kernel (no module, nothing in /sys/class/bluetooth): the service stops
 # itself instead of failing every second
-modprobe -q bluetooth 2>/dev/null
+# cig-modload leaves the Bluetooth drivers out while bluez is not installed: load them now
+# (bluez installed later works without a reboot)
+if command -v cig-modload >/dev/null; then cig-modload --bluetooth; else modprobe -q bluetooth 2>/dev/null; fi
 if [ ! -d /sys/class/bluetooth ]; then
     echo "this kernel has no Bluetooth support: bluetoothd not started"
     exec sv down .

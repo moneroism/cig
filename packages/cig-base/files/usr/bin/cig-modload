@@ -1,0 +1,46 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 moneroism
+# cig-modload - load the drivers for device modaliases (rc.init at boot, mdev on hotplug).
+#   cig-modload <modalias>...    every driver, except Bluetooth while bluez is not installed
+#   cig-modload --bluetooth      the Bluetooth drivers of the devices present (bluez's service)
+# Without bluez nothing can use a Bluetooth controller, but its drivers would still load
+# (about 1.5 MB of kernel memory). Installing bluez later needs no setting: its service loads
+# them when it starts, and from then on boot and hotplug load them too.
+PATH=/usr/bin:/usr/sbin
+moddir=${CIG_MODDIR:-/usr/lib/modules/$(uname -r)}
+bluez=${CIG_BLUETOOTHD:-/usr/lib/bluetooth/bluetoothd}
+
+if [ "$1" != --bluetooth ] && [ -x "$bluez" ]; then
+    for m; do modprobe -q "$m" 2>/dev/null; done
+    exit 0
+fi
+
+# the aliases of every module that needs the bluetooth module (modules.dep.bb: a block per
+# module, its file and aliases on the first line, the modules it needs on the second): globs,
+# matched with the shell's case (awk's regular expressions took 1.6 s for 200 devices)
+patterns() {
+    awk 'BEGIN { RS = "" }
+        { split($0, l, "\n"); if (l[2] !~ /(^| )bluetooth( |$)/) next
+          n = split(l[1], f, " "); for (i = 2; i <= n; i++) if (f[i] !~ /^symbol:/) print f[i] }' \
+        "$moddir/modules.dep.bb" 2>/dev/null
+}
+is_bt() {   # is_bt <modalias>: a Bluetooth driver's device (only patterns of the same bus)
+    local p
+    for p in $pats; do
+        case ${1%%:*} in ${p%%:*}) ;; *) continue ;; esac
+        case $1 in $p) return 0 ;; esac
+    done
+    return 1
+}
+set -f   # the patterns are globs: never expanded to file names
+pats=$(patterns)
+
+if [ "$1" = --bluetooth ]; then
+    modprobe -q bluetooth 2>/dev/null
+    for m in $(find /sys/devices -name modalias -exec cat {} + 2>/dev/null | sort -u); do
+        is_bt "$m" && modprobe -q "$m" 2>/dev/null
+    done
+    exit 0
+fi
+for m; do is_bt "$m" || modprobe -q "$m" 2>/dev/null; done

@@ -346,13 +346,19 @@ s_network() {
 s_bluetooth() {
     section "Bluetooth"
     local h n=0
+    # without bluez, boot leaves the Bluetooth drivers out (cig-modload): load them for the test
+    # (the RAM was measured before, in the first section)
+    if ! ls /sys/class/bluetooth/hci* >/dev/null 2>&1 && have cig-modload; then
+        log "  (Bluetooth drivers not loaded at boot, bluez not installed: loading them for the test)"
+        cig-modload --bluetooth; sleep 2
+    fi
     for h in /sys/class/bluetooth/hci*; do
         [ -e "$h" ] || continue
         n=$((n + 1))
         log "  ${h##*/}: driver $(basename "$(readlink "$h/device/driver")" 2>/dev/null)"
     done
     [ $n -gt 0 ] && result PASS "$n Bluetooth controller(s)" || result WARN "no Bluetooth controller"
-    grep -i -E 'bluetooth: hci[0-9].*(fail|error|timeout)' "$WORK/dmesg.txt" | head -n 5 | sed 's/^/    /' >> "$REPORT"
+    dmesg | grep -i -E 'bluetooth: hci[0-9].*(fail|error|timeout)' | head -n 5 | sed 's/^/    /' >> "$REPORT"
 }
 
 s_sound() {

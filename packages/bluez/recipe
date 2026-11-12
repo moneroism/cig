@@ -1,7 +1,7 @@
 # bluez - Bluetooth (bluetoothd, bluetoothctl); needs the D-Bus system bus
 name=bluez
 version=5.87
-rel=3
+rel=4
 license="GPL-2.0-or-later AND LGPL-2.1-or-later"
 source="https://cdn.kernel.org/pub/linux/bluetooth/bluez-$version.tar.xz"
 keys="E932D120BC2AEC444E558F0106CA9F5D1DCF2659"
