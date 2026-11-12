@@ -23,9 +23,9 @@ hardware waits until cig has booted on real hardware.
 
 | Version | Meaning |
 |---|---|
-| **X.0.0** | stable release, production-ready on real hardware (1.0.0 = first stable) |
-| **0.X.0** | beta / testing release: may run on hardware, but unstable |
-| **x.y.Z** | hotfixes and small additions to that release (0.1.1, 1.0.1) |
+| **X**.y.z | stable release, production-ready on real hardware (1.0.0 = first stable) |
+| x.**Y**.z | beta / testing release: one more phase reached; may run on hardware, but unstable |
+| x.y.**Z** | patch: hotfixes and small additions to that stable or beta release, not working towards the next version (0.3.1, 1.0.1) |
 
 The current version is in `VERSION` in the repository root; `cig-base` writes it
 into `/usr/lib/os-release` of every installed system.

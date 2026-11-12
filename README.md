@@ -33,6 +33,20 @@ machine.
 - **Auditable.** One readable inventory says what is installed and why;
   `smoke audit` checks the whole system against it.
 
+## Versions
+
+A version is `X.Y.Z`:
+
+| Part | Meaning | Example |
+|---|---|---|
+| **X**.y.z | a **stable** release, ready for daily use on real hardware; 1.0.0 is the first | 1.0.0, 2.0.0 |
+| x.**Y**.z | a **beta** release: one more phase of the [roadmap](ROADMAP.md) reached; runs on hardware but is not stable yet | 0.3.0, 0.4.0 |
+| x.y.**Z** | a **patch** to that stable or beta release: fixes and small additions that don't work towards the next version (like a hotfix) | 0.3.1, 1.0.1 |
+
+The current version is in [`VERSION`](VERSION); every installed system has it in
+`/usr/lib/os-release`, and the install medium is `cig-<version>.iso`. Which phase each
+version reached is listed in [`ROADMAP.md`](ROADMAP.md#versions).
+
 ## Design
 
 | Area | Choice |
@@ -82,7 +96,7 @@ src/pixel/          pixel, terminal animations (C; package pixel)
 packages/<name>/    one recipe per package (+ files/ for extra files)
 assets/             logos and banners (ASCII and braille), with their size and colour rules
 scripts/            bootstrap, the install media (build-media.sh) and VM helpers
-VERSION             the cig release (X.0.0 stable, 0.X.0 beta, x.y.Z fixes)
+VERSION             the cig release (see "Versions")
 docs/               design documents: smoke, sources (how every source is authenticated)
 kernel/             earlier kernel configs (reference)
 ROADMAP.md          goals and phases
