@@ -1,0 +1,32 @@
+# cig's default yambar config. yambar reads ~/.config/yambar/config.yml first: copy this file
+# there to change it. Modules that need a device name (network, backlight, ALSA) are left out,
+# names differ per machine; see yambar-modules(5). The click actions open a terminal (foot).
+bar:
+  height: 24
+  location: top
+  spacing: 8
+  margin: 6
+  font: monospace:pixelsize=14
+  foreground: ffffffff
+  background: 000000ff
+  right:
+    - label:
+        content: {string: {text: "wifi", on-click: "cig-bar open wifi"}}
+    - label:
+        content: {string: {text: "bluetooth", on-click: "cig-bar open bluetooth"}}
+    - label:
+        content: {string: {text: "sound", on-click: "cig-bar open sound"}}
+    - script:
+        path: /usr/bin/cig-bar
+        args: [caffeine]
+        poll-interval: 1000
+        content: {string: {text: "{caffeine}", on-click: "cig-bar caffeine toggle"}}
+    - script:
+        path: /usr/bin/cig-bar
+        args: [battery]
+        poll-interval: 30000
+        content: {string: {text: "{battery}"}}
+    - mem:
+        content: {string: {text: "mem {percent_used}%"}}
+    - clock:
+        content: {string: {text: "{date} {time}"}}

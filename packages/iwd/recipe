@@ -1,0 +1,32 @@
+# iwd - WiFi daemon with an interactive client (iwctl): networks are found and joined without
+# config files. Needs the D-Bus system bus. Replaces wpa_supplicant: installing it switches the
+# wpa_supplicant service off (both cannot drive the same card); udhcpc-wlan0 stays the DHCP client.
+# Users in wheel may use iwctl (upstream's D-Bus policy). WPA2/WPA3-Personal; Enterprise (EAP)
+# needs kernel options cig's kernel does not have yet (PKCS#8 key parser, MD4).
+name=iwd
+version=3.12
+license="LGPL-2.1-or-later"
+source="https://cdn.kernel.org/pub/linux/network/wireless/iwd-$version.tar.xz"
+signature="https://cdn.kernel.org/pub/linux/network/wireless/iwd-$version.tar.sign"
+sha256="-"
+keys="E932D120BC2AEC444E558F0106CA9F5D1DCF2659"
+depends="dbus readline"
+makedepends="pkgconf"
+style=gnu
+group="network"
+configure_args="--libexecdir=/usr/lib/iwd --disable-systemd-service --disable-manual-pages"
+do_install() {
+    style_install
+    cp -R "$PKGDIR/files/etc" "$DEST/"
+}
+post_install() {
+    # upstream's D-Bus policy also lets group netdev use iwctl (dbus warns when it is missing)
+    grep -q '^netdev:' /etc/group || addgroup -S netdev
+    install -d -m 750 /var/log/iwd
+    install -d -m 700 /var/lib/iwd
+    mkdir -p /etc/service
+    rm -f /etc/service/wpa_supplicant
+    for s in dbus iwd; do
+        [ -e "/etc/service/$s" ] || ln -s "/etc/sv/$s" "/etc/service/$s"
+    done
+}

@@ -1,5 +1,6 @@
 # dbus - message bus between programs; only for components that cannot work without it
-# (BlueZ). Nothing else in cig needs it, and its service runs only when such a component does.
+# (BlueZ, iwd; mako's session bus). Nothing else in cig needs it, and its service runs only
+# when such a component does.
 name=dbus
 version=1.16.2
 rel=2

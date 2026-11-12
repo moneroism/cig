@@ -1,0 +1,14 @@
+# mako - notification daemon for Wayland. Notifications are a D-Bus protocol: mako needs a
+# session bus, which startdwl starts (dbus-run-session) only when mako is installed.
+name=mako
+version=1.11.0
+license="MIT"
+source="https://github.com/emersion/mako/releases/download/v$version/mako-$version.tar.gz"
+signature="https://github.com/emersion/mako/releases/download/v$version/mako-$version.tar.gz.sig"
+sha256="-"
+keys="34FF9526CFEF0E97A340E2E40FDE7BE0E88F5E48"
+depends="basu dbus cairo pango glib wayland"
+makedepends="meson pkgconf wayland-protocols"
+style=meson
+group="wayland"
+meson_args="-Dsd-bus-provider=basu -Dicons=disabled -Dman-pages=disabled"

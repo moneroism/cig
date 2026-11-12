@@ -220,10 +220,14 @@ is detected, and everything else renders with pixman. Not yet tested on the RX57
   component list marks packages whose upstream signs nothing (done 2026-10-16).
   Second wave (decided 2026-11-12: terminal first, the desktop basics before a browser):
   swayidle, swaylock (setuid without PAM; drops root after reading the hash), yambar (+ libyaml),
-  nnn (done 2026-11-12, run in a headless dwl session); still open: a cig default bar config with
-  a caffeine toggle, notifications (mako and every other daemon need D-Bus), WiFi without
-  config files (iwd needs D-Bus), brightness keys (brightnessctl without logind needs setuid or a
-  writable /sys file); then the browser (Chromium, optional, off by default) and the laptop install
+  nnn (done 2026-11-12, run in a headless dwl session); then (2026-11-12, developer's choices):
+  yambar ships cig's default bar (/etc/xdg/yambar, read when ~/.config has none: wifi,
+  bluetooth and sound open their tools in foot, a caffeine toggle that holds swayidle's lock,
+  battery, memory, clock), startdwl starts the bar, mako and swayidle when installed;
+  mako (+ basu) and iwd optional, off: they need D-Bus (mako a session bus, which startdwl
+  starts only with mako; iwd replaces wpa_supplicant's service); brightnessctl not setuid:
+  rc.init makes the brightness files writable for video/input. Then the component sweep,
+  the browser (Chromium, optional, off by default) and the laptop install
 
 - components as recipes, offered in the installer:
   PipeWire (optional, off by default: done 2026-11-03, with WirePlumber and its PulseAudio

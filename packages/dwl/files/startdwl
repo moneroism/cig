@@ -9,7 +9,24 @@ pw=
 if command -v pipewire-launcher >/dev/null; then
     pipewire-launcher & pw=$!
 fi
-dwl "$@" 2> "$XDG_RUNTIME_DIR/dwl.log"
+# without arguments: the bar, notifications and the idle lock when they are installed (dwl -s
+# runs them in the session; the last command reads dwl's status output, so the startup command
+# never ends)
+if [ $# -eq 0 ]; then
+    s=
+    command -v yambar >/dev/null && s="yambar & "
+    command -v mako >/dev/null && s="$s mako & "
+    if command -v swayidle >/dev/null && command -v swaylock >/dev/null; then
+        lock="swaylock -f"
+        command -v cig-bar >/dev/null && lock="cig-bar awake $lock"
+        s="$s swayidle -w timeout 300 '$lock' & "
+    fi
+    [ -z "$s" ] || set -- -s "$s exec cat > /dev/null"
+fi
+# notifications are D-Bus messages: a session bus for the session when mako is installed
+bus=
+command -v mako >/dev/null && command -v dbus-run-session >/dev/null && bus="dbus-run-session --"
+$bus dwl "$@" 2> "$XDG_RUNTIME_DIR/dwl.log"
 status=$?
 [ -z "$pw" ] || kill "$pw" 2>/dev/null
 exit $status

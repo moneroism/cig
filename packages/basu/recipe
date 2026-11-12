@@ -1,0 +1,17 @@
+# basu - the sd-bus D-Bus library from systemd, on its own (mako talks D-Bus through it)
+name=basu
+version=0.2.1
+license="LGPL-2.1-or-later"
+source="https://git.sr.ht/~emersion/basu/refs/download/v$version/basu-$version.tar.gz"
+signature="https://git.sr.ht/~emersion/basu/refs/download/v$version/basu-$version.tar.gz.sig"
+sha256="-"
+keys="34FF9526CFEF0E97A340E2E40FDE7BE0E88F5E48"
+makedepends="meson pkgconf gperf"
+style=meson
+meson_args="-Daudit=disabled -Dlibcap=disabled -Dsystem-bus-address=unix:path=/run/dbus/system_bus_socket"
+# its build only warns when UID 65534 is not named "nobody", by running getent, which musl
+# systems lack (BusyBox has no getent either): the check is skipped
+pre_build() {
+    sed -i "s/^if not meson.is_cross_build()$/if false/" meson.build
+    grep -q '^if false$' meson.build
+}

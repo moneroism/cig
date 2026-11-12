@@ -1,0 +1,13 @@
+# brightnessctl - read and set screen and LED brightness
+# Not setuid and no logind: rc.init (cig-base) makes the brightness files writable for the
+# groups video (screens) and input (LEDs) at boot, as upstream's udev rules do.
+# Unsigned (GitHub's archive of the tag); the checksum matches Alpine's SHA-512.
+name=brightnessctl
+version=0.5.1
+license="MIT"
+source="brightnessctl-$version.tar.gz::https://github.com/Hummer12007/brightnessctl/archive/$version.tar.gz"
+sha256="a68869e23f56ac4f2e28f1783002810ddbf10f95e1af9b48b2912fb169f46994"
+style=custom
+group="tools"
+do_build()   { make CC=cc; }
+do_install() { make PREFIX=/usr DESTDIR="$DEST" INSTALL_UDEV_RULES=0 MODE=0755 install; }

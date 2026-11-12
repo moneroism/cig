@@ -1,0 +1,48 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 moneroism
+# cig-bar - helpers for cig's default yambar config (/etc/xdg/yambar/config.yml)
+#   cig-bar battery           yambar script module: the batteries' charge, nothing without one
+#   cig-bar caffeine          yambar script module: whether caffeine is on
+#   cig-bar caffeine toggle   switch caffeine (clicking it in the bar)
+#   cig-bar awake <cmd>...    run <cmd> only while caffeine is off (swayidle's idle commands)
+#   cig-bar open wifi|bluetooth|sound   the matching tool in a terminal (clicks in the bar)
+flag=${XDG_RUNTIME_DIR:-/tmp}/cig-caffeine
+
+case $1 in
+battery)
+    out=
+    for b in /sys/class/power_supply/BAT*; do
+        [ -r "$b/capacity" ] || continue
+        s=$(cat "$b/status" 2>/dev/null)
+        out="$out bat $(cat "$b/capacity")%"
+        case $s in Charging) out="$out+" ;; esac
+    done
+    printf 'battery|string|%s\n\n' "${out# }"
+    ;;
+caffeine)
+    if [ "$2" = toggle ]; then
+        if [ -e "$flag" ]; then rm -f "$flag"; else : > "$flag"; fi
+        exit 0
+    fi
+    if [ -e "$flag" ]; then s=on; else s=off; fi
+    printf 'caffeine|string|caffeine %s\n\n' "$s"
+    ;;
+awake)
+    shift
+    [ -e "$flag" ] || exec "$@"
+    ;;
+open)
+    case $2 in
+    # iwctl: users in wheel may use it; wpa_cli needs root (its control socket)
+    wifi) if command -v iwctl >/dev/null; then exec foot iwctl; else exec foot doas wpa_cli; fi ;;
+    bluetooth) exec foot bluetoothctl ;;
+    sound) exec foot alsamixer ;;
+    esac
+    exit 2
+    ;;
+*)
+    echo "usage: cig-bar battery | caffeine [toggle] | awake <command>... | open wifi|bluetooth|sound" >&2
+    exit 2
+    ;;
+esac

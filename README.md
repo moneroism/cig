@@ -61,7 +61,7 @@ version reached is listed in [`ROADMAP.md`](ROADMAP.md#versions).
 | Packages | `cigbuild` builds, `smoke` installs: every package in its own folder under `/usr/pkg` |
 | TLS | OpenSSL 3.5 LTS |
 | Desktop | Wayland: dwl, foot (sway, labwc optional); CPU rendering (pixman) for now. No X11. |
-| D-Bus | only with optional Bluetooth (BlueZ, off by default); its service runs only then. Without BlueZ the Bluetooth drivers stay unloaded too (`cig-modload`; BlueZ installed later loads them when its service starts). PipeWire's Bluetooth audio is its own optional component (`pipewire-bluetooth`) for the same reason |
+| D-Bus | only with optional components that cannot work without it, all off by default: Bluetooth (BlueZ), the iwd WiFi daemon and the mako notification daemon (a session bus that startdwl starts only with mako); the system bus service runs only with BlueZ or iwd. Without BlueZ the Bluetooth drivers stay unloaded too (`cig-modload`; BlueZ installed later loads them when its service starts). PipeWire's Bluetooth audio is its own optional component (`pipewire-bluetooth`) for the same reason |
 | Sound | ALSA; PipeWire optional (off by default): WirePlumber, PulseAudio and ALSA compatibility, started per desktop session by `pipewire-launcher` (no systemd user units, no D-Bus); with it installed, ALSA programs play through PipeWire, so they need a running session |
 | Time | chrony with NTS (authenticated) to Netnod and PTB; Cloudflare only if neither answers within 60 s. Optional: off, no time server sees the machine |
 

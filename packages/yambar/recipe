@@ -1,8 +1,12 @@
 # yambar - status bar for Wayland (the same font and drawing libraries as foot)
 # No X11 backend; modules for what cig ships (ALSA, backlight, battery, network, dwl, sway,
-# scripts...), not MPD or PulseAudio. Its manual pages need scdoc, which cig has not: not built.
+# scripts...), not MPD or PulseAudio.
+# cig adds a default config (/etc/xdg/yambar, read when ~/.config has none) with cig-bar:
+# battery, a caffeine toggle (swayidle's lock waits while it is on), clicks open wpa_cli,
+# bluetoothctl, alsamixer in foot. The manual pages need scdoc, which cig has not: not built.
 name=yambar
 version=1.11.0
+rel=2
 license="MIT"
 source="https://codeberg.org/dnkl/yambar/releases/download/$version/yambar-$version.tar.gz"
 sha256="-"
@@ -14,6 +18,23 @@ style=meson
 group="wayland"
 meson_args="-Dwerror=false -Dbackend-x11=disabled -Dbackend-wayland=enabled -Dplugin-mpd=disabled
     -Dplugin-pulse=disabled -Dplugin-pipewire=disabled -Dplugin-xkb=disabled -Dplugin-xwindow=disabled"
+config_files="etc/xdg/yambar/config.yml"
+
+# cig's default config, read when the user has none: yambar itself only looks in ~/.config
 pre_build() {
     sed -i "/^subdir('doc')/d" meson.build
+    awk '/^get_config_path\(void\)/ { f = 1 }
+         f && /^    return NULL;$/ {
+             print "    /* cig: the system-wide default */"
+             print "    if (stat(\"/etc/xdg/yambar/config.yml\", &st) == 0 && S_ISREG(st.st_mode))"
+             print "        return strdup(\"/etc/xdg/yambar/config.yml\");"
+             f = 0 }
+         { print }' main.c > main.c.cig && mv main.c.cig main.c
+    grep -q /etc/xdg/yambar main.c
+}
+
+do_install() {
+    style_install
+    install -D -m 644 "$PKGDIR/files/config.yml" "$DEST/etc/xdg/yambar/config.yml"
+    install -D -m 755 "$PKGDIR/files/cig-bar" "$DEST/usr/bin/cig-bar"
 }

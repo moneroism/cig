@@ -48,7 +48,7 @@ on first download (trust on first use), and `smoke add` warns about it on every 
 | pango, fontconfig, tllist, wmenu, seatd, pkgconf, perl | tags are signed, but the keys are not on public keyservers (or the signatures are SSH, which is not checked yet) | find the keys on an independent source; SSH tag signatures |
 | json-c, libxkbcommon, tmux, libffi, samurai, vulkan-headers, labwc, pipewire (+ wireplumber), pipewire-bluetooth | tags unsigned (labwc: matches Alpine's SHA-512; pipewire, wireplumber: each tarball is its tag's tree, whose git archive matches Arch's BLAKE2 sum) (vulkan-headers: annotated but not verifiable), releases unsigned | none upstream |
 | libyaml | release unsigned (GitHub); the tarball matches Alpine's SHA-512 (main/yaml) | none upstream |
-| glslang, fastfetch, wl-clipboard, jq, htop, dwl, vulkan-loader | lightweight tags (cannot be signed), releases unsigned (jq: Sigstore attestation, htop: a SHA256 file on the same host) | Sigstore verification for jq |
+| glslang, fastfetch, wl-clipboard, jq, htop, dwl, vulkan-loader, brightnessctl | lightweight tags (cannot be signed), releases unsigned (jq: Sigstore attestation, htop: a SHA256 file on the same host) | Sigstore verification for jq |
 | python-mako, -markupsafe, -packaging, -pyyaml | PyPI: no GPG signatures | Sigstore (PEP 740) attestations |
 | linux (Alpine config), elfutils (musl patch) | files from Alpine's aports at a pinned commit; the commit's authenticity is not checked | signed aports commits, or cig's own reviewed config (Phase 5) |
 | ca-certificates | curl.se's extract of Mozilla's CA store, unsigned | build from Mozilla's certdata at a verified revision |
@@ -66,9 +66,11 @@ on first download (trust on first use), and `smoke add` warns about it on every 
 | autoconf | ftp.gnu.org | upstream GPG signature |
 | automake | ftp.gnu.org | upstream GPG signature |
 | bash | ftp.gnu.org | upstream GPG signature |
+| basu | git.sr.ht | upstream GPG signature |
 | binutils | ftp.gnu.org | upstream GPG signature |
 | bison | ftp.gnu.org | upstream GPG signature |
 | bluez | cdn.kernel.org | upstream GPG signature |
+| brightnessctl | github.com | **UNVERIFIED** (pinned SHA256 only, trusted on first use) |
 | busybox | busybox.net | upstream GPG signature |
 | ca-certificates | curl.se | **UNVERIFIED** (pinned SHA256 only, trusted on first use) |
 | cairo | cairographics.org | signed git tag (archive = tag tree) |
@@ -104,6 +106,7 @@ on first download (trust on first use), and `smoke add` warns about it on every 
 | harfbuzz | github.com | signed git tag (archive = tag tree) |
 | htop | github.com | **UNVERIFIED** (pinned SHA256 only, trusted on first use) |
 | hwdata | github.com | signed git tag (archive = tag tree) |
+| iwd | cdn.kernel.org | upstream GPG signature |
 | jq | github.com | **UNVERIFIED** (pinned SHA256 only, trusted on first use) |
 | json-c | github.com | **UNVERIFIED** (pinned SHA256 only, trusted on first use) |
 | labwc | github.com | **UNVERIFIED** (pinned SHA256 only, trusted on first use) |
@@ -137,6 +140,7 @@ on first download (trust on first use), and `smoke add` warns about it on every 
 | lua | www.lua.org | **UNVERIFIED** (pinned SHA256 only, trusted on first use) |
 | m4 | ftp.gnu.org | upstream GPG signature |
 | make | ftp.gnu.org | upstream GPG signature |
+| mako | github.com | upstream GPG signature |
 | mandoc | mandoc.bsd.lv | **UNVERIFIED** (pinned SHA256 only, trusted on first use) |
 | mesa | archive.mesa3d.org | upstream GPG signature |
 | meson | github.com | upstream GPG signature |
@@ -201,4 +205,4 @@ on first download (trust on first use), and `smoke add` warns about it on every 
 | zlib | github.com | upstream GPG signature |
 | zstd | github.com | upstream GPG signature |
 
-94 sources verified, 46 flagged.
+97 sources verified, 47 flagged.

@@ -59,12 +59,19 @@ for f in /etc/sysctl.d/*.conf; do [ -f "$f" ] && sysctl -q -p "$f"; done
 mdev -d
 cig-modload $(find /sys/devices -name modalias -exec cat {} + 2>/dev/null | sort -u)
 mdev -s
+# screen and LED brightness for their groups (as brightnessctl's udev rules do; no logind here)
+for f in /sys/class/backlight/*/brightness; do [ -e "$f" ] && chgrp video "$f" && chmod g+w "$f"; done
+for f in /sys/class/leds/*/brightness; do [ -e "$f" ] && chgrp input "$f" && chmod g+w "$f"; done
 
 # sound: the saved mixer state, or ALSA's unmuted defaults the first time
 command -v alsactl >/dev/null && alsactl restore 2>/dev/null
 
 # optional: no further kernel modules until reboot
 [ -f /etc/lock-modules ] && echo 1 > /proc/sys/kernel/modules_disabled
+
+# /var/run, the old name of /run: some programs still use it (iwd's D-Bus library looks for
+# the system bus at /var/run/dbus/system_bus_socket)
+[ -e /var/run ] || [ -L /var/run ] || ln -s ../run /var/run
 
 # per-user runtime directories (normally logind's job)
 mkdir -p -m 0755 /run/user
