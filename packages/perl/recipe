@@ -1,6 +1,7 @@
 # perl - needed to build OpenSSL (and by some build scripts)
 name=perl
 version=5.44.0
+rel=2
 # updates: even minor numbers are stable releases, odd ones development
 stable='^5\.[0-9]*[02468]\.'
 license="Artistic-1.0-Perl OR GPL-1.0-or-later"
@@ -8,8 +9,12 @@ source="https://www.cpan.org/src/5.0/perl-$version.tar.xz"
 sha256="505cf43912e9480495c344c70260452e32aa2a73c546a026b3f100053b23ce91"
 style=custom
 do_build() {
+    # the man pages go where cigbuild removes all documentation: with -Dman1dir=none (and with
+    # the defaults on a system without /usr/share/man) 5.44's installman wrote them into the
+    # package root (962 Module.0 files in /)
     sh Configure -des -Dprefix=/usr -Dvendorprefix=/usr \
-        -Duseshrplib -Dusethreads -Dman1dir=none -Dman3dir=none
+        -Duseshrplib -Dusethreads \
+        -Dman1dir=/usr/share/man/man1 -Dman3dir=/usr/share/man/man3 -Dman1ext=1 -Dman3ext=3pm
     make
 }
 do_install() { make DESTDIR="$DEST" install; }
