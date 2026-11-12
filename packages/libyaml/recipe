@@ -1,0 +1,10 @@
+# libyaml - YAML parser in C (yambar reads its config with it)
+# Unsigned upstream (its release on the project's GitHub); the checksum matches an
+# independent source (Alpine's aports, main/yaml: sha512 dadd7d8e...e8c4c02).
+name=libyaml
+version=0.2.5
+license="MIT"
+source="https://github.com/yaml/libyaml/releases/download/$version/yaml-$version.tar.gz"
+sha256="c642ae9b75fee120b2d96c712538bd2cf283228d2337df2cf2988e3c02678ef4"
+style=gnu
+configure_args="--disable-static"

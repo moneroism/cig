@@ -1,0 +1,21 @@
+# swaylock - screen locker for Wayland
+# Without PAM (cig has none) it checks the password against /etc/shadow, so the binary is
+# setuid root, as upstream's README says ("Without PAM"); it drops root right after reading
+# the user's hash.
+name=swaylock
+version=1.8.6
+license="MIT"
+source="https://github.com/swaywm/swaylock/releases/download/v$version/swaylock-$version.tar.gz"
+signature="https://github.com/swaywm/swaylock/releases/download/v$version/swaylock-$version.tar.gz.sig"
+keys="34FF9526CFEF0E97A340E2E40FDE7BE0E88F5E48"
+sha256="-"
+depends="wayland libxkbcommon cairo"
+makedepends="meson pkgconf wayland-protocols"
+style=meson
+group="wayland"
+meson_args="-Dpam=disabled -Dgdk-pixbuf=disabled -Dman-pages=disabled
+    -Dzsh-completions=false -Dbash-completions=false -Dfish-completions=false"
+post_install() {
+    chown root:root /usr/bin/swaylock
+    chmod 4755 /usr/bin/swaylock
+}

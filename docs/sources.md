@@ -47,6 +47,7 @@ on first download (trust on first use), and `smoke add` warns about it on every 
 | glib | GNOME's release tarball is not the signed tag's tree (it bundles subprojects); GNOME does not sign tarballs | build from the signed tag with its subprojects pinned |
 | pango, fontconfig, tllist, wmenu, seatd, pkgconf, perl | tags are signed, but the keys are not on public keyservers (or the signatures are SSH, which is not checked yet) | find the keys on an independent source; SSH tag signatures |
 | json-c, libxkbcommon, tmux, libffi, samurai, vulkan-headers, labwc, pipewire (+ wireplumber), pipewire-bluetooth | tags unsigned (labwc: matches Alpine's SHA-512; pipewire, wireplumber: each tarball is its tag's tree, whose git archive matches Arch's BLAKE2 sum) (vulkan-headers: annotated but not verifiable), releases unsigned | none upstream |
+| libyaml | release unsigned (GitHub); the tarball matches Alpine's SHA-512 (main/yaml) | none upstream |
 | glslang, fastfetch, wl-clipboard, jq, htop, dwl, vulkan-loader | lightweight tags (cannot be signed), releases unsigned (jq: Sigstore attestation, htop: a SHA256 file on the same host) | Sigstore verification for jq |
 | python-mako, -markupsafe, -packaging, -pyyaml | PyPI: no GPG signatures | Sigstore (PEP 740) attestations |
 | linux (Alpine config), elfutils (musl patch) | files from Alpine's aports at a pinned commit; the commit's authenticity is not checked | signed aports commits, or cig's own reviewed config (Phase 5) |
@@ -127,6 +128,7 @@ on first download (trust on first use), and `smoke add` warns about it on every 
 | libudev-zero | github.com | **UNVERIFIED** (pinned SHA256 only, trusted on first use) |
 | libxkbcommon | github.com | **UNVERIFIED** (pinned SHA256 only, trusted on first use) |
 | libxml2 | download.gnome.org | **UNVERIFIED** (pinned SHA256 only, trusted on first use) |
+| libyaml | github.com | **UNVERIFIED** (pinned SHA256 only, trusted on first use) |
 | linux-firmware | cdn.kernel.org | upstream GPG signature |
 | linux-headers | cdn.kernel.org | upstream GPG signature |
 | linux | cdn.kernel.org | upstream GPG signature |
@@ -147,6 +149,7 @@ on first download (trust on first use), and `smoke add` warns about it on every 
 | nano | www.nano-editor.org | upstream GPG signature |
 | ncurses | ftp.gnu.org | upstream GPG signature |
 | nettle | ftp.gnu.org | upstream GPG signature |
+| nnn | github.com | upstream GPG signature |
 | npth | gnupg.org | upstream GPG signature |
 | opendoas | github.com | upstream GPG signature |
 | openssh | cdn.openbsd.org | upstream GPG signature |
@@ -174,6 +177,8 @@ on first download (trust on first use), and `smoke add` warns about it on every 
 | strace | github.com | upstream GPG signature |
 | sway | github.com | upstream GPG signature |
 | swaybg | github.com | upstream GPG signature |
+| swayidle | github.com | upstream GPG signature |
+| swaylock | github.com | upstream GPG signature |
 | tllist | codeberg.org | **UNVERIFIED** (pinned SHA256 only, trusted on first use) |
 | tmux | github.com | **UNVERIFIED** (pinned SHA256 only, trusted on first use) |
 | tree | oldmanprogrammer.net | **UNVERIFIED** (pinned SHA256 only, trusted on first use) |
@@ -192,7 +197,8 @@ on first download (trust on first use), and `smoke add` warns about it on every 
 | xkeyboard-config | www.x.org | upstream GPG signature |
 | xorriso | files.libburnia-project.org | upstream GPG signature |
 | xz | github.com | upstream GPG signature |
+| yambar | codeberg.org | upstream GPG signature |
 | zlib | github.com | upstream GPG signature |
 | zstd | github.com | upstream GPG signature |
 
-90 sources verified, 45 flagged.
+94 sources verified, 46 flagged.

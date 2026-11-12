@@ -1,0 +1,19 @@
+# yambar - status bar for Wayland (the same font and drawing libraries as foot)
+# No X11 backend; modules for what cig ships (ALSA, backlight, battery, network, dwl, sway,
+# scripts...), not MPD or PulseAudio. Its manual pages need scdoc, which cig has not: not built.
+name=yambar
+version=1.11.0
+license="MIT"
+source="https://codeberg.org/dnkl/yambar/releases/download/$version/yambar-$version.tar.gz"
+sha256="-"
+signature="https://codeberg.org/dnkl/yambar/releases/download/$version/yambar-$version.tar.gz.sig"
+keys="B19964FBBA09664CC81027ED5BBD4992C116573F"
+depends="fcft pixman libyaml wayland alsa-lib libudev-zero json-c"
+makedepends="tllist meson pkgconf wayland-protocols"
+style=meson
+group="wayland"
+meson_args="-Dwerror=false -Dbackend-x11=disabled -Dbackend-wayland=enabled -Dplugin-mpd=disabled
+    -Dplugin-pulse=disabled -Dplugin-pipewire=disabled -Dplugin-xkb=disabled -Dplugin-xwindow=disabled"
+pre_build() {
+    sed -i "/^subdir('doc')/d" meson.build
+}

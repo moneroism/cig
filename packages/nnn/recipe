@@ -1,0 +1,16 @@
+# nnn - small, fast terminal file manager (upstream defaults; plugins not shipped)
+# Upstream signs the release tarball it uploads (nnn-v$version.tar.gz).
+name=nnn
+version=5.3
+license="BSD-2-Clause"
+source="https://github.com/jarun/nnn/releases/download/v$version/nnn-v$version.tar.gz"
+sha256="-"
+signature="https://github.com/jarun/nnn/releases/download/v$version/nnn-$version.tar.gz.sig"
+keys="E0B84447CD884CBB13E3266E4A865183AF6C5631"
+depends="ncurses musl-fts"
+makedepends="pkgconf"
+style=custom
+group="tools"
+# musl has no fts(3): musl-fts provides it
+do_build()   { make CC=cc LDLIBS_CURSES="$(pkgconf --libs ncursesw) -lfts"; }
+do_install() { make PREFIX=/usr DESTDIR="$DEST" install; }

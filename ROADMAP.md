@@ -217,7 +217,13 @@ is detected, and everything else renders with pixman. Not yet tested on the RX57
   2026-10-05): sway, labwc, wayfire and friends instead of X11 window managers; X11 may come
   later as an optional recipe. First wave of easy recipes: sway, labwc, nano, vim, htop
   (done, plus tmux, tree, jq, rsync, strace, fastfetch, pixel; labwc 2026-10-16). The
-  component list marks packages whose upstream signs nothing (done 2026-10-16)
+  component list marks packages whose upstream signs nothing (done 2026-10-16).
+  Second wave (decided 2026-11-12: terminal first, the desktop basics before a browser):
+  swayidle, swaylock (setuid without PAM; drops root after reading the hash), yambar (+ libyaml),
+  nnn (done 2026-11-12, run in a headless dwl session); still open: a cig default bar config with
+  a caffeine toggle, notifications (mako and every other daemon need D-Bus), WiFi without
+  config files (iwd needs D-Bus), brightness keys (brightnessctl without logind needs setuid or a
+  writable /sys file); then the browser (Chromium, optional, off by default) and the laptop install
 
 - components as recipes, offered in the installer:
   PipeWire (optional, off by default: done 2026-11-03, with WirePlumber and its PulseAudio

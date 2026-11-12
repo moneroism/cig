@@ -1,0 +1,14 @@
+# swayidle - runs commands when the session goes idle (screen lock, display off, suspend)
+name=swayidle
+version=1.9.1
+license="MIT"
+source="https://github.com/swaywm/swayidle/releases/download/v$version/swayidle-$version.tar.gz"
+signature="https://github.com/swaywm/swayidle/releases/download/v$version/swayidle-$version.tar.gz.sig"
+keys="34FF9526CFEF0E97A340E2E40FDE7BE0E88F5E48"
+sha256="-"
+depends="wayland"
+makedepends="meson pkgconf wayland-protocols"
+style=meson
+group="wayland"
+meson_args="-Dman-pages=disabled -Dlogind=disabled
+    -Dzsh-completions=false -Dbash-completions=false -Dfish-completions=false"
