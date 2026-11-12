@@ -1,6 +1,8 @@
 # openssh - secure shell client (ssh, scp, sftp); the server is built but not enabled
+# (its service: ln -s /etc/sv/sshd /etc/service/)
 name=openssh
 version=10.5p1
+rel=2
 license="SSH-OpenSSH AND BSD-2-Clause AND BSD-3-Clause AND ISC"
 source="https://cdn.openbsd.org/pub/OpenBSD/OpenSSH/portable/openssh-$version.tar.gz"
 signature="https://cdn.openbsd.org/pub/OpenBSD/OpenSSH/portable/openssh-$version.tar.gz.asc"
@@ -11,3 +13,14 @@ style=gnu
 group="network"
 configure_args="--sysconfdir=/etc/ssh --with-privsep-path=/var/empty --with-pid-dir=/run --without-pam"
 config_files="etc/ssh/ssh_config etc/ssh/sshd_config"
+do_install() {
+    style_install
+    cp -R "$PKGDIR/files/etc" "$DEST/"
+}
+post_install() {
+    # privilege separation: an unprivileged user and an empty, root-owned folder
+    grep -q '^sshd:' /etc/group || addgroup -S sshd
+    grep -q '^sshd:' /etc/passwd || adduser -S -D -H -h /var/empty -s /bin/false -G sshd sshd
+    install -d -m 755 /var/empty
+    install -d -m 750 /var/log/sshd
+}

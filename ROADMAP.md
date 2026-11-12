@@ -226,8 +226,13 @@ is detected, and everything else renders with pixman. Not yet tested on the RX57
   battery, memory, clock), startdwl starts the bar, mako and swayidle when installed;
   mako (+ basu) and iwd optional, off: they need D-Bus (mako a session bus, which startdwl
   starts only with mako; iwd replaces wpa_supplicant's service); brightnessctl not setuid:
-  rc.init makes the brightness files writable for video/input. Then the component sweep,
-  the browser (Chromium, optional, off by default) and the laptop install
+  rc.init makes the brightness files writable for video/input. Component sweep in QEMU
+  (2026-11-12): all 43 optional components install one after another on the dev image,
+  `smoke audit` clean; CLI tools run, chrony syncs, unbound resolves, curl fetches over TLS,
+  sshd (new: an off-by-default service) answers, PipeWire + WirePlumber run, dwl, sway and
+  labwc start headless with foot, the clipboard and screenshots. Not testable headless:
+  wmenu and slurp (no keyboard/pointer there), sound and WiFi hardware. Then the browser
+  (Chromium, optional, off by default) and the laptop install
 
 - components as recipes, offered in the installer:
   PipeWire (optional, off by default: done 2026-11-03, with WirePlumber and its PulseAudio

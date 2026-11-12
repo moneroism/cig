@@ -1,0 +1,5 @@
+#!/bin/sh
+# the SSH server; off unless enabled: ln -s /etc/sv/sshd /etc/service/
+# host keys are made on its first start
+ssh-keygen -A >/dev/null || exit 1
+exec /usr/sbin/sshd -D -e 2>&1
