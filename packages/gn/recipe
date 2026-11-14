@@ -1,0 +1,22 @@
+# gn - Chromium's build file generator: a build tool for Chromium. Not offered in the installer.
+# The commit Chromium's DEPS names (gn_version). gn has no releases or signed tags, and its git
+# host generates archives per download (not byte-identical twice): the pin matches cig's cached
+# copy, a fresh download fails the check (flagged in docs/sources.md).
+name=gn
+_commit=0035961837fbcfe875d855744b3eda4fd2eefb43
+version=0.0.20261113
+license="BSD-3-Clause"
+source="gn-$_commit.tar.gz::https://gn.googlesource.com/gn/+archive/$_commit.tar.gz"
+sha256="fb9dd1a098b185e354991420252346240cc556c88681e215e34d0ed17bad435f"
+makedepends="python samurai"
+style=custom
+do_build() {
+    CC=cc CXX=c++ AR=ar python3 build/gen.py --no-last-commit-position --no-static-libstdc++
+    printf '%s\n' '#ifndef OUT_LAST_COMMIT_POSITION_H_' '#define OUT_LAST_COMMIT_POSITION_H_' \
+        '#define LAST_COMMIT_POSITION_NUM 0' "#define LAST_COMMIT_POSITION \"${_commit%${_commit#???????}}\"" \
+        '#endif' > out/last_commit_position.h
+    # GCC warns where clang does not (gn's own builds use clang); not fatal here
+    sed -i 's/-Werror/-Wno-error/g' out/build.ninja
+    samu -C out gn
+}
+do_install() { install -D -m 755 out/gn "$DEST/usr/bin/gn"; }

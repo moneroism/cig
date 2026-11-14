@@ -1,0 +1,26 @@
+# nodejs - JavaScript runtime: a build tool for Chromium (its build scripts and web UI).
+# Not offered in the installer. Its own copies of V8, libuv, ICU (small) and the rest; cig's
+# OpenSSL and zlib.
+name=nodejs
+version=24.22.3
+license="MIT"
+source="https://nodejs.org/dist/v$version/node-v$version.tar.xz"
+signature="sums=https://nodejs.org/dist/v$version/SHASUMS256.txt.asc"
+sha256="-"
+keys="5BE8A3F6C8A5C01D106C0AD820B1A390B168D356"
+wrksrc="node-v$version"
+depends="openssl zlib"
+makedepends="python"
+style=custom
+pre_build() {
+    # cig's Python has no bz2 module: the ICU data unpacked here, and configure.py's
+    # import moved to where it is used (never reached once the .dat exists)
+    bunzip2 -k deps/icu-small/source/data/in/icudt*l.dat.bz2
+    sed -i -e 's/^import bz2$//' -e 's/^\( *\)inf = bz2.BZ2File(/\1import bz2; inf = bz2.BZ2File(/' configure.py
+}
+do_build() {
+    ./configure --prefix=/usr --shared-openssl --shared-zlib --with-intl=small-icu \
+        --without-npm --without-corepack
+    make BUILDTYPE=Release
+}
+do_install() { make DESTDIR="$DEST" install; }

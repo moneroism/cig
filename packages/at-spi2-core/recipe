@@ -1,0 +1,13 @@
+# at-spi2-core - accessibility: ATK, its bridge and the AT-SPI bus, through which screen readers
+# reach programs (Chromium's accessibility). No X11. Talks over D-Bus. GNOME does not sign
+# tarballs (flagged in docs/sources.md).
+name=at-spi2-core
+version=2.62.1
+license="LGPL-2.1-or-later"
+source="https://download.gnome.org/sources/at-spi2-core/${version%.*}/at-spi2-core-$version.tar.xz"
+sha256="cca6b6a86e4389d89b370288761ce2385ddeceb10c4412da78689bc30c88af2d"
+depends="dbus glib libxml2"
+makedepends="meson pkgconf"
+style=meson
+meson_args="-Dx11=disabled -Dintrospection=disabled -Ddocs=false -Ddbus_daemon=/usr/bin/dbus-daemon
+    -Duse_systemd=false"

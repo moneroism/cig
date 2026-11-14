@@ -37,7 +37,10 @@ for r in packages/*/recipe; do
             *sourceforge*|*sf.net*|*mirror*) how="**MIRROR** ($host) - $how" ;;
         esac
         case "$how" in *UNVERIFIED*|*MIRROR*) flagged=$((flagged + 1)) ;; *) ok=$((ok + 1)) ;; esac
-        echo "| $p | $host | $how |"
+        # one row per package, host and method (a recipe may list hundreds of crates)
+        row="| $p | $host | $how |"
+        [ "$row" = "${last:-}" ] || echo "$row"
+        last=$row
         i=$((i + 1))
     done
 done

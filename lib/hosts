@@ -57,3 +57,11 @@ oldmanprogrammer.net        tree
 gnupg.org                   GnuPG
 files.libburnia-project.org libburnia (xorriso: libburn, libisofs, libisoburn)
 www.gnupg.org               GnuPG
+static.rust-lang.org        Rust (releases and the signed bootstrap seed)
+nodejs.org                  Node.js
+go.dev                      Go
+dl.google.com               Go (go.dev's downloads are served from here)
+commondatastorage.googleapis.com  Chromium (official release tarballs: chromium-browser-official)
+gn.googlesource.com         gn (Chromium's build tool, its own git host)
+archive.mozilla.org         Mozilla (NSS, NSPR)
+static.crates.io            crates.io (Rust libraries: their official release channel)

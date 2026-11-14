@@ -1,0 +1,52 @@
+# go - the Go toolchain: a build tool (Chromium needs esbuild, which is written in Go). Not
+# offered in the installer.
+# Built from source alone, no binary seed: Go 1.4 is the last Go written in C, and each later
+# Go is built by the one before (1.4 -> 1.17 -> 1.20 -> 1.22 -> 1.24 -> this). Only the last is
+# installed. Go's sources are not GPG-signed: pinned (each checksum matches go.dev's list).
+name=go
+version=1.27.4
+_chain="1.17.13 1.20.14 1.22.12 1.24.13"
+license="BSD-3-Clause"
+source="https://dl.google.com/go/go1.4-bootstrap-20171003.tar.gz
+    go1.17.13.src.tar.gz::https://dl.google.com/go/go1.17.13.src.tar.gz
+    go1.20.14.src.tar.gz::https://dl.google.com/go/go1.20.14.src.tar.gz
+    go1.22.12.src.tar.gz::https://dl.google.com/go/go1.22.12.src.tar.gz
+    go1.24.13.src.tar.gz::https://dl.google.com/go/go1.24.13.src.tar.gz
+    go$version.src.tar.gz::https://dl.google.com/go/go$version.src.tar.gz"
+sha256="f4ff5b5eb3a3cae1c993723f3eab519c5bae18866b5e5f96fe1102f0cb5c3e52 a1a48b23afb206f95e7bbaa9b898d965f90826f6f1d1fc0c1d784ada0cd300fd 1aef321a0e3e38b7e91d2d7eb64040666cabdcc77d383de3c9522d0d69b67f4e 012a7e1f37f362c0918c1dfa3334458ac2da1628c4b9cf4d9ca02db986e17d71 639a6204c2486b137df1eb6e78ee3ed038f9877d0e4b5a465e796a2153f858d7 73cfb8571aec0c01177687db87163d46aa20e9779672772891aa17654d9a6099"
+noextract=1
+makedepends="bash"
+style=custom
+nostrip=1   # Go binaries are not stripped with binutils' strip (upstream advice)
+_unpack() {   # _unpack <tarball> <dir>: each Go release unpacks to go/
+    rm -rf "$WORK/$2" "$WORK/go"
+    tar -C "$WORK" -xzf "$CIG_VAR/sources/$1"
+    mv "$WORK/go" "$WORK/$2"
+}
+do_build() {
+    local v prev
+    export CGO_ENABLED=0 GOTELEMETRY=off GOTOOLCHAIN=local GOFLAGS= GOPATH="$WORK/gopath" \
+        GOCACHE="$WORK/gocache"
+    # 1. Go 1.4, written in C (dist, the compilers and the linker), built by cig's C compiler
+    _unpack go1.4-bootstrap-20171003.tar.gz go1.4
+    # old C: GCC 15+ defaults to C23 and makes old idioms errors (gnu17, -fpermissive); its
+    # make.bash builds dist with -Werror
+    sed -i 's/ -Werror / /' "$WORK/go1.4/src/make.bash"
+    ( cd "$WORK/go1.4/src" && CC="cc -std=gnu17 -fpermissive" \
+        CFLAGS="-O2 -std=gnu17 -fpermissive -Wno-error" ./make.bash )
+    prev="$WORK/go1.4"
+    # 2. each later Go with the one before
+    for v in $_chain $version; do
+        _unpack "go$v.src.tar.gz" "go$v"
+        ( cd "$WORK/go$v/src" && GOROOT_BOOTSTRAP="$prev" GOROOT_FINAL=/usr/lib/go ./make.bash )
+        prev="$WORK/go$v"
+    done
+}
+do_install() {
+    local g="$WORK/go$version"
+    mkdir -p "$DEST/usr/lib/go" "$DEST/usr/bin"
+    cp -a "$g/bin" "$g/pkg" "$g/src" "$g/lib" "$g/misc" "$g/go.env" "$g/VERSION" "$DEST/usr/lib/go/"
+    rm -rf "$DEST/usr/lib/go/pkg/obj" "$DEST/usr/lib/go/pkg/bootstrap"
+    ln -s ../lib/go/bin/go "$DEST/usr/bin/go"
+    ln -s ../lib/go/bin/gofmt "$DEST/usr/bin/gofmt"
+}

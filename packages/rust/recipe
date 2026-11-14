@@ -1,0 +1,77 @@
+# rust - the Rust compiler, cargo, rustfmt and the standard library's source: a build tool for
+# Chromium. Not offered in the installer.
+# Bootstrapping needs a Rust compiler: the first build uses upstream's signed release of the
+# previous version for musl (the "seed", rust-$_seed below, checked with gpgv), only to build
+# this one from source; it is never installed. Later builds can use the installed rust.
+# musl patches from Alpine's aports at a pinned commit (dynamic musl instead of static, unwinding
+# through libgcc_eh, rustix on musl 1.2). Uses cig's llvm (shared libLLVM).
+name=rust
+version=1.99.1
+_seed=1.98.0
+_aports=7628bce802e7cb27e838d0bf59a116781a500635
+_ap="https://gitlab.alpinelinux.org/alpine/aports/-/raw/$_aports/main/rust"
+license="MIT OR Apache-2.0"
+source="https://static.rust-lang.org/dist/rustc-$version-src.tar.xz
+    https://static.rust-lang.org/dist/rust-$_seed-x86_64-unknown-linux-musl.tar.xz
+    alpine-target.patch::$_ap/alpine-target.patch
+    do-not-install-libunwind-source.patch::$_ap/do-not-install-libunwind-source.patch
+    gcc-eh-libunwind.patch::$_ap/gcc-eh-libunwind.patch
+    install-template-shebang.patch::$_ap/install-template-shebang.patch
+    no-export-ld-library-path.patch::$_ap/no-export-ld-library-path.patch
+    remove-musl-root.patch::$_ap/remove-musl-root.patch
+    libc-cfg.patch::$_ap/libc-cfg.patch
+    rustix-1.1.2-statx_flags.diff::$_ap/rustix-1.1.2-statx_flags.diff
+    rustix-1.1.4-statx_flags.diff::$_ap/rustix-1.1.4-statx_flags.diff"
+signature="https://static.rust-lang.org/dist/rustc-$version-src.tar.xz.asc
+    https://static.rust-lang.org/dist/rust-$_seed-x86_64-unknown-linux-musl.tar.xz.asc - - - - - - - - -"
+sha256="- - f73855962259e292340e4041caa64b29b4ddac0d8a3b2878d5076834f30ab551 3f38905cdd90ddf8eb9ceafca07b9db7172ce1c7886d6d03bf7aa5495b962064 3733e5f53e796f2595cc647897aece546172a88f8fb606416f77c9ce88b4768d 3ca1d1163157ec5ec36513ba282ef26dad2f93422d5bf24d5c2f4941c2b94c45 e3d7baf6bf5901c931ee1748690eb8e2af02e639e29e57849c14e18698e28fe0 89e72982d52879791e78261387d56cb3d8ca47193cc3febd42ab611c0299c03f 3c50ca505518ab53d0d1ddbde222a6b612e6a563490b090a5d266adec73978f8 7349e35fea28659fad0011e3dd1fec7a38f0a2f1b55e8cb8cf967c09cdb34bf2 2bb20336564df26bb600e75654c27120e0495fa1cb845cc1b9f4d96fd030d50a"
+keys="108F66205EAEB0AAA8DD5E1C85AB96E6FA1BE5FE"
+wrksrc="rustc-$version-src"
+depends="llvm zlib"
+makedepends="python cmake samurai pkgconf openssl curl"
+style=custom
+pre_build() {
+    local p v
+    # alpine-target first: the musl targets without self-contained CRT objects, which
+    # remove-musl-root then deletes
+    for p in alpine-target do-not-install-libunwind-source gcc-eh-libunwind install-template-shebang \
+             no-export-ld-library-path remove-musl-root libc-cfg; do
+        patch -p1 < "$WORK/src/$p.patch"
+    done
+    # rustix is not compatible with musl 1.2's statx flags; cargo's checksums of the patched
+    # crates are cleared (as Alpine does)
+    for v in 1.1.2 1.1.4; do
+        [ -d "vendor/rustix-$v" ] || continue
+        ( cd "vendor/rustix-$v" && patch -p1 < "$WORK/src/rustix-$v-statx_flags.diff" )
+        sed -i 's/"files":{[^}]*}/"files":{}/' "vendor/rustix-$v/.cargo-checksum.json"
+    done
+    # the seed: upstream's previous release, unpacked here only to build this one
+    # (cigbuild unpacked it next to the source)
+    sh "$WORK/src/rust-$_seed-x86_64-unknown-linux-musl/install.sh" --prefix="$WORK/seed" \
+        --disable-ldconfig --components=rustc,cargo,rust-std-x86_64-unknown-linux-musl >/dev/null
+}
+do_build() {
+    local t=x86_64-unknown-linux-musl
+    export RUST_MIN_STACK=16777216   # LLVM 23 needs a larger thread stack (Alpine)
+    ./configure --build=$t --host=$t --target=$t --prefix=/usr --release-channel=stable \
+        --local-rust-root="$WORK/seed" --enable-local-rust --disable-docs --enable-extended \
+        --tools=cargo,src,rustfmt --enable-llvm-link-shared --enable-locked-deps \
+        --enable-profiler --enable-vendor --dist-compression-formats=gz --python=python3 \
+        --set=rust.codegen-units-std=1 --set=rust.deny-warnings=false --set=rust.lld=false \
+        --set=rust.incremental=false --set=rust.remap-debuginfo=true \
+        --set=target.$t.llvm-config=/usr/bin/llvm-config --set=target.$t.crt-static=false \
+        --set=target.$t.cc=cc --set=target.$t.cxx=c++ --set=target.$t.ar=ar --set=target.$t.linker=cc
+    python3 ./x.py dist --jobs "$(nproc)" rustc rust-std cargo rust-src rustfmt rustc-dev
+}
+do_install() {
+    local c
+    for c in rustc rust-std cargo rust-src rustfmt rustc-dev; do
+        for d in build/dist/$c-*.tar.gz; do
+            tar -C "$WORK" -xzf "$d"
+            sh "$WORK/$(basename "$d" .tar.gz)/install.sh" --prefix=/usr --destdir="$DEST" \
+                --disable-ldconfig >/dev/null
+        done
+    done
+    rm -f "$DEST"/usr/lib/rustlib/install.log "$DEST"/usr/lib/rustlib/uninstall.sh \
+          "$DEST"/usr/lib/rustlib/manifest-* "$DEST"/usr/lib/rustlib/components
+}

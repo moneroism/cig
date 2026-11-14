@@ -1,0 +1,33 @@
+# llvm - LLVM with clang, lld and compiler-rt's builtins: a build tool, for Rust and Chromium
+# (Chromium builds only with clang). Not offered in the installer: installed only to build.
+# Targets: x86 only; no sanitizer runtimes (they do not build on musl, nothing here needs them).
+name=llvm
+version=23.1.5
+license="Apache-2.0 WITH LLVM-exception"
+source="https://github.com/llvm/llvm-project/releases/download/llvmorg-$version/llvm-project-$version.src.tar.xz"
+signature="https://github.com/llvm/llvm-project/releases/download/llvmorg-$version/llvm-project-$version.src.tar.xz.sig"
+sha256="-"
+keys="FFB3368980F3E6BB5737145A316C56D064CACBA5"
+depends="zlib zstd libffi"
+makedepends="cmake samurai python"
+style=custom
+do_build() {
+    cmake -B build -G Ninja -S llvm -Wno-dev \
+        -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_INSTALL_LIBDIR=lib \
+        -DLLVM_DEFAULT_TARGET_TRIPLE=x86_64-pc-linux-musl -DLLVM_HOST_TRIPLE=x86_64-pc-linux-musl \
+        -DLLVM_TARGETS_TO_BUILD=X86 \
+        -DLLVM_ENABLE_PROJECTS="clang;lld" -DLLVM_ENABLE_RUNTIMES=compiler-rt \
+        -DCOMPILER_RT_BUILD_SANITIZERS=OFF -DCOMPILER_RT_BUILD_XRAY=OFF -DCOMPILER_RT_BUILD_LIBFUZZER=OFF \
+        -DCOMPILER_RT_BUILD_PROFILE=ON -DCOMPILER_RT_BUILD_MEMPROF=OFF -DCOMPILER_RT_BUILD_ORC=OFF \
+        -DCOMPILER_RT_BUILD_CTX_PROFILE=OFF -DCOMPILER_RT_BUILD_GWP_ASAN=OFF \
+        -DLLVM_BUILD_LLVM_DYLIB=ON -DLLVM_LINK_LLVM_DYLIB=ON -DCLANG_LINK_CLANG_DYLIB=ON \
+        -DLLVM_ENABLE_RTTI=ON -DLLVM_ENABLE_EH=ON -DLLVM_ENABLE_FFI=ON -DLLVM_ENABLE_PIC=ON \
+        -DLLVM_ENABLE_ZLIB=FORCE_ON -DLLVM_ENABLE_ZSTD=FORCE_ON -DLLVM_ENABLE_LIBXML2=OFF \
+        -DLLVM_ENABLE_LIBEDIT=OFF -DLLVM_ENABLE_TERMINFO=OFF -DLLVM_ENABLE_CURL=OFF -DLLVM_ENABLE_HTTPLIB=OFF \
+        -DLLVM_ENABLE_ASSERTIONS=OFF -DLLVM_APPEND_VC_REV=OFF -DLLVM_INSTALL_UTILS=ON \
+        -DLLVM_INCLUDE_TESTS=OFF -DLLVM_INCLUDE_BENCHMARKS=OFF -DLLVM_INCLUDE_EXAMPLES=OFF \
+        -DLLVM_INCLUDE_DOCS=OFF -DCLANG_INCLUDE_TESTS=OFF -DCLANG_INCLUDE_DOCS=OFF \
+        -DLLVM_ENABLE_SPHINX=OFF -DCLANG_DEFAULT_PIE_ON_LINUX=ON
+    samu -C build
+}
+do_install() { DESTDIR="$DEST" samu -C build install; }

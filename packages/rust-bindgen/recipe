@@ -1,0 +1,104 @@
+# rust-bindgen - generates Rust bindings to C/C++ headers (through libclang): a build tool for
+# Chromium. Not offered in the installer.
+# Upstream's tag archive (unsigned) and the crates its Cargo.lock names, each fetched from
+# crates.io and pinned (every pin matches the checksum in Cargo.lock); built offline.
+name=rust-bindgen
+version=0.73.2
+license="BSD-3-Clause"
+source="rust-bindgen-$version.tar.gz::https://github.com/rust-lang/rust-bindgen/archive/refs/tags/v$version.tar.gz
+    aho-corasick-1.1.5.crate::https://static.crates.io/crates/aho-corasick/aho-corasick-1.1.5.crate
+    annotate-snippets-0.11.5.crate::https://static.crates.io/crates/annotate-snippets/annotate-snippets-0.11.5.crate
+    anstream-0.6.21.crate::https://static.crates.io/crates/anstream/anstream-0.6.21.crate
+    anstyle-1.0.14.crate::https://static.crates.io/crates/anstyle/anstyle-1.0.14.crate
+    anstyle-parse-0.2.7.crate::https://static.crates.io/crates/anstyle-parse/anstyle-parse-0.2.7.crate
+    anstyle-query-1.1.5.crate::https://static.crates.io/crates/anstyle-query/anstyle-query-1.1.5.crate
+    anstyle-wincon-3.0.11.crate::https://static.crates.io/crates/anstyle-wincon/anstyle-wincon-3.0.11.crate
+    bitflags-2.13.1.crate::https://static.crates.io/crates/bitflags/bitflags-2.13.1.crate
+    block-0.1.6.crate::https://static.crates.io/crates/block/block-0.1.6.crate
+    cc-1.4.5.crate::https://static.crates.io/crates/cc/cc-1.4.5.crate
+    cexpr-0.6.0.crate::https://static.crates.io/crates/cexpr/cexpr-0.6.0.crate
+    cfg-if-1.0.4.crate::https://static.crates.io/crates/cfg-if/cfg-if-1.0.4.crate
+    clang-sys-1.9.1.crate::https://static.crates.io/crates/clang-sys/clang-sys-1.9.1.crate
+    clap-4.4.18.crate::https://static.crates.io/crates/clap/clap-4.4.18.crate
+    clap_builder-4.4.18.crate::https://static.crates.io/crates/clap_builder/clap_builder-4.4.18.crate
+    clap_complete-4.4.10.crate::https://static.crates.io/crates/clap_complete/clap_complete-4.4.10.crate
+    clap_derive-4.4.7.crate::https://static.crates.io/crates/clap_derive/clap_derive-4.4.7.crate
+    clap_lex-0.6.0.crate::https://static.crates.io/crates/clap_lex/clap_lex-0.6.0.crate
+    colorchoice-1.0.5.crate::https://static.crates.io/crates/colorchoice/colorchoice-1.0.5.crate
+    env_logger-0.8.4.crate::https://static.crates.io/crates/env_logger/env_logger-0.8.4.crate
+    env_logger-0.10.2.crate::https://static.crates.io/crates/env_logger/env_logger-0.10.2.crate
+    errno-0.3.14.crate::https://static.crates.io/crates/errno/errno-0.3.14.crate
+    fastrand-2.5.0.crate::https://static.crates.io/crates/fastrand/fastrand-2.5.0.crate
+    find-msvc-tools-0.1.12.crate::https://static.crates.io/crates/find-msvc-tools/find-msvc-tools-0.1.12.crate
+    getrandom-0.2.17.crate::https://static.crates.io/crates/getrandom/getrandom-0.2.17.crate
+    getrandom-0.3.4.crate::https://static.crates.io/crates/getrandom/getrandom-0.3.4.crate
+    glob-0.3.4.crate::https://static.crates.io/crates/glob/glob-0.3.4.crate
+    heck-0.4.1.crate::https://static.crates.io/crates/heck/heck-0.4.1.crate
+    hermit-abi-0.5.3.crate::https://static.crates.io/crates/hermit-abi/hermit-abi-0.5.3.crate
+    humantime-2.4.0.crate::https://static.crates.io/crates/humantime/humantime-2.4.0.crate
+    is-terminal-0.4.17.crate::https://static.crates.io/crates/is-terminal/is-terminal-0.4.17.crate
+    is_terminal_polyfill-1.70.2.crate::https://static.crates.io/crates/is_terminal_polyfill/is_terminal_polyfill-1.70.2.crate
+    libc-0.2.189.crate::https://static.crates.io/crates/libc/libc-0.2.189.crate
+    libloading-0.8.9.crate::https://static.crates.io/crates/libloading/libloading-0.8.9.crate
+    linux-raw-sys-0.12.1.crate::https://static.crates.io/crates/linux-raw-sys/linux-raw-sys-0.12.1.crate
+    log-0.4.34.crate::https://static.crates.io/crates/log/log-0.4.34.crate
+    malloc_buf-0.0.6.crate::https://static.crates.io/crates/malloc_buf/malloc_buf-0.0.6.crate
+    memchr-2.8.3.crate::https://static.crates.io/crates/memchr/memchr-2.8.3.crate
+    minimal-lexical-0.2.1.crate::https://static.crates.io/crates/minimal-lexical/minimal-lexical-0.2.1.crate
+    nom-7.1.3.crate::https://static.crates.io/crates/nom/nom-7.1.3.crate
+    objc-0.2.7.crate::https://static.crates.io/crates/objc/objc-0.2.7.crate
+    once_cell-1.21.4.crate::https://static.crates.io/crates/once_cell/once_cell-1.21.4.crate
+    once_cell_polyfill-1.70.2.crate::https://static.crates.io/crates/once_cell_polyfill/once_cell_polyfill-1.70.2.crate
+    owo-colors-4.2.3.crate::https://static.crates.io/crates/owo-colors/owo-colors-4.2.3.crate
+    prettyplease-0.2.37.crate::https://static.crates.io/crates/prettyplease/prettyplease-0.2.37.crate
+    proc-macro2-1.0.107.crate::https://static.crates.io/crates/proc-macro2/proc-macro2-1.0.107.crate
+    quickcheck-1.0.3.crate::https://static.crates.io/crates/quickcheck/quickcheck-1.0.3.crate
+    quote-1.0.47.crate::https://static.crates.io/crates/quote/quote-1.0.47.crate
+    r-efi-5.3.0.crate::https://static.crates.io/crates/r-efi/r-efi-5.3.0.crate
+    rand-0.8.8.crate::https://static.crates.io/crates/rand/rand-0.8.8.crate
+    rand_core-0.6.4.crate::https://static.crates.io/crates/rand_core/rand_core-0.6.4.crate
+    regex-1.13.1.crate::https://static.crates.io/crates/regex/regex-1.13.1.crate
+    regex-automata-0.4.18.crate::https://static.crates.io/crates/regex-automata/regex-automata-0.4.18.crate
+    regex-syntax-0.8.11.crate::https://static.crates.io/crates/regex-syntax/regex-syntax-0.8.11.crate
+    rustc-hash-2.1.1.crate::https://static.crates.io/crates/rustc-hash/rustc-hash-2.1.1.crate
+    rustix-1.1.4.crate::https://static.crates.io/crates/rustix/rustix-1.1.4.crate
+    shlex-2.0.1.crate::https://static.crates.io/crates/shlex/shlex-2.0.1.crate
+    similar-2.7.0.crate::https://static.crates.io/crates/similar/similar-2.7.0.crate
+    strsim-0.10.0.crate::https://static.crates.io/crates/strsim/strsim-0.10.0.crate
+    syn-2.0.119.crate::https://static.crates.io/crates/syn/syn-2.0.119.crate
+    tempfile-3.27.0.crate::https://static.crates.io/crates/tempfile/tempfile-3.27.0.crate
+    termcolor-1.4.1.crate::https://static.crates.io/crates/termcolor/termcolor-1.4.1.crate
+    unicode-ident-1.0.24.crate::https://static.crates.io/crates/unicode-ident/unicode-ident-1.0.24.crate
+    unicode-width-0.2.2.crate::https://static.crates.io/crates/unicode-width/unicode-width-0.2.2.crate
+    utf8parse-0.2.2.crate::https://static.crates.io/crates/utf8parse/utf8parse-0.2.2.crate
+    wasi-0.11.1+wasi-snapshot-preview1.crate::https://static.crates.io/crates/wasi/wasi-0.11.1+wasi-snapshot-preview1.crate
+    wasip2-1.0.4+wasi-0.2.12.crate::https://static.crates.io/crates/wasip2/wasip2-1.0.4+wasi-0.2.12.crate
+    winapi-util-0.1.11.crate::https://static.crates.io/crates/winapi-util/winapi-util-0.1.11.crate
+    windows-link-0.2.1.crate::https://static.crates.io/crates/windows-link/windows-link-0.2.1.crate
+    windows-sys-0.61.2.crate::https://static.crates.io/crates/windows-sys/windows-sys-0.61.2.crate
+    wit-bindgen-0.57.1.crate::https://static.crates.io/crates/wit-bindgen/wit-bindgen-0.57.1.crate"
+sha256="5fc3277dd334e4bbbd7bdb8cad5d4fb87a667b2e95a2bae350a8d5424c280629 c982642fa9e8606056828ee9a8505737230110bb1099153c79efe865c59d12ba 710e8eae58854cdc1790fcb56cca04d712a17be849eeb81da2a724bf4bae2bc4 43d5b281e737544384e969a5ccad3f1cdd24b48086a0fc1b2a5262a26b8f4f4a 940b3a0ca603d1eade50a4846a2afffd5ef57a9feac2c0e2ec2e14f9ead76000 4e7644824f0aa2c7b9384579234ef10eb7efb6a0deb83f9630a49594dd9c15c2 40c48f72fd53cd289104fc64099abca73db4166ad86ea0b4341abe65af83dadc 291e6a250ff86cd4a820112fb8898808a366d8f9f58ce16d1f538353ad55747d b588b76d00fde79687d7646a9b5bdf3cc0f655e0bbd080335a95d7e96f3587da 0d8c1fef690941d3e7788d328517591fecc684c084084702d6ff1641e993699a 005ec2760ca554fae18df7a11195552ec576cd665632a881bc011d5bb2fd4d80 6fac387a98bb7c37292057cffc56d62ecb629900026402633ae9160df93a8766 9330f8b2ff13f34540b44e946ef35111825727b38d33286ef986142615121801 157a8ba7b480713b56f4c09fd13fc3e0a22a5dfab8097ba61cbc5feef950788a 1e578d6ec4194633722ccf9544794b71b1385c3c027efe0c55db226fc880865c 4df4df40ec50c46000231c914968278b1eb05098cf8f1b3a518a95030e71d1c7 abb745187d7f4d76267b37485a65e0149edd0e91a4cfcdd3f27524ad86cee9f3 cf9804afaaf59a91e75b022a30fb7229a7901f60c755489cc61c9b423b836442 702fc72eb24e5a1e48ce58027a675bc24edd52096d5397d4aea7c6dd9eca0bd1 1d07550c9036bf2ae0c684c4297d503f838287c83c53686d05370d0e139ae570 a19187fea3ac7e84da7dacf48de0c45d63c6a76f9490dae389aead16c243fce3 4cd405aab171cb85d6735e5c8d9db038c17d3ca007a4d2c25f337935c3d90580 39cab71617ae0d63f51a36d69f866391735b51691dbda63cf6f96d042b63efeb da7c62ceae207dd37ea5b845da6a0696c799f85e97da1ab5b7910be3c1c80223 3e0f1c7c3a72c66fd80abe965175f7523475c0489a87d3ff9d6e8c87d87a9d2d ff2abc00be7fca6ebc474524697ae276ad847ad0a6b3faa4bcb027e9a4614ad0 899def5c37c4fd7b2664648c28120ecec138e4d395b459e5ca34f9cce2dd77fd e4eba85ea1d0a966a983acd07deee566e67395d2d96b6fb39e62b5a833f1eb0b 95505c38b4572b2d910cecb0281560f54b440a19336cbbcb27bf6ce6adc6f5a8 e17592d60ebacc7d5e169f4663c5f84f9161cc90328abcfe8456f41e4dfcb284 15cdd26707701c53297e2fa6afb323d55fbc1d0810c3aec078ae3ef0424c3c15 3640c1c38b8e4e43584d8df18be5fc6b0aa314ce6ebf51b53313d4306cca8e46 a6cb138bb79a146c1bd460005623e142ef0181e3d0219cb493e02f7d08a35695 3eaf3ede3fee6db1a4c2ee091bf8a8b4dccdc6d17f656fb07896ee72867612f2 d7c4b02199fee7c5d21a5ae7d8cfa79a6ef5bb2fc834d6e9058e89c825efdc55 32a66949e030da00e8c7d4434b251670a91556f4144941d37452769c25d58a53 f9f8bd3e56ce4dfc153cf470fffbfa98c7620958b312ca5c3a4b8d5181fd13c6 62bb907fe88d54d8d9ce32a3cceab4218ed2f6b7d35617cafe9adf84e43919cb cf8baf1c55e62ffcace7a9f06f4bd9cd3f0c4beb022d3b367256b91b87513d98 68354c5c6bd36d73ff3feceb05efa59b6acb7626617f4962be322a825e61f79a d273983c5a657a70a3e8f2a01329822f3b8c8172b73826411a55751e404a0a4a 915b1b472bc21c53464d6c8461c9d3af805ba1ef837e1cac254428f4a77177b1 9f7c3e4beb33f85d45ae3e3a1792185706c8e16d043238c593331cc7cd313b50 384b8ab6d37215f3c5301a95a4accb5d64aa607f1fcb26a11b5303878451b4fe 9c6901729fa79e91a0913333229e9ca5dc725089d1c363b2f4b4760709dc4a52 479ca8adacdd7ce8f1fb39ce9ecccbfe93a3f1344b3d0d97f20bc0196208f62b 985e7ec9bb745e6ce6535b544d84d6cd6f7ad8bd711c398938ae983b91a766d9 588f6378e4dd99458b60ec275b4477add41ce4fa9f64dcba6f15adccb19b50d6 1fbf4db142a473a8d80c26bbf18454ed458bf8d26c8219c331daecfdbd079001 69cdb34c158ceb288df11e18b4bd39de994f6657d83847bdffdbd7f346754b0f e058c7de0b26af77780c769414d6257830bb240f3c38477dbc2c16e5f54d6d4c ec0be4795e2f6a28069bec0b5ff3e2ac9bafc99e6a9a7dc3547996c5c816922c f020237b6c8eed93db2e2cb53c00c60a8e1bc73da7d073199a1180401450218d ad8553b9b26413251cbf30e620595c7a41b3887f03da04579c0e6b0d6a06b4b2 d6f6ff9a378485b298a5286656da665ba74413d36db0979633275d2e708145d4 357703d41365b4b27c590e3ed91eabb1b663f07c4c084095e60cbed4362dff0d b6fe4565b9518b83ef4f91bb47ce29620ca828bd32cb7e408f0062e9930ba190 f8fadd59c855ef2080decdef8ff161eb6661b86933c9d82e5ba29dc602a55aba bbbb5d9659141646ae647b42fe094daf6c6192d1620870b449d9557f748b2daa 73473c0e59e6d5812c5dfe2a064a6444949f089e20eec9a2e5506596494e4623 872831b642d1a07999a962a351ed35b955ea2cfc8f3862091e2a240a84f17297 32497e9a4c7b38532efcdebeef879707aa9f794296a4f0244f6f69e9bc8574bd 06794f8f6c5c898b3275aebefa6b8a1cb24cd2c6c79397ab15774837a0bc5755 e6e4313cd5fcd3dad5cafa179702e2b244f760991f45397d14d4ebf38247da75 b4ac048d71ede7ee76d585517add45da530660ef4390e49b098733c6e897f254 06abde3611657adf66d383f00b093d7faecc7fa57071cce2578660c9f1010821 ccf3ec651a847eb01de73ccad15eb7d99f80485de043efb2f370cd654f4ea44b b67efb37e106e55ce722a510d6b5f9c17f083e5fc79afc2badeb12cc313d9487 c2a7b1c03c876122aa43f3020e6c3c3ee5c05081c9a00739faf7503aeba10d22 f0805222e57f7521d6a62e36fa9163bc891acd422f971defe97d64e70d0a4fe5 ae137229bcbd6cdf0f7b80a31df61766145077ddf49416a728b02cb3921ff3fc 1ebf944e87a7c253233ad6766e082e3cd714b5d03812acc24c318f549614536e"
+noextract=1
+depends="llvm"
+makedepends="rust"
+style=custom
+do_build() {
+    local n v c
+    tar -C "$WORK" -xzf "$CIG_VAR/sources/rust-bindgen-$version.tar.gz"
+    cd "$WORK/rust-bindgen-$version"
+    # the pinned crates as a vendored source, each named with its Cargo.lock checksum
+    mkdir -p "$WORK/vendor"
+    awk '/^\[\[package\]\]/{n="";v=""} /^name = /{gsub(/"/,"",$3);n=$3} /^version = /{gsub(/"/,"",$3);v=$3}
+         /^checksum = /{gsub(/"/,"",$3); print n, v, $3}' Cargo.lock |
+    while read -r n v c; do
+        tar -C "$WORK/vendor" -xzf "$CIG_VAR/sources/$n-$v.crate"
+        printf '{"files":{},"package":"%s"}' "$c" > "$WORK/vendor/$n-$v/.cargo-checksum.json"
+    done
+    mkdir -p .cargo
+    printf '%s\n' '[source.crates-io]' 'replace-with = "vendored"' '[source.vendored]' \
+        "directory = \"$WORK/vendor\"" > .cargo/config.toml
+    CARGO_HOME="$WORK/cargo" LIBCLANG_PATH=/usr/lib cargo build --release --offline --locked -p bindgen-cli
+}
+do_install() {
+    install -D -m 755 "$WORK/rust-bindgen-$version/target/release/bindgen" "$DEST/usr/bin/bindgen"
+}

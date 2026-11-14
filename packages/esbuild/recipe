@@ -1,0 +1,27 @@
+# esbuild - JavaScript bundler, written in Go: a build tool for Chromium (its DevTools bundles
+# with it; the source tarball's copy is a glibc binary). Not offered in the installer.
+# The version Chromium's DevTools pins (node_modules/esbuild). Its one dependency, golang.org/x/sys
+# at the commit its go.mod names, is vendored from that commit's archive (no module download).
+# Unsigned: tag archives on GitHub (flagged in docs/sources.md).
+name=esbuild
+version=0.28.2
+_xsys=c0bba94af5f8
+_xsysver=v0.0.0-20220715151400-c0bba94af5f8
+license="MIT"
+source="esbuild-$version.tar.gz::https://github.com/evanw/esbuild/archive/refs/tags/v$version.tar.gz
+    golang-sys-$_xsys.tar.gz::https://github.com/golang/sys/archive/$_xsys.tar.gz"
+sha256="300162f899361d9f0263065f8728ef9086dcfc1a3d36bcbc4e0abe5de9c58bf8 68996737e91bf6e69f8c80efe882309f6f928fd9220abc586abac7d985bd4bd3"
+wrksrc="esbuild-$version"
+makedepends="go"
+style=custom
+nostrip=1
+do_build() {
+    mkdir -p vendor/golang.org/x
+    cp -R "$WORK"/src/sys-$_xsys* vendor/golang.org/x/sys
+    printf '%s\n' "# golang.org/x/sys $_xsysver" '## explicit' 'golang.org/x/sys/unix' > vendor/modules.txt
+    CGO_ENABLED=0 GOFLAGS=-mod=vendor GOTOOLCHAIN=local GOTELEMETRY=off GOPROXY=off \
+        GOPATH="$WORK/gopath" GOCACHE="$WORK/gocache" \
+        go build -trimpath -ldflags="-s -w" -o esbuild ./cmd/esbuild
+    ./esbuild --version
+}
+do_install() { install -D -m 755 esbuild "$DEST/usr/bin/esbuild"; }

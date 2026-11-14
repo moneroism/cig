@@ -1,0 +1,48 @@
+# nss - Mozilla's Network Security Services (TLS, certificates) with NSPR, its portability
+# library: Chromium needs both. Built together from Mozilla's combined release with NSS's
+# make build (its in-tree SQLite; no gyp). Unsigned: Mozilla publishes only a SHA256SUMS file
+# next to it (the pin matches it).
+name=nss
+version=3.133
+_nspr=4.39
+license="MPL-2.0"
+source="https://archive.mozilla.org/pub/security/nss/releases/NSS_${version//./_}_RTM/src/nss-$version-with-nspr-$_nspr.tar.gz"
+sha256="21a9fa95043631db5331ad9202d8c7e7475f7d8d94fdf92c01624563c88502b4"
+wrksrc="nss-$version"
+depends="zlib"
+makedepends="perl"
+style=custom
+_m() {
+    make -C nss BUILD_OPT=1 USE_64=1 NSS_ENABLE_WERROR=0 NSDISTMODE=copy NSS_DISABLE_GTESTS=1 \
+        USE_SYSTEM_ZLIB=1 ZLIB_LIBS=-lz CC=cc CCC=c++ "$@"
+}
+do_build() {
+    # nspr's _linux.h checks only for glibc: musl's features named (as Alpine does)
+    # (one line: nspr's configure writes it into a Makefile; no _PR_HAVE_OFF64_T: musl 1.2.4+
+    # has no off64_t, its off_t is 64-bit)
+    local f="-D_PR_POLL_AVAILABLE -D_PR_INET6 -D_PR_HAVE_INET_NTOP"
+    f="$f -D_PR_HAVE_GETHOSTBYNAME2 -D_PR_HAVE_GETADDRINFO -D_PR_INET6_PROBE"
+    export XCFLAGS="${CFLAGS:-} $f"
+    _m nss_build_all
+}
+do_install() {
+    local d obj
+    obj=$(find dist -maxdepth 1 -type d -name 'Linux*_OPT.OBJ' | head -n1)
+    [ -n "$obj" ] || { echo "no dist/Linux*_OPT.OBJ"; return 1; }
+    mkdir -p "$DEST/usr/lib/pkgconfig" "$DEST/usr/include/nss" "$DEST/usr/include/nspr" "$DEST/usr/bin"
+    cp -L "$obj"/lib/*.so "$DEST/usr/lib/"
+    cp -L "$obj"/lib/*.chk "$DEST/usr/lib/" 2>/dev/null || true
+    cp -RL dist/public/nss/. "$DEST/usr/include/nss/"
+    cp -RL "$obj"/include/. "$DEST/usr/include/nspr/"
+    rm -rf "$DEST/usr/include/nspr/md"
+    for b in certutil pk12util modutil; do
+        [ -f "$obj/bin/$b" ] && install -m 755 "$obj/bin/$b" "$DEST/usr/bin/$b"
+    done
+    printf '%s\n' 'prefix=/usr' 'libdir=${prefix}/lib' 'includedir=${prefix}/include/nspr' '' \
+        'Name: NSPR' 'Description: The Netscape Portable Runtime' "Version: $_nspr" \
+        'Libs: -L${libdir} -lplds4 -lplc4 -lnspr4' 'Cflags: -I${includedir}' > "$DEST/usr/lib/pkgconfig/nspr.pc"
+    printf '%s\n' 'prefix=/usr' 'libdir=${prefix}/lib' 'includedir=${prefix}/include/nss' '' \
+        'Name: NSS' 'Description: Network Security Services' "Version: $version" \
+        "Requires: nspr >= $_nspr" 'Libs: -L${libdir} -lssl3 -lsmime3 -lnss3 -lnssutil3' \
+        'Cflags: -I${includedir}' > "$DEST/usr/lib/pkgconfig/nss.pc"
+}

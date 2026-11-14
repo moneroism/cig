@@ -49,6 +49,14 @@ on first download (trust on first use), and `smoke add` warns about it on every 
 | json-c, libxkbcommon, tmux, libffi, samurai, vulkan-headers, labwc, pipewire (+ wireplumber), pipewire-bluetooth | tags unsigned (labwc: matches Alpine's SHA-512; pipewire, wireplumber: each tarball is its tag's tree, whose git archive matches Arch's BLAKE2 sum) (vulkan-headers: annotated but not verifiable), releases unsigned | none upstream |
 | libyaml | release unsigned (GitHub); the tarball matches Alpine's SHA-512 (main/yaml) | none upstream |
 | glslang, fastfetch, wl-clipboard, jq, htop, dwl, vulkan-loader, brightnessctl | lightweight tags (cannot be signed), releases unsigned (jq: Sigstore attestation, htop: a SHA256 file on the same host) | Sigstore verification for jq |
+| go | Go's source releases are not GPG-signed (the pins match go.dev's checksum list, same host); built from source alone, from Go 1.4 (C) up | signed releases |
+| gn | no releases or signed tags; gn.googlesource.com generates archives per download (never byte-identical): the pin matches cig's cached copy, a fresh download fails | a git source type pinned by commit |
+| nss (+ nspr) | Mozilla publishes only a SHA256SUMS file on the same host (the pin matches it) | signed releases |
+| at-spi2-core | GNOME does not sign tarballs (its .sha256sum on the same host matches the pin) | signed git tags with a published key |
+| esbuild | tag archives on GitHub, unsigned; golang.org/x/sys at the commit esbuild's go.mod names | none upstream |
+| rust-bindgen, chromium (crates) | crates.io has no signatures; every .crate pin matches the checksum in the Cargo.lock that names it (bindgen 71, crubit + gnrt 336) | crates.io signing (not available) |
+| chromium | Google's official tarball is unsigned (a hashes file on the same host matches the pin); crubit is a GitHub commit archive; the musl patches are Alpine's (aports commit 7628bce8) and copium's (157.1), refreshed for patch without fuzz | signed releases |
+| rust (patches) | Alpine's musl patches from aports at a pinned commit (the compiler and the seed themselves are signed) | signed aports commits |
 | python-mako, -markupsafe, -packaging, -pyyaml | PyPI: no GPG signatures | Sigstore (PEP 740) attestations |
 | linux (Alpine config), elfutils (musl patch) | files from Alpine's aports at a pinned commit; the commit's authenticity is not checked | signed aports commits, or cig's own reviewed config (Phase 5) |
 | ca-certificates | curl.se's extract of Mozilla's CA store, unsigned | build from Mozilla's certdata at a verified revision |
@@ -63,6 +71,7 @@ on first download (trust on first use), and `smoke add` warns about it on every 
 | alsa-lib | www.alsa-project.org | upstream GPG signature |
 | alsa-utils | www.alsa-project.org | upstream GPG signature |
 | argp-standalone | github.com | **UNVERIFIED** (pinned SHA256 only, trusted on first use) |
+| at-spi2-core | download.gnome.org | **UNVERIFIED** (pinned SHA256 only, trusted on first use) |
 | autoconf | ftp.gnu.org | upstream GPG signature |
 | automake | ftp.gnu.org | upstream GPG signature |
 | bash | ftp.gnu.org | upstream GPG signature |
@@ -74,6 +83,9 @@ on first download (trust on first use), and `smoke add` warns about it on every 
 | busybox | busybox.net | upstream GPG signature |
 | ca-certificates | curl.se | **UNVERIFIED** (pinned SHA256 only, trusted on first use) |
 | cairo | cairographics.org | signed git tag (archive = tag tree) |
+| chromium | commondatastorage.googleapis.com | **UNVERIFIED** (pinned SHA256 only, trusted on first use) |
+| chromium | github.com | **UNVERIFIED** (pinned SHA256 only, trusted on first use) |
+| chromium | static.crates.io | **UNVERIFIED** (pinned SHA256 only, trusted on first use) |
 | chrony | chrony-project.org | upstream GPG signature |
 | cmake | github.com | signed checksum file |
 | curl | curl.se | upstream GPG signature |
@@ -83,6 +95,7 @@ on first download (trust on first use), and `smoke add` warns about it on every 
 | e2fsprogs | cdn.kernel.org | upstream GPG signature |
 | elfutils | sourceware.org | upstream GPG signature |
 | elfutils | gitlab.alpinelinux.org | **UNVERIFIED** (pinned SHA256 only, trusted on first use) |
+| esbuild | github.com | **UNVERIFIED** (pinned SHA256 only, trusted on first use) |
 | expat | github.com | upstream GPG signature |
 | fastfetch | github.com | **UNVERIFIED** (pinned SHA256 only, trusted on first use) |
 | fcft | codeberg.org | signed git tag (archive = tag tree) |
@@ -99,7 +112,9 @@ on first download (trust on first use), and `smoke add` warns about it on every 
 | glib | download.gnome.org | **UNVERIFIED** (pinned SHA256 only, trusted on first use) |
 | glslang | github.com | **UNVERIFIED** (pinned SHA256 only, trusted on first use) |
 | gmp | ftp.gnu.org | upstream GPG signature |
+| gn | gn.googlesource.com | **UNVERIFIED** (pinned SHA256 only, trusted on first use) |
 | gnutls | www.gnupg.org | upstream GPG signature |
+| go | dl.google.com | **UNVERIFIED** (pinned SHA256 only, trusted on first use) |
 | gperf | ftp.gnu.org | upstream GPG signature |
 | gpgv | gnupg.org | upstream GPG signature |
 | grim | gitlab.freedesktop.org | upstream GPG signature |
@@ -137,6 +152,7 @@ on first download (trust on first use), and `smoke add` warns about it on every 
 | linux | cdn.kernel.org | upstream GPG signature |
 | linux | github.com | upstream GPG signature |
 | linux | gitlab.alpinelinux.org | **UNVERIFIED** (pinned SHA256 only, trusted on first use) |
+| llvm | github.com | upstream GPG signature |
 | lua | www.lua.org | **UNVERIFIED** (pinned SHA256 only, trusted on first use) |
 | m4 | ftp.gnu.org | upstream GPG signature |
 | make | ftp.gnu.org | upstream GPG signature |
@@ -154,7 +170,9 @@ on first download (trust on first use), and `smoke add` warns about it on every 
 | ncurses | ftp.gnu.org | upstream GPG signature |
 | nettle | ftp.gnu.org | upstream GPG signature |
 | nnn | github.com | upstream GPG signature |
+| nodejs | nodejs.org | signed checksum file |
 | npth | gnupg.org | upstream GPG signature |
+| nss | archive.mozilla.org | **UNVERIFIED** (pinned SHA256 only, trusted on first use) |
 | opendoas | github.com | upstream GPG signature |
 | openssh | cdn.openbsd.org | upstream GPG signature |
 | openssl | github.com | upstream GPG signature |
@@ -162,7 +180,6 @@ on first download (trust on first use), and `smoke add` warns about it on every 
 | pcre2 | github.com | upstream GPG signature |
 | perl | www.cpan.org | **UNVERIFIED** (pinned SHA256 only, trusted on first use) |
 | pipewire-bluetooth | gitlab.freedesktop.org | **UNVERIFIED** (pinned SHA256 only, trusted on first use) |
-| pipewire | gitlab.freedesktop.org | **UNVERIFIED** (pinned SHA256 only, trusted on first use) |
 | pipewire | gitlab.freedesktop.org | **UNVERIFIED** (pinned SHA256 only, trusted on first use) |
 | pixman | www.x.org | signed checksum file |
 | pkgconf | distfiles.ariadne.space | **UNVERIFIED** (pinned SHA256 only, trusted on first use) |
@@ -173,6 +190,10 @@ on first download (trust on first use), and `smoke add` warns about it on every 
 | python | www.python.org | upstream GPG signature |
 | readline | ftp.gnu.org | upstream GPG signature |
 | rsync | download.samba.org | **UNVERIFIED** (signed, but no trusted key: pinned SHA256 only) |
+| rust-bindgen | github.com | **UNVERIFIED** (pinned SHA256 only, trusted on first use) |
+| rust-bindgen | static.crates.io | **UNVERIFIED** (pinned SHA256 only, trusted on first use) |
+| rust | static.rust-lang.org | upstream GPG signature |
+| rust | gitlab.alpinelinux.org | **UNVERIFIED** (pinned SHA256 only, trusted on first use) |
 | samurai | github.com | **UNVERIFIED** (pinned SHA256 only, trusted on first use) |
 | sbc | cdn.kernel.org | upstream GPG signature |
 | seatd | git.sr.ht | **UNVERIFIED** (pinned SHA256 only, trusted on first use) |
@@ -205,4 +226,4 @@ on first download (trust on first use), and `smoke add` warns about it on every 
 | zlib | github.com | upstream GPG signature |
 | zstd | github.com | upstream GPG signature |
 
-97 sources verified, 47 flagged.
+101 sources verified, 476 flagged.

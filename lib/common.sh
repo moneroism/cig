@@ -200,6 +200,9 @@ unpack_sources() {
         # noextract=1: the recipe unpacks what it needs itself (e.g. linux-firmware)
         [ -n "$noextract" ] && continue
         case "$f" in
+            # BusyBox's xz decoder fails on some archives (Rust's): xz itself when it is there
+            *.tar.xz)     if command -v xz >/dev/null; then xz -dc "$f" | tar -C "$WORK/src" -xf -
+                          else tar -C "$WORK/src" -xf "$f"; fi ;;
             *.tar*|*.tgz) tar -C "$WORK/src" -xf "$f" ;;
             *.zip)        unzip -q -d "$WORK/src" "$f" ;;
             *)            cp "$f" "$WORK/src/" ;;
