@@ -1,4 +1,4 @@
-# llvm - LLVM with clang, lld and compiler-rt's builtins: a build tool, for Rust and Chromium
+# llvm - LLVM with clang and lld (the runtime archives are in compiler-rt): a build tool, for Rust and Chromium
 # (Chromium builds only with clang). Not offered in the installer: installed only to build.
 # Targets: x86 only; no sanitizer runtimes (they do not build on musl, nothing here needs them).
 name=llvm

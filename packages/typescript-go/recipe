@@ -1,0 +1,74 @@
+# typescript-go - the TypeScript 7 compiler (tsgo), written in Go: a build tool for Chromium (its
+# WebUI is compiled with it; the source tarball's copy is a prebuilt binary). Not offered in the
+# installer. Upstream's tag archive (unsigned, it matches Alpine's sha512) and the Go modules its
+# go.sum names, each from the Go module mirror and pinned; at build they are a local GOPROXY
+# directory and go checks each one against go.sum too.
+name=typescript-go
+version=7.0.2
+license="Apache-2.0"
+source="TypeScript-$version.tar.gz::https://github.com/microsoft/TypeScript/archive/v$version/TypeScript-$version.tar.gz
+    gomod-github.com_Microsoft_go-winio@v0.6.2.zip::https://proxy.golang.org/github.com/!microsoft/go-winio/@v/v0.6.2.zip
+    gomod-github.com_Microsoft_go-winio@v0.6.2.mod::https://proxy.golang.org/github.com/!microsoft/go-winio/@v/v0.6.2.mod
+    gomod-github.com_go-json-experiment_json@v0.0.0-20260623181947-01eb4420fa68.zip::https://proxy.golang.org/github.com/go-json-experiment/json/@v/v0.0.0-20260623181947-01eb4420fa68.zip
+    gomod-github.com_go-json-experiment_json@v0.0.0-20260623181947-01eb4420fa68.mod::https://proxy.golang.org/github.com/go-json-experiment/json/@v/v0.0.0-20260623181947-01eb4420fa68.mod
+    gomod-github.com_google_go-cmp@v0.7.0.zip::https://proxy.golang.org/github.com/google/go-cmp/@v/v0.7.0.zip
+    gomod-github.com_google_go-cmp@v0.7.0.mod::https://proxy.golang.org/github.com/google/go-cmp/@v/v0.7.0.mod
+    gomod-github.com_klauspost_cpuid_v2@v2.2.10.zip::https://proxy.golang.org/github.com/klauspost/cpuid/v2/@v/v2.2.10.zip
+    gomod-github.com_klauspost_cpuid_v2@v2.2.10.mod::https://proxy.golang.org/github.com/klauspost/cpuid/v2/@v/v2.2.10.mod
+    gomod-github.com_mackerelio_go-osstat@v0.2.7.zip::https://proxy.golang.org/github.com/mackerelio/go-osstat/@v/v0.2.7.zip
+    gomod-github.com_mackerelio_go-osstat@v0.2.7.mod::https://proxy.golang.org/github.com/mackerelio/go-osstat/@v/v0.2.7.mod
+    gomod-github.com_matryer_moq@v0.7.1.zip::https://proxy.golang.org/github.com/matryer/moq/@v/v0.7.1.zip
+    gomod-github.com_matryer_moq@v0.7.1.mod::https://proxy.golang.org/github.com/matryer/moq/@v/v0.7.1.mod
+    gomod-github.com_peter-evans_patience@v0.3.0.zip::https://proxy.golang.org/github.com/peter-evans/patience/@v/v0.3.0.zip
+    gomod-github.com_peter-evans_patience@v0.3.0.mod::https://proxy.golang.org/github.com/peter-evans/patience/@v/v0.3.0.mod
+    gomod-github.com_pmezard_go-difflib@v1.0.0.zip::https://proxy.golang.org/github.com/pmezard/go-difflib/@v/v1.0.0.zip
+    gomod-github.com_pmezard_go-difflib@v1.0.0.mod::https://proxy.golang.org/github.com/pmezard/go-difflib/@v/v1.0.0.mod
+    gomod-github.com_zeebo_assert@v1.3.0.zip::https://proxy.golang.org/github.com/zeebo/assert/@v/v1.3.0.zip
+    gomod-github.com_zeebo_assert@v1.3.0.mod::https://proxy.golang.org/github.com/zeebo/assert/@v/v1.3.0.mod
+    gomod-github.com_zeebo_xxh3@v1.1.0.zip::https://proxy.golang.org/github.com/zeebo/xxh3/@v/v1.1.0.zip
+    gomod-github.com_zeebo_xxh3@v1.1.0.mod::https://proxy.golang.org/github.com/zeebo/xxh3/@v/v1.1.0.mod
+    gomod-golang.org_x_mod@v0.37.0.zip::https://proxy.golang.org/golang.org/x/mod/@v/v0.37.0.zip
+    gomod-golang.org_x_mod@v0.37.0.mod::https://proxy.golang.org/golang.org/x/mod/@v/v0.37.0.mod
+    gomod-golang.org_x_sync@v0.21.0.zip::https://proxy.golang.org/golang.org/x/sync/@v/v0.21.0.zip
+    gomod-golang.org_x_sync@v0.21.0.mod::https://proxy.golang.org/golang.org/x/sync/@v/v0.21.0.mod
+    gomod-golang.org_x_sys@v0.46.0.zip::https://proxy.golang.org/golang.org/x/sys/@v/v0.46.0.zip
+    gomod-golang.org_x_sys@v0.46.0.mod::https://proxy.golang.org/golang.org/x/sys/@v/v0.46.0.mod
+    gomod-golang.org_x_term@v0.44.0.zip::https://proxy.golang.org/golang.org/x/term/@v/v0.44.0.zip
+    gomod-golang.org_x_term@v0.44.0.mod::https://proxy.golang.org/golang.org/x/term/@v/v0.44.0.mod
+    gomod-golang.org_x_text@v0.38.0.zip::https://proxy.golang.org/golang.org/x/text/@v/v0.38.0.zip
+    gomod-golang.org_x_text@v0.38.0.mod::https://proxy.golang.org/golang.org/x/text/@v/v0.38.0.mod
+    gomod-golang.org_x_tools@v0.47.0.zip::https://proxy.golang.org/golang.org/x/tools/@v/v0.47.0.zip
+    gomod-golang.org_x_tools@v0.47.0.mod::https://proxy.golang.org/golang.org/x/tools/@v/v0.47.0.mod
+    gomod-gotest.tools_v3@v3.5.2.zip::https://proxy.golang.org/gotest.tools/v3/@v/v3.5.2.zip
+    gomod-gotest.tools_v3@v3.5.2.mod::https://proxy.golang.org/gotest.tools/v3/@v/v3.5.2.mod"
+sha256="8472f284b1465f5c4826a64c88853eccba667446f31a435ed1d0b28d373dbc0b cd007bdb877a578efde2780bf5dd2f57dd557b5b08c3614597b820d0369ebb0f 47fb19990ebb31954f3aa784ff45f4c93a9e86ac3e1297d7ca87c614aeffe2cb 54e45770eb951a295e9c4613e8ab8dba929fe0e2b404a07d1f63447a895f750a 64ddb6e13b6f1d3d6fb44c9a938b485b2c2d5c6fe6d897370a3900dff5a4b1f1 64a9ce046f2c320e3783fba0d1f4a15f8a18f0b009b67bf27f7630919db3f539 31c874a1d2a18e62b0550f823ce7a575c8dec7f8fd9d4fa1959bb12d7f7c0f14 db89665fa22cef477dc551b72d49707c516b749c17ed154bf67eb8081ee08dff ff61d47f254f2333bf44a8ff4187a2f2e973693807c10025033bb37143577237 0caac3de4d3a63829ed97214fccbc0e0eb7e770c037dc4c8c4dec9e91672f01c 3e97d1eb5a7bbe38340fb98da66224605500a6306d2bf284849494a8c0c97592 0f1ef0c5e0dfc6392fe42f50a8cd0fd9e0c5f5a0e3bffbb60fd10e243eaaf1b1 6af13809f329d332ba4b71654963f8417af46a831af77d3c7af3fb3705997c78 c906874fce4ff10415a537779adbad62414240af8e3be1db0170fa50360a5f90 cd609513d29c931fa8d135ecb37ae90e7569135484a62bb2db21ec899a8c9777 de04cecc1a4b8d53e4357051026794bcbc54f2e6a260cfac508ce69d5d6457a0 74b2e766eb215377864d587badf57e95521f692d2a7860b3c7759093f9c9bec2 1f01421d74ff37cb8247988155be9e6877d336029bcd887a1d035fd32d7ab6ae cb8cea69ecbc99692af21d44909083f4d962e95dcb7adcb5fd0676b773587e9c 0cd36657902317f81f3d31b217ebaca6f98dfb665f1af611d1db0904a689bcd1 c0ffb54a842e7143f079c321e74206d65f35cb39e19d2a0996cfef914e28c3f4 91e8e4e9b74a8706dae808b66538d4ab22befd00c11f34134eb97ff572d52e85 538472fdf094dd5e49dc40e70468fa931a93c241eba07fb946a98747c94ab4df ee65459023de7f24836f6e2123144b5329bd0a4d05a87c3c448509378e2e6be7 a3e29e76060bd561060454b1fa2bdcd66674f60c9ca93833b8106355e34c603c 36dc83b6bc5884d260cdbd9d09e597b1eed64d15dfdc374ca6e31aef99d533d7 57f4393ea18d5446a12363b35c23a616d843fa1669c7121a70a2bc3a9677d665 e420c6640012a697d806c2e865df26993c82a9ab1b16d286787cb77fc10062f7 c1ed42075fbd1940a6ec34cbb1af6fff240b5c76e7a75599023fa138a112e948 be98266212ac63cdc78631ae0ff8f783e0f5e47d9b6094c11ffebe43fd0424b3 5ea8b1f12f8a2eb1617ddedb3051a44f772222f977470d76231cfa95de7b6b01 143d132b519da1454db967febb65241796805d7c9d4752034341c1376fd3d7f1 eb46e44850fb4dca48f7b680cac5177682cb0e302b307d4d3dbd7ed9df05fc0f d7c40ae135e4a34dee9ca4847ad18208f138847721e693647b897259287a1d4b e9353cd880d398afaacb0ba54e12575213b975f3cd7991d7b42aa3bfe5f6f9d6"
+keys=""
+wrksrc="TypeScript-$version/tsc"
+makedepends="go"
+style=custom
+nostrip=1
+do_build() {
+    local e f p
+    # the modules as a module proxy directory: <module>/@v/<version>.zip|.mod, as in their URLs
+    for e in $source; do
+        case "$e" in gomod-*) ;; *) continue ;; esac
+        f=${e%%::*}; p=${e#*proxy.golang.org/}
+        mkdir -p "$WORK/goproxy/${p%/*}"
+        cp "$CIG_VAR/sources/$f" "$WORK/goproxy/$p"
+    done
+    CGO_ENABLED=0 GOFLAGS=-mod=mod GOTOOLCHAIN=local GOTELEMETRY=off GOSUMDB=off \
+        GOPROXY="file://$WORK/goproxy" GOPATH="$WORK/gopath" GOCACHE="$WORK/gocache" \
+        go build -trimpath -tags=noembed \
+        -ldflags="-s -w -X github.com/microsoft/typescript-go/internal/core.version=$version" \
+        -o built/local/tsc ./cmd/tsgo
+}
+do_install() {
+    # the layout of npm's @typescript/typescript-linux-x64 (binary and lib.*.d.ts in lib/),
+    # which Chromium's third_party/typescript expects
+    local l="$DEST/usr/lib/typescript-go/platform/lib"
+    install -D -m 755 built/local/tsc "$l/tsc"
+    cp -R internal/bundled/libs/. "$l/"
+    "$l/tsc" --version    # noembed: it finds its lib.*.d.ts next to itself
+    mkdir -p "$DEST/usr/bin"
+    ln -s ../lib/typescript-go/platform/lib/tsc "$DEST/usr/bin/tsgo"
+}

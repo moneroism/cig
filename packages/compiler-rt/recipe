@@ -1,0 +1,35 @@
+# compiler-rt - clang's runtime archives: builtins and profile, which Chromium links into every
+# binary (profile once Rust is in its toolchain). Separate from llvm, as on Alpine: llvm's package
+# drops all static archives. From the same signed llvm-project release. Not offered in the
+# installer. The crt objects come with llvm.
+name=compiler-rt
+version=23.1.5
+license="Apache-2.0 WITH LLVM-exception"
+source="https://github.com/llvm/llvm-project/releases/download/llvmorg-$version/llvm-project-$version.src.tar.xz"
+signature="https://github.com/llvm/llvm-project/releases/download/llvmorg-$version/llvm-project-$version.src.tar.xz.sig"
+sha256="fb50b1eac93ddeb3aa8dab4cfe324dff74f4a9c2bdee6160c9e36188f8d06a6e"
+keys="FFB3368980F3E6BB5737145A316C56D064CACBA5"
+makedepends="llvm cmake samurai python"
+keep_static=1
+style=custom
+do_build() {
+    CC=clang CXX=clang++ cmake -B build -G Ninja -S runtimes -Wno-dev \
+        -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr \
+        -DLLVM_ENABLE_RUNTIMES=compiler-rt -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=ON \
+        -DLLVM_DEFAULT_TARGET_TRIPLE=x86_64-pc-linux-musl -DCOMPILER_RT_DEFAULT_TARGET_ONLY=ON \
+        -DCMAKE_C_COMPILER_TARGET=x86_64-pc-linux-musl -DCMAKE_CXX_COMPILER_TARGET=x86_64-pc-linux-musl \
+        -DCMAKE_ASM_COMPILER_TARGET=x86_64-pc-linux-musl \
+        -DCOMPILER_RT_INSTALL_PATH=/usr/lib/clang/${version%%.*} \
+        -DCOMPILER_RT_BUILD_BUILTINS=ON -DCOMPILER_RT_BUILD_PROFILE=ON -DCOMPILER_RT_BUILD_CRT=OFF \
+        -DCOMPILER_RT_BUILD_SANITIZERS=OFF -DCOMPILER_RT_BUILD_XRAY=OFF -DCOMPILER_RT_BUILD_LIBFUZZER=OFF \
+        -DCOMPILER_RT_BUILD_MEMPROF=OFF -DCOMPILER_RT_BUILD_ORC=OFF -DCOMPILER_RT_BUILD_CTX_PROFILE=OFF \
+        -DCOMPILER_RT_BUILD_GWP_ASAN=OFF -DCOMPILER_RT_INCLUDE_TESTS=OFF
+    samu -C build
+}
+do_install() {
+    DESTDIR="$DEST" samu -C build install
+    # its headers come with llvm already
+    rm -rf "$DEST"/usr/lib/clang/*/include "$DEST/usr/include"
+    # the builtins archive must be there (Chromium links it by path)
+    find "$DEST/usr/lib/clang" -type f -name 'libclang_rt.*.a' | grep -q builtins
+}
