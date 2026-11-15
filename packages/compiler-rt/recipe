@@ -4,6 +4,7 @@
 # installer. The crt objects come with llvm.
 name=compiler-rt
 version=23.1.5
+rel=2
 license="Apache-2.0 WITH LLVM-exception"
 source="https://github.com/llvm/llvm-project/releases/download/llvmorg-$version/llvm-project-$version.src.tar.xz"
 signature="https://github.com/llvm/llvm-project/releases/download/llvmorg-$version/llvm-project-$version.src.tar.xz.sig"
@@ -28,8 +29,11 @@ do_build() {
 }
 do_install() {
     DESTDIR="$DEST" samu -C build install
-    # its headers come with llvm already
+    # its headers come with llvm already, except the sanitizer interface headers, which
+    # compiler-rt installs only with the sanitizers (Chromium's V8 includes them)
     rm -rf "$DEST"/usr/lib/clang/*/include "$DEST/usr/include"
+    install -d "$DEST/usr/lib/clang/${version%%.*}/include/sanitizer"
+    install -m 644 compiler-rt/include/sanitizer/*.h "$DEST/usr/lib/clang/${version%%.*}/include/sanitizer/"
     # the builtins archive must be there (Chromium links it by path)
     find "$DEST/usr/lib/clang" -type f -name 'libclang_rt.*.a' | grep -q builtins
 }

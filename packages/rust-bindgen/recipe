@@ -4,6 +4,7 @@
 # crates.io and pinned (every pin matches the checksum in Cargo.lock); built offline.
 name=rust-bindgen
 version=0.73.2
+rel=2
 license="BSD-3-Clause"
 source="rust-bindgen-$version.tar.gz::https://github.com/rust-lang/rust-bindgen/archive/refs/tags/v$version.tar.gz
     aho-corasick-1.1.5.crate::https://static.crates.io/crates/aho-corasick/aho-corasick-1.1.5.crate
@@ -97,8 +98,11 @@ do_build() {
     mkdir -p .cargo
     printf '%s\n' '[source.crates-io]' 'replace-with = "vendored"' '[source.vendored]' \
         "directory = \"$WORK/vendor\"" > .cargo/config.toml
-    CARGO_HOME="$WORK/cargo" LIBCLANG_PATH=/usr/lib cargo build --release --offline --locked -p bindgen-cli
+    # dynamically linked: it dlopens libclang, which a static musl binary cannot
+    RUSTFLAGS="-Ctarget-feature=-crt-static" CARGO_HOME="$WORK/cargo" LIBCLANG_PATH=/usr/lib cargo build --release --offline --locked -p bindgen-cli
 }
 do_install() {
     install -D -m 755 "$WORK/rust-bindgen-$version/target/release/bindgen" "$DEST/usr/bin/bindgen"
+    printf 'int cig_probe(int);\n' > "$WORK/probe.h"
+    "$DEST/usr/bin/bindgen" "$WORK/probe.h" | grep -q 'pub fn cig_probe'
 }
