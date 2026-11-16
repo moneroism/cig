@@ -62,7 +62,10 @@ src_url()  { case "$1" in *::*) echo "${1#*::}" ;; *) echo "$1" ;; esac; }
 host_ok() {
     local url=$1 host
     case "$url" in https://*) ;; *) die "not an HTTPS URL: $url" ;; esac
-    host=${url#https://}; host=${host%%/*}; host=${host%%:*}
+    # the host part must be a plain name (and port): "allowed.host:x@other.host" is other.host
+    host=${url#https://}; host=${host%%/*}
+    case "$host" in ""|*[!A-Za-z0-9.:-]*|*:*:*) die "not a plain host name in the URL: $url" ;; esac
+    host=${host%%:*}
     awk -v h="$host" '!/^#/ && $1 == h { found = 1 } END { exit !found }' "$CIG_REPO/lib/hosts" \
         || die "$host is not an allowed source host (lib/hosts: forges and projects' own release sites): $url"
 }
