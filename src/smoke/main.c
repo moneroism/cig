@@ -794,6 +794,10 @@ int main(int argc, char **argv)
 		const char *reason = "explicit";
 		if (n >= 2 && !strcmp(args[0], "--as")) {
 			reason = args[1];
+			/* an INVENTORY field: anything else (a space) would make the file unreadable */
+			if (strcmp(reason, "explicit") && strcmp(reason, "dependency") && strcmp(reason, "build") &&
+			    strcmp(reason, "keep"))
+				die("reason must be explicit, dependency, build or keep");
 			n -= 2;
 			args += 2;
 		}
