@@ -509,7 +509,12 @@ void install_pkg(const char *name, const char *reason_in)
 	/* 5. previous build: drop what the new one no longer has, then its folder */
 	if (prevD && is_real_dir(prevD) && strcmp(prevD, D)) {
 		struct strv old = { 0 };
+		struct meta om = { 0 };
 		char *of = xasprintf("%s/.meta/FILES", prevD);
+		char *lp = xasprintf("%s/.meta/LAYOUT", prevD), *layout = read_file(lp);
+		char *into = xasprintf("%s/", prevD + strlen(ROOT));   /* what its links start with */
+		if (layout)
+			parse_assignments(layout, &om, NULL);
 		read_lines(of, &old);
 		for (size_t i = 0; i < old.n; i++) {
 			const char *p = old.v[i];
@@ -517,8 +522,18 @@ void install_pkg(const char *name, const char *reason_in)
 				continue;
 			char *dst = xasprintf("%s/%s", ROOT, p);
 			if (starts_with(p, "usr/")) {
-				if (owned_by(dst, name))
+				/* below one of its link_dirs the link is the folder itself: it goes if it
+				 * still points into the old build (the modules of the kernel before) */
+				char *top = om.linkdirs ? link_dir_top(p, om.linkdirs) : NULL;
+				if (top) {
+					char *tdst = xasprintf("%s/%s", ROOT, top), *t = read_link(tdst);
+					if (t && starts_with(t, into))
+						unlink(tdst);
+					free(tdst); free(t);
+				} else if (owned_by(dst, name)) {
 					unlink(dst);
+				}
+				free(top);
 			} else {
 				char *prist = xasprintf("%s/.meta/root/%s", prevD, p);
 				if (is_file(prist) && same_content(prist, dst))
@@ -529,7 +544,8 @@ void install_pkg(const char *name, const char *reason_in)
 		}
 		rm_rf(prevD);
 		sv_free(&old);
-		free(of);
+		free_meta(&om);
+		free(of); free(lp); free(layout); free(into);
 	}
 
 	{
