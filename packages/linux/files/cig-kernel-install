@@ -25,7 +25,13 @@ mkdir -p /boot/EFI/BOOT /boot/EFI/cig
 if [ -f "$K" ] && ! cmp -s "$M/$kver/vmlinuz" "$K"; then
     cp "$K" /boot/EFI/cig/vmlinuz-old.efi
 fi
-cp "$M/$kver/vmlinuz" "$K.new" && mv "$K.new" "$K"
+# two commands: in "cp && mv" a failed cp would not stop the script (set -e ignores it there)
+cp "$M/$kver/vmlinuz" "$K.new" || {
+    rm -f "$K.new"
+    echo "cig-kernel-install: cannot write to the EFI partition (full?); kernel $kver NOT deployed" >&2
+    exit 1
+}
+mv "$K.new" "$K"
 [ ! -f /boot/EFI/cig/vmlinuz.efi ] || cp "$M/$kver/vmlinuz" /boot/EFI/cig/vmlinuz.efi
 sync
 [ "$mounted" = 1 ] && umount /boot
