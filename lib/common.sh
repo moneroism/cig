@@ -130,7 +130,8 @@ gpgv_verify() {
                 *)           out=$(gpgv --homedir "$d" --keyring "$d/keyring.gpg" --status-fd 1 "$sigf" "$f" 2>/dev/null || true) ;;
             esac ;;
     esac
-    signer=$(echo "$out" | awk '/VALIDSIG/ { p = $NF; if (length(p) < 40) p = $3; print p; exit }')
+    # status lines only ($1 $2): a user ID or a file name may contain the word too
+    signer=$(echo "$out" | awk '$1 == "[GNUPG:]" && $2 == "VALIDSIG" { p = $NF; if (length(p) < 40) p = $3; print p; exit }')
     [ -n "$signer" ] || { rm -rf "$d"; die "$name: no valid signature on ${sigf##*/} by its trusted keys ($keys): tampered, or signed by another key"; }
     case " $keys " in *" $signer "*) ;; *) rm -rf "$d"; die "$name: ${sigf##*/} is signed by $signer, not by $keys" ;; esac
     if [ -f "$d/plain" ]; then
@@ -353,17 +354,19 @@ pkg_meta() {      # fields smoke needs, for packages built before they were reco
 gpg_check() {
     local what=$1 out key ks; shift
     out=$("$@" 2>&1 || true)
-    if echo "$out" | grep -q NO_PUBKEY; then
-        key=$(echo "$out" | awk '/NO_PUBKEY/ {print $NF; exit}')
+    # GnuPG's own status lines only ($1 $2): the words also appear inside them as text an
+    # attacker chooses (GOODSIG prints the signing key's user ID, spaces and all)
+    if echo "$out" | grep -q '^\[GNUPG:\] NO_PUBKEY '; then
+        key=$(echo "$out" | awk '$1 == "[GNUPG:]" && $2 == "NO_PUBKEY" {print $NF; exit}')
         for ks in hkps://keyserver.ubuntu.com hkps://keys.openpgp.org hkps://pgp.mit.edu; do
             gpg --homedir "$GH" --keyserver "$ks" --recv-keys "$key" >/dev/null 2>&1 && break
         done
         out=$("$@" 2>&1 || true)
     fi
-    echo "$out" | grep -q BADSIG && die "BAD SIGNATURE on $what"
+    echo "$out" | grep -q '^\[GNUPG:\] BADSIG ' && die "BAD SIGNATURE on $what"
     # the primary key's fingerprint (the last VALIDSIG field), so signing subkeys of the same
     # key count as the same signer; old keys without it: the signing key itself
-    SIGNER=$(echo "$out" | awk '/VALIDSIG/ { p = $NF; if (length(p) < 40) p = $3; print p; exit }')
+    SIGNER=$(echo "$out" | awk '$1 == "[GNUPG:]" && $2 == "VALIDSIG" { p = $NF; if (length(p) < 40) p = $3; print p; exit }')
     [ -n "$SIGNER" ] || die "could not verify the signature of $what (key not found?)"
 }
 
