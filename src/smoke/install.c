@@ -317,6 +317,10 @@ void install_pkg(const char *name, const char *reason_in)
 	if (!valid_name(name))
 		die("not a package name: %s", name);
 	inv_init();
+	/* checked before anything changes: the write at the end would be refused, and the
+	 * package would be installed but not recorded */
+	if (!inv_sealed())
+		die("inventory checksum mismatch - refusing to install %s (run: smoke audit)", name);
 	/* "keep": rebuilds keep the current reason (explicit for a new install) */
 	if (!strcmp(reason, "keep")) {
 		e = inv_get(name);

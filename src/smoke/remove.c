@@ -61,6 +61,10 @@ void remove_pkg(const char *name, bool force)
 
 	if (!e)
 		die("%s is not installed", name);
+	/* checked before anything is deleted: the write at the end would be refused, and the
+	 * inventory would still list a package that is gone */
+	if (!inv_sealed())
+		die("inventory checksum mismatch - refusing to remove %s (run: smoke audit)", name);
 	needed_by(name, &users);
 	if (users.n && !force) {
 		char *list = xstrdup("");
