@@ -25,7 +25,7 @@ LDFLAGS="-Wl,--wrap=exit"
 build_one() {
     local t=$1 objs=() f
     case $t in
-        answers) objs=("$src"/installer/{ui,diskui,disk,install,sys,libreui}.c "$src/libre/libre.c") ;;
+        answers) objs=("$src"/installer/{ui,diskui,disk,install,sys,libreui,wifi}.c "$src/libre/libre.c") ;;
         pkginfo) objs=("$src"/smoke/{util,sha256,inventory,remove,audit}.c "$src/libre/libre.c") ;;
         elf)     objs=("$src"/smoke/{util,sha256,inventory,install,remove}.c "$src/libre/libre.c") ;;
         license) objs=() ;;
