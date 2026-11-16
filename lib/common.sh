@@ -96,8 +96,12 @@ get_local() {
 # Returns 2 when it cannot be checked here: no gpgv yet (bootstrap), no keys=, a signed tag
 # (needs git: checked through the pinned sha256), or a checksum file that cannot be fetched
 # (offline: the pinned sha256 decides, and a source without one is refused by the caller).
-gpgv_verify() {
-    local f=$1 e=$2 d sigf url out signer k want have
+# A failed check leaves nothing in $CIG_VAR/sources that the next run would use again
+# (sig_drop): the signature or checksum list always goes (a broken download, or an older list
+# under the same name), the source too unless it matched a pinned sha256 (<pinned>).
+sig_drop() { rm -rf "$d"; rm -f "$sigf" "$sigf.asc"; [ -n "$pinned" ] || rm -f "$f"; }
+gpgv_verify() {   # gpgv_verify <file> <signature entry> [<pinned sha256>]
+    local f=$1 e=$2 pinned=${3:-} d sigf url out signer k want have
     command -v gpgv >/dev/null && [ -n "${keys:-}" ] || return 2
     case "$e" in tag=*) return 2 ;; esac
     d=$(mktemp -d)
@@ -132,16 +136,17 @@ gpgv_verify() {
     esac
     # status lines only ($1 $2): a user ID or a file name may contain the word too
     signer=$(echo "$out" | awk '$1 == "[GNUPG:]" && $2 == "VALIDSIG" { p = $NF; if (length(p) < 40) p = $3; print p; exit }')
-    [ -n "$signer" ] || { rm -rf "$d"; die "$name: no valid signature on ${sigf##*/} by its trusted keys ($keys): tampered, or signed by another key"; }
-    case " $keys " in *" $signer "*) ;; *) rm -rf "$d"; die "$name: ${sigf##*/} is signed by $signer, not by $keys" ;; esac
+    [ -n "$signer" ] || { sig_drop; die "$name: no valid signature on ${sigf##*/} by its trusted keys ($keys): tampered, or signed by another key"; }
+    case " $keys " in *" $signer "*) ;; *) sig_drop; die "$name: ${sigf##*/} is signed by $signer, not by $keys" ;; esac
     if [ -f "$d/plain" ]; then
         want=$(awk -v n="${f##*/}" '$2 == n || $2 == "*" n { print $1; exit }' "$d/plain")
         case ${#want} in
             64)  have=$(sha256sum "$f" | cut -d' ' -f1) ;;
             128) have=$(sha512sum "$f" | cut -d' ' -f1) ;;
-            *)   rm -rf "$d"; die "$name: the signed ${sigf##*/} lists no checksum for ${f##*/}" ;;
+            *)   rm -rf "$d"; rm -f "$sigf" "$sigf.asc"   # the list of another version: fetched again next time
+                 die "$name: the signed ${sigf##*/} lists no checksum for ${f##*/}" ;;
         esac
-        [ "$want" = "$have" ] || { rm -rf "$d"; die "$name: CHECKSUM MISMATCH: ${f##*/} does not match the signed ${sigf##*/}"; }
+        [ "$want" = "$have" ] || { sig_drop; die "$name: CHECKSUM MISMATCH: ${f##*/} does not match the signed ${sigf##*/}"; }
     fi
     rm -rf "$d"
     return 0
@@ -171,7 +176,7 @@ fetch_sources() {
         fi
         ok=0
         if [ "$sig" != - ]; then
-            gpgv_verify "$CIG_VAR/sources/$f" "$sig" && ok=1 || [ $? -eq 2 ] \
+            gpgv_verify "$CIG_VAR/sources/$f" "$sig" "$want" && ok=1 || [ $? -eq 2 ] \
                 || die "$name: signature check failed for $f"
         fi
         if [ -z "$want" ] && [ $ok -eq 0 ]; then
