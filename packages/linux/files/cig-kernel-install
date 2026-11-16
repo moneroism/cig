@@ -21,18 +21,25 @@ if ! mountpoint -q /boot; then
 fi
 K=/boot/EFI/BOOT/BOOTX64.EFI
 mkdir -p /boot/EFI/BOOT /boot/EFI/cig
-# the previous kernel becomes the fallback - unless it is the very same kernel
-if [ -f "$K" ] && ! cmp -s "$M/$kver/vmlinuz" "$K"; then
-    cp "$K" /boot/EFI/cig/vmlinuz-old.efi
-fi
-# two commands: in "cp && mv" a failed cp would not stop the script (set -e ignores it there)
-cp "$M/$kver/vmlinuz" "$K.new" || {
-    rm -f "$K.new"
-    echo "cig-kernel-install: cannot write to the EFI partition (full?); kernel $kver NOT deployed" >&2
+# Every file is written under a .new name and renamed: a full partition never leaves a cut-off
+# kernel. The new kernel is written first, so nothing has changed yet when it does not fit.
+# (Separate commands: in "cp && mv" a failed cp would not stop the script, set -e ignores it there.)
+fail() {
+    rm -f "$K.new" /boot/EFI/cig/vmlinuz-old.efi.new /boot/EFI/cig/vmlinuz.efi.new
+    echo "cig-kernel-install: cannot write to the EFI partition (full?); $1" >&2
     exit 1
 }
+cp "$M/$kver/vmlinuz" "$K.new" || fail "kernel $kver NOT deployed"
+# the previous kernel becomes the fallback - unless it is the very same kernel
+if [ -f "$K" ] && ! cmp -s "$K.new" "$K"; then
+    cp "$K" /boot/EFI/cig/vmlinuz-old.efi.new || fail "kernel $kver NOT deployed"
+    mv /boot/EFI/cig/vmlinuz-old.efi.new /boot/EFI/cig/vmlinuz-old.efi
+fi
 mv "$K.new" "$K"
-[ ! -f /boot/EFI/cig/vmlinuz.efi ] || cp "$M/$kver/vmlinuz" /boot/EFI/cig/vmlinuz.efi
+if [ -f /boot/EFI/cig/vmlinuz.efi ]; then
+    cp "$K" /boot/EFI/cig/vmlinuz.efi.new || fail "kernel $kver is at $K, but EFI/cig/vmlinuz.efi was NOT updated"
+    mv /boot/EFI/cig/vmlinuz.efi.new /boot/EFI/cig/vmlinuz.efi
+fi
 sync
 [ "$mounted" = 1 ] && umount /boot
 echo "cig-kernel-install: $kver deployed to the EFI partition ($K)"
