@@ -1,0 +1,19 @@
+--- a/third_party/libsync/src/include/ndk/sync.h
++++ b/third_party/libsync/src/include/ndk/sync.h
+@@ -31,6 +31,16 @@
+ 
+ #include <linux/sync_file.h>
+ 
++#if !defined(__BEGIN_DECLS) && !defined(__END_DECLS)
++#ifdef __cplusplus
++#define __BEGIN_DECLS extern "C" {
++#define __END_DECLS }
++#else
++#define __BEGIN_DECLS
++#define __END_DECLS
++#endif
++#endif
++
+ __BEGIN_DECLS
+ 
+ /* Fences indicate the status of an asynchronous task. They are initially

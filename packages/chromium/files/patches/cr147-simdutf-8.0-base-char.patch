@@ -1,0 +1,14 @@
+--- a/base/simdutf_shim.cc
++++ b/base/simdutf_shim.cc
+@@ -14,7 +14,10 @@
+ 
+ size_t simdutf_binary_to_base64(std::span<const uint8_t> input,
+                                 std::span<char> binary_output) {
+-  return simdutf::binary_to_base64(input, binary_output);
++  return simdutf::binary_to_base64(
++      std::span<const char>(reinterpret_cast<const char*>(input.data()),
++                            input.size()),
++      binary_output);
+ }
+ 
+ }  // namespace base::internal

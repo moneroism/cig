@@ -1,0 +1,32 @@
+--- a/v8/src/sandbox/testing.cc
++++ b/v8/src/sandbox/testing.cc
+@@ -1122,13 +1122,6 @@
+   for (int signal : kSignalsToHandle) {
+     sigaction(signal, &g_old_handlers[signal], nullptr);
+   }
+-
+-  // We should also uninstall the sanitizer death callback as our crash filter
+-  // may hand a crash over to sanitizers, which should then not print the
+-  // sandbox violation message a second time.
+-#ifdef V8_USE_ANY_SANITIZER
+-  __sanitizer_set_death_callback(nullptr);
+-#endif  // V8_USE_ANY_SANITIZER
+ }
+ 
+ void ForwardToOldHandler(int signal, siginfo_t* info, void* context) {
+@@ -1503,15 +1496,6 @@
+     success &= (sigaction(signal, &action, &g_old_handlers[signal]) == 0);
+   }
+   CHECK(success);
+-
+-#ifdef V8_USE_ANY_SANITIZER
+-  // We install a sanitizer death callback. For ASan, this will check the flag
+-  // set by __asan_on_error to determine if the fault was harmless.
+-  //
+-  // The crash handler also resets the signal handler as sanitizer may use
+-  // `abort()` via `abort_on_error=1` option to signal problems.
+-  __sanitizer_set_death_callback(&SanitizerFaultHandler);
+-#endif  // V8_USE_ANY_SANITIZER
+ }
+ 
+ #endif  // V8_OS_LINUX

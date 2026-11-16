@@ -1,0 +1,52 @@
+--- a/third_party/node/BUILD.gn
++++ b/third_party/node/BUILD.gn
+@@ -4,22 +4,32 @@
+ 
+ import("//third_party/node/node.gni")
+ 
+-node("check_version") {
+-  script = "check_version.py"
++declare_args() {
++  # Check the version of the Node.js binary.
++  node_version_check = true
++}
++
++if (node_version_check) {
++  node("check_version") {
++    script = "check_version.py"
++
++    expected_version_file = "update_node_binaries"
++    inputs = [
++      expected_version_file,
++      "check_version.js",
++    ]
++
++    out_file = "${target_gen_dir}/check_version_result.txt"
++    outputs = [ out_file ]
+ 
+-  expected_version_file = "update_node_binaries"
+-  inputs = [
+-    expected_version_file,
+-    "check_version.js",
+-  ]
+-
+-  out_file = "${target_gen_dir}/check_version_result.txt"
+-  outputs = [ out_file ]
+-
+-  args = [
+-    "--expected_version_file",
+-    rebase_path(expected_version_file, root_build_dir),
+-    "--out_file",
+-    rebase_path(out_file, root_build_dir),
+-  ]
++    args = [
++      "--expected_version_file",
++      rebase_path(expected_version_file, root_build_dir),
++      "--out_file",
++      rebase_path(out_file, root_build_dir),
++    ]
++  }
++} else {
++  group("check_version") {
++  }
+ }

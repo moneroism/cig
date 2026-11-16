@@ -1,0 +1,11 @@
+--- a/third_party/blink/renderer/platform/graphics/paint/display_item_list.h
++++ b/third_party/blink/renderer/platform/graphics/paint/display_item_list.h
+@@ -247,7 +247,7 @@
+   }
+ 
+   DisplayItem& MoveItem(DisplayItem& item, ItemSlot* new_item_slot) {
+-    UNSAFE_TODO(memcpy(static_cast<void*>(new_item_slot),
++    UNSAFE_TODO(__builtin_memcpy(static_cast<void*>(new_item_slot),
+                        static_cast<void*>(&item), kMaxItemSize));
+ 
+     // Created a tombstone/"dead display item" that can be safely destructed but

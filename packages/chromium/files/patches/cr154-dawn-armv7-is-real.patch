@@ -1,0 +1,12 @@
+--- a/third_party/dawn/tools/python/cipd_deps.py
++++ b/third_party/dawn/tools/python/cipd_deps.py
+@@ -72,6 +72,9 @@
+     if native_arm or emulated_x86:
+         return 'arm64'
+ 
++    if platform.machine().lower() in ('armv7', 'armv7l', 'armv8l'):
++        return 'arm'
++
+     native_x86 = platform.machine().lower() in ('x86', 'x86_64', 'amd64')
+     if native_x86:
+         return 'amd64'

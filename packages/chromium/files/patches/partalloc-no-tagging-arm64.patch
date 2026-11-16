@@ -1,0 +1,23 @@
+--- a/base/allocator/partition_allocator/partition_alloc.gni
++++ b/base/allocator/partition_allocator/partition_alloc.gni
+@@ -110,8 +110,7 @@
+ # TODO(crbug.com/329199197): Clean this up when experiments are complete.
+ use_large_empty_slot_span_ring = true
+ 
+-has_memory_tagging = current_cpu == "arm64" && is_clang && !is_asan &&
+-                     !is_hwasan && (is_linux || is_android)
++has_memory_tagging = false
+ 
+ declare_args() {
+   # Whether PartitionAlloc is built in official mode.
+--- a/base/allocator/partition_allocator/src/partition_alloc/aarch64_support.h
++++ b/base/allocator/partition_allocator/src/partition_alloc/aarch64_support.h
+@@ -10,7 +10,7 @@
+ #include "partition_alloc/build_config.h"
+ #include "partition_alloc/buildflags.h"
+ 
+-#if PA_BUILDFLAG(IS_ANDROID) || PA_BUILDFLAG(IS_LINUX)
++#if PA_BUILDFLAG(IS_ANDROID) || (PA_BUILDFLAG(IS_LINUX) && defined(__GLIBC__))
+ #define HAS_HW_CAPS
+ #endif
+ 

@@ -1,0 +1,65 @@
+--- a/tools/crates/gnrt/build/build.rs
++++ b/tools/crates/gnrt/build/build.rs
+@@ -38,6 +38,12 @@
+     let rustc = env::var_os("RUSTC").unwrap();
+     let output =
+         Command::new(&rustc).arg("--print=cfg").arg(format!("--target={triple_name}")).output()?;
++    let stderr = std::str::from_utf8(&output.stderr).unwrap_or("");
++    if !output.status.success() && stderr.contains("could not create LLVM TargetMachine") {
++        // cig: rustc's LLVM has only the backends cig builds for; the basic properties of
++        // the other triples follow from their names (enough for gnrt's conditions)
++        return Ok(fallback_cfg_lines(triple_name));
++    }
+     ensure!(
+         output.status.success(),
+         "`rustc` returned a non-zero exit status: {}",
+@@ -57,6 +63,49 @@
+         .collect_vec())
+ }
+ 
++fn fallback_cfg_lines(triple_name: &'static str) -> Vec<CfgLine> {
++    let arch = match triple_name.split('-').next().unwrap_or("") {
++        "aarch64" | "arm64e" => "aarch64",
++        "arm" | "armv7" | "armv7s" | "thumbv7neon" => "arm",
++        "i386" | "i686" => "x86",
++        "riscv64gc" => "riscv64",
++        "powerpc64le" => "powerpc64",
++        other => other,
++    };
++    let t = triple_name;
++    let os = if t.contains("-darwin") {
++        "macos"
++    } else if t.contains("-ios") {
++        "ios"
++    } else if t.contains("-tvos") {
++        "tvos"
++    } else if t.contains("-android") {
++        "android"
++    } else if t.contains("-fuchsia") {
++        "fuchsia"
++    } else if t.contains("-windows") {
++        "windows"
++    } else {
++        "linux"
++    };
++    let env = if t.ends_with("-msvc") {
++        "msvc"
++    } else if t.contains("-linux-gnu") {
++        "gnu"
++    } else {
++        ""
++    };
++    let family = if os == "windows" { "windows" } else { "unix" };
++    [("target_arch", arch), ("target_os", os), ("target_env", env), ("target_family", family)]
++        .into_iter()
++        .map(|(n, v)| CfgLine {
++            triple_name,
++            property_name: n.to_string(),
++            property_value: v.to_string(),
++        })
++        .collect()
++}
++
+ fn generate_enum_for_named_property(
+     cfg_lines: &[CfgLine],
+     doc_string: TokenStream,

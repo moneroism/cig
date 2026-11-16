@@ -1,0 +1,216 @@
+--- a/build/config/compiler/BUILD.gn
++++ b/build/config/compiler/BUILD.gn
+@@ -590,7 +590,7 @@
+     cflags += [ "-fcolor-diagnostics" ]
+     if (!is_wasm) {
+       if (!is_win) {
+-        cflags += [ "-fdiagnostics-show-inlining-chain" ]
++        # cflags += [ "-fdiagnostics-show-inlining-chain" ]
+       } else {
+         # Combine after https://github.com/llvm/llvm-project/pull/192241
+         cflags += [ "/clang:-fdiagnostics-show-inlining-chain" ]
+@@ -626,13 +626,6 @@
+       ]
+     }
+ 
+-    # The performance improvement does not seem worth the risk. See
+-    # https://crbug.com/484082200 for background and https://crrev.com/c/7593035
+-    # for discussion.
+-    if (!is_wasm) {
+-      cflags += [ "-fno-lifetime-dse" ]
+-    }
+-
+     # TODO(hans): Remove this once Clang generates better optimized debug info
+     # by default. https://crbug.com/765793
+     cflags += [
+@@ -647,22 +640,6 @@
+       }
+     }
+ 
+-    # TODO(crbug.com/40283598): This causes binary size growth and potentially
+-    # other problems.
+-    if (default_toolchain != "//build/toolchain/cros:target") {
+-      cflags += [
+-        "-mllvm",
+-        "-split-threshold-for-reg-with-hint=0",
+-      ]
+-      if (use_thin_lto && is_a_target_toolchain) {
+-        if (is_win) {
+-          ldflags += [ "-mllvm:-split-threshold-for-reg-with-hint=0" ]
+-        } else {
+-          ldflags += [ "-Wl,-mllvm,-split-threshold-for-reg-with-hint=0" ]
+-        }
+-      }
+-    }
+-
+     # TODO(crbug.com/40192287): Investigate why/if this should be needed.
+     if (is_win) {
+       cflags += [ "/clang:-ffp-contract=off" ]
+@@ -2174,7 +2151,7 @@
+       defines = [ "_HAS_NODISCARD" ]
+     }
+   } else {
+-    cflags = [ "-Wall" ]
++    cflags = []
+     if (is_clang) {
+       # Enable extra warnings for chromium_code when we control the compiler.
+       cflags += [ "-Wextra" ]
+--- a/build/config/rust.gni
++++ b/build/config/rust.gni
+@@ -202,11 +202,11 @@
+ rust_abi_target = ""
+ if (is_linux || is_chromeos) {
+   if (current_cpu == "arm64") {
+-    rust_abi_target = "aarch64-unknown-linux-gnu"
++    rust_abi_target = "aarch64-unknown-linux-musl"
+   } else if (current_cpu == "x86") {
+-    rust_abi_target = "i686-unknown-linux-gnu"
++    rust_abi_target = "i586-unknown-linux-musl"
+   } else if (current_cpu == "x64") {
+-    rust_abi_target = "x86_64-unknown-linux-gnu"
++    rust_abi_target = "x86_64-unknown-linux-musl"
+   } else if (current_cpu == "arm") {
+     if (arm_float_abi == "hard") {
+       float_suffix = "hf"
+@@ -224,21 +224,21 @@
+       # The thumbv7 vs. armv7 distinction is for legacy reasons and both
+       # targets in fact target Thumb, see:
+       # https://github.com/rust-lang/rust/issues/44722
+-      rust_abi_target = "thumbv7neon-unknown-linux-gnueabi" + float_suffix
++      rust_abi_target = "armv7-unknown-linux-musleabi" + float_suffix
+     } else {
+-      rust_abi_target = "arm-unknown-linux-gnueabi" + float_suffix
++      rust_abi_target = "armv6-unknown-linux-musleabi" + float_suffix
+     }
+   } else if (current_cpu == "riscv64") {
+-    rust_abi_target = "riscv64gc-unknown-linux-gnu"
++    rust_abi_target = "riscv64-unknown-linux-musl"
+   } else if (current_cpu == "ppc64") {
+-    rust_abi_target = "powerpc64le-unknown-linux-gnu"
++    rust_abi_target = "powerpc64le-unknown-linux-musl"
+   } else if (current_cpu == "s390x") {
+-    rust_abi_target = "s390x-unknown-linux-gnu"
++    rust_abi_target = "s390x-unknown-linux-musl"
+   } else if (current_cpu == "loong64") {
+-    rust_abi_target = "loongarch64-unknown-linux-gnu"
++    rust_abi_target = "loongarch64-unknown-linux-musl"
+   } else {
+     # Best guess for other future platforms.
+-    rust_abi_target = current_cpu + "-unknown-linux-gnu"
++    rust_abi_target = current_cpu + "-unknown-linux-musl"
+   }
+ } else if (is_android) {
+   import("//build/config/android/abi.gni")
+--- a/build/config/clang/BUILD.gn
++++ b/build/config/clang/BUILD.gn
+@@ -205,7 +205,7 @@
+         _dir = "darwin"
+       } else if (is_linux || is_chromeos) {
+         if (current_cpu == "x64") {
+-          _dir = "x86_64-unknown-linux-gnu"
++          _dir = "x86_64-pc-linux-musl"
+         } else if (current_cpu == "x86") {
+           _dir = "i386-unknown-linux-gnu"
+         } else if (current_cpu == "arm") {
+--- a/build/config/sanitizers/sanitizers.gni
++++ b/build/config/sanitizers/sanitizers.gni
+@@ -535,13 +535,6 @@
+       cflags = [
+         "-fsanitize=${invoker.sanitizer}",
+         "-fsanitize-trap=${invoker.sanitizer}",
+-
+-        # Prevents `__has_feature(undefined_behavior_sanitizer)`
+-        # from evaluating true. Configs defined here are intended to
+-        # be usable even in release builds, i.e. as widely as possible.
+-        # It's important not to have full-on UBSan workarounds activate
+-        # just because we built support for a specific sanitizer.
+-        "-fsanitize-ignore-for-ubsan-feature=${invoker.sanitizer}",
+       ]
+       if (defined(invoker.cflags)) {
+         cflags += invoker.cflags
+--- a/build/config/compiler_cpu_abi.gn
++++ b/build/config/compiler_cpu_abi.gn
+@@ -49,8 +49,8 @@
+   # simplicity we always explicitly set the architecture.
+   if (current_cpu == "x64") {
+     if (is_clang && !is_android && !is_fuchsia && !is_chromeos_device) {
+-      cpu_abi_cflags += [ "--target=x86_64-unknown-linux-gnu" ]
+-      cpu_abi_ldflags += [ "--target=x86_64-unknown-linux-gnu" ]
++      cpu_abi_cflags += [ "--target=x86_64-pc-linux-musl" ]
++      cpu_abi_ldflags += [ "--target=x86_64-pc-linux-musl" ]
+     } else {
+       cpu_abi_cflags += [ "-m64" ]
+       cpu_abi_ldflags += [ "-m64" ]
+@@ -63,8 +63,8 @@
+     }
+   } else if (current_cpu == "x86") {
+     if (is_clang && !is_android && !is_chromeos_device) {
+-      cpu_abi_cflags += [ "--target=i386-unknown-linux-gnu" ]
+-      cpu_abi_ldflags += [ "--target=i386-unknown-linux-gnu" ]
++      cpu_abi_cflags += [ "--target=i586-unknown-linux-musl" ]
++      cpu_abi_ldflags += [ "--target=i586-unknown-linux-musl" ]
+     } else {
+       cpu_abi_cflags += [ "-m32" ]
+       cpu_abi_ldflags += [ "-m32" ]
+@@ -75,8 +75,8 @@
+     ]
+   } else if (current_cpu == "arm") {
+     if (is_clang && !is_android && !is_chromeos_device) {
+-      cpu_abi_cflags += [ "--target=arm-linux-gnueabihf" ]
+-      cpu_abi_ldflags += [ "--target=arm-linux-gnueabihf" ]
++      cpu_abi_cflags += [ "--target=armv7-unknown-linux-musleabihf" ]
++      cpu_abi_ldflags += [ "--target=armv7-unknown-linux-musleabihf" ]
+     }
+     cpu_abi_cflags += [
+       "-march=$arm_arch",
+@@ -84,8 +84,8 @@
+     ]
+   } else if (current_cpu == "arm64") {
+     if (is_clang && !is_android && !is_fuchsia && !is_chromeos_device) {
+-      cpu_abi_cflags += [ "--target=aarch64-linux-gnu" ]
+-      cpu_abi_ldflags += [ "--target=aarch64-linux-gnu" ]
++      cpu_abi_cflags += [ "--target=aarch64-unknown-linux-musl" ]
++      cpu_abi_ldflags += [ "--target=aarch64-unknown-linux-musl" ]
+     }
+     if (target_os == "chromeos" && cros_target_cpu_arch != "" &&
+         is_a_target_toolchain) {
+@@ -334,22 +334,22 @@
+         cpu_abi_ldflags += [ "-maix64" ]
+       }
+     } else if (is_clang) {
+-      cpu_abi_cflags += [ "--target=powerpc64le-unknown-linux-gnu" ]
+-      cpu_abi_ldflags += [ "--target=powerpc64le-unknown-linux-gnu" ]
++      cpu_abi_cflags += [ "--target=powerpc64le-unknown-linux-musl" ]
++      cpu_abi_ldflags += [ "--target=powerpc64le-unknown-linux-musl" ]
+     } else {
+       cpu_abi_cflags += [ "-m64" ]
+       cpu_abi_ldflags += [ "-m64" ]
+     }
+   } else if (current_cpu == "riscv64") {
+     if (is_clang && !is_android) {
+-      cpu_abi_cflags += [ "--target=riscv64-linux-gnu" ]
+-      cpu_abi_ldflags += [ "--target=riscv64-linux-gnu" ]
++      cpu_abi_cflags += [ "--target=riscv64-unknown-linux-musl" ]
++      cpu_abi_ldflags += [ "--target=riscv64-unknown-linux-musl" ]
+     }
+     cpu_abi_cflags += [ "-mabi=lp64d" ]
+   } else if (current_cpu == "loong64") {
+     if (is_clang) {
+-      cpu_abi_cflags += [ "--target=loongarch64-linux-gnu" ]
+-      cpu_abi_ldflags += [ "--target=loongarch64-linux-gnu" ]
++      cpu_abi_cflags += [ "--target=loongarch64-unknown-linux-musl" ]
++      cpu_abi_ldflags += [ "--target=loongarch64-unknown-linux-musl" ]
+     }
+     cpu_abi_cflags += [
+       "-mabi=lp64d",
+@@ -357,8 +357,8 @@
+     ]
+   } else if (current_cpu == "s390x") {
+     if (is_clang && current_os != "zos") {
+-      cpu_abi_cflags += [ "--target=s390x-unknown-linux-gnu" ]
+-      cpu_abi_ldflags += [ "--target=s390x-unknown-linux-gnu" ]
++      cpu_abi_cflags += [ "--target=s390x-unknown-linux-musl" ]
++      cpu_abi_ldflags += [ "--target=s390x-unknown-linux-musl" ]
+     }
+     cpu_abi_cflags += [ "-m64" ]
+     cpu_abi_ldflags += [ "-m64" ]

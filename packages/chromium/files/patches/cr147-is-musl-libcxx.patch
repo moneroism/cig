@@ -1,0 +1,47 @@
+--- a/build/config/c++/BUILD.gn
++++ b/build/config/c++/BUILD.gn
+@@ -3,6 +3,7 @@
+ import("//build/config/chrome_build.gni")
+ import("//build/config/compiler/compiler.gni")
+ import("//build/config/dcheck_always_on.gni")
++import("//build/config/linux/musl.gni")
+ import("//buildtools/deps_revisions.gni")
+ 
+ assert(use_custom_libcxx, "should only be used if use_custom_libcxx is set")
+@@ -54,6 +55,12 @@
+ 
+   defines += [ "CR_LIBCXX_REVISION=$libcxx_revision" ]
+ 
++  # Musl has no preprocessor macro to indicate that it's used,
++  # libc++ needs it indicated explicitly.
++  if (is_musl) {
++    defines += [ "_LIBCPP_HAS_MUSL_LIBC=1" ]
++  }
++
+   if (is_win) {
+     # Intentionally not using libc++abi on Windows because libc++abi only
+     # implements the Itanium C++ ABI, and not the Microsoft ABI which we use on
+--- a/build/config/linux/musl.gni
++++ b/build/config/linux/musl.gni
+@@ -0,0 +1,10 @@
++# Copyright 2025 The Chromium Authors
++# Use of this source code is governed by a BSD-style license that can be
++# found in the LICENSE file.
++
++declare_args() {
++  # Whether the build is targeting musl libc. This is a special variable
++  # because musl cannot be detected with a preprocessor macro.
++  # See: https://wiki.musl-libc.org/faq#Q:-Why-is-there-no-%3Ccode%3E__MUSL__%3C/code%3E-macro
++  is_musl = false
++}
+--- a/buildtools/third_party/libc++/__config_site
++++ b/buildtools/third_party/libc++/__config_site
+@@ -28,8 +28,6 @@
+ 
+ #ifdef ANDROID_HOST_MUSL
+ #define _LIBCPP_HAS_MUSL_LIBC 1
+-#else
+-#define _LIBCPP_HAS_MUSL_LIBC 0
+ #endif
+ 
+ #ifdef _WIN32

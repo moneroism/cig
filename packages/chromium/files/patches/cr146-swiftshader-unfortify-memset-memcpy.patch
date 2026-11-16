@@ -1,0 +1,17 @@
+--- a/third_party/swiftshader/src/Device/Memset.hpp
++++ b/third_party/swiftshader/src/Device/Memset.hpp
+@@ -53,12 +53,12 @@
+ 	// They can leave padding bytes uninitialized.
+ 	Memset(const Memset &rhs)
+ 	{
+-		::memcpy(this, &rhs, sizeof(T));
++		__builtin_memcpy(this, &rhs, sizeof(T));
+ 	}
+ 
+ 	Memset &operator=(const Memset &rhs)
+ 	{
+-		::memcpy(this, &rhs, sizeof(T));
++		__builtin_memcpy(this, &rhs, sizeof(T));
+ 		return *this;
+ 	}
+ 
