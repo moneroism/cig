@@ -5,9 +5,10 @@
 # check-updates.sh - which recipes are behind their upstream's newest stable release.
 # Runs `cigbuild latest` for every recipe (8 at a time) and prints a table; recipes with
 # track= stay within their series (the reasons are in the recipes and in README).
-# Updating a recipe: set the new version. A signed source (sha256 "-") needs nothing else: gpgv
-# checks the new release against the recipe's keys= when it is built (another key fails). An
-# unsigned source, a signed checksum file or tag: clear its sha256 entry, then cigbuild pin.
+# Updating a recipe: set the new version, clear the sha256 entry of the sources that changed,
+# then cigbuild pin (on the host: it checks the new release's signature against the recipe's
+# keys= - another key stops it - and writes the new hash). A build refuses a signed source
+# without a pin.
 
 set -euo pipefail
 REPO="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"

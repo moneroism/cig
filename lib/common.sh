@@ -158,38 +158,35 @@ gpgv_verify() {   # gpgv_verify <file> <signature entry> [<pinned sha256>]
 # fetch_sources: every source, checked against its pinned sha256 and its upstream signature
 # with gpgv (if it has one and gpgv is installed): both must match. The signature says who
 # made the file, the pin says which file: a signature alone is also valid for every older
-# release the key signed, served under the new name. "-" (signed, no pin) is what recipes
-# pinned before 2026-11-17 hold until `cigbuild pin` ran on them again; it is accepted with
-# a warning. A source with neither is trusted on first use: its sha256 is recorded on this
-# device ($CIG_VAR/tofu) and any later change refuses it.
+# release the key signed, served under the new name. A signed source without a pin (an empty
+# entry, or the "-" of recipes written between 2026-10-07 and 2026-11-17) is refused:
+# `cigbuild pin` fills it in. A source with neither is trusted on first use: its sha256 is
+# recorded on this device ($CIG_VAR/tofu) and any later change refuses it.
 fetch_sources() {
-    local i=0 e f url want have sig ok tofu
+    local i=0 e f url want have sig tofu
     local -a sums sigs
     read -r -a sums <<< "$(echo $sha256)"
     read -r -a sigs <<< "$(echo $signature)"
     for e in $source; do
         f=$(src_name "$e"); url=$(src_url "$e")
+        want=${sums[$i]:-}; sig=${sigs[$i]:--}
+        [ "$want" != - ] || want=""
+        [ -n "$want" ] || [ "$sig" = - ] \
+            || die "$name: $f is signed but not pinned: its signature alone would also accept an older signed release. On the host: cigbuild pin $name"
         if ! get_local "$CIG_VAR/sources/$f"; then
             info "$name: downloading $f"
             fetch "$url" "$CIG_VAR/sources/$f" || die "download failed: $url"
-        fi
-        want=${sums[$i]:-}; sig=${sigs[$i]:--}
-        if [ "$want" = - ]; then
-            want=""
-            warn "$name: $f is not pinned (sha256 \"-\"): only its signature is checked, and an older signed release passes that too. On the host: cigbuild pin $name"
         fi
         have=$(sha256sum "$CIG_VAR/sources/$f" | cut -d' ' -f1)
         if [ -n "$want" ] && [ "$want" != "$have" ]; then
             rm -f "$CIG_VAR/sources/$f"
             die "$name: CHECKSUM MISMATCH for $f (expected $want, got $have). File deleted."
         fi
-        ok=0
         if [ "$sig" != - ]; then
-            gpgv_verify "$CIG_VAR/sources/$f" "$sig" "$want" && ok=1 || [ $? -eq 2 ] \
+            gpgv_verify "$CIG_VAR/sources/$f" "$sig" "$want" || [ $? -eq 2 ] \
                 || die "$name: signature check failed for $f"
         fi
-        if [ -z "$want" ] && [ $ok -eq 0 ]; then
-            [ "$sig" = - ] || die "$name: $f has no pinned sha256 and its signature cannot be checked here (needs gpgv and keys=)"
+        if [ -z "$want" ]; then
             tofu="$CIG_VAR/tofu/$f.sha256"
             if [ -s "$tofu" ]; then
                 if [ "$(cat "$tofu")" != "$have" ]; then
@@ -526,9 +523,10 @@ pkg_keys() {   # pkg_keys <pkg>: verify the pinned sources again and record thei
     for e in $source; do
         f=$(src_name "$e"); sig=${sigs[$i]:--}
         if [ "$sig" != - ] && [ -n "${sums[$i]:-}" ]; then
+            [ "${sums[$i]}" != - ] || die "$p: $f is not pinned yet (cigbuild pin $p)"
             [ -s "$CIG_VAR/sources/$f" ] || fetch "$(src_url "$e")" "$CIG_VAR/sources/$f" \
                 || die "download failed: $(src_url "$e")"
-            [ "${sums[$i]}" = - ] || [ "$(sha256sum "$CIG_VAR/sources/$f" | cut -d' ' -f1)" = "${sums[$i]}" ] \
+            [ "$(sha256sum "$CIG_VAR/sources/$f" | cut -d' ' -f1)" = "${sums[$i]}" ] \
                 || die "$p: $f does not match its pinned sha256"
             verify_source "$CIG_VAR/sources/$f" "$sig"
             check_signer "$p" "$f"
@@ -548,7 +546,7 @@ pkg_pin() {
     read -r -a sigs <<< "$(echo $signature)"
     for e in $source; do
         f=$(src_name "$e")
-        # "-": signed but not pinned (recipes from before 2026-11-17), pinned now like a new source
+        # "-": signed but not pinned (recipes written before 2026-11-17), pinned like a new source
         if [ -n "${sums[$i]:-}" ] && [ "${sums[$i]}" != - ]; then new="$new ${sums[$i]}"; i=$((i+1)); continue; fi
         # 1. a checksum recorded when the bootstrap verified this file's signature
         known=$(awk -v f="$f" '$2 == f || $2 == "./" f { print $1; exit }' /sources/SHA256SUMS 2>/dev/null || true)
@@ -600,11 +598,11 @@ pkg_sig() {   # pkg_sig <pkg> <signature URL | ->...: check pinned sources again
         || die "$p: the recipe's signature= spans several lines; edit it with pin instead"
     for e in $source; do
         f=$(src_name "$e"); sig=${sigs[$i]}
-        [ -n "${sums[$i]:-}" ] || die "$p: $f is not pinned yet (cigbuild pin $p)"
+        [ -n "${sums[$i]:-}" ] && [ "${sums[$i]}" != - ] || die "$p: $f is not pinned yet (cigbuild pin $p)"
         if [ "$sig" != - ]; then
             [ -s "$CIG_VAR/sources/$f" ] || fetch "$(src_url "$e")" "$CIG_VAR/sources/$f" \
                 || die "download failed: $(src_url "$e")"
-            [ "${sums[$i]}" = - ] || [ "$(sha256sum "$CIG_VAR/sources/$f" | cut -d' ' -f1)" = "${sums[$i]}" ] \
+            [ "$(sha256sum "$CIG_VAR/sources/$f" | cut -d' ' -f1)" = "${sums[$i]}" ] \
                 || die "$p: $f does not match its pinned sha256"
             verify_source "$CIG_VAR/sources/$f" "$sig"
             check_signer "$p" "$f"

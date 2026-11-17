@@ -28,8 +28,10 @@ source with a detached signature also checks that signature with `gpgv` against 
 keys, whose public halves are in `keys/<fingerprint>.gpg`. Both must match (2026-11-17): the
 signature says who made the file, the pin says which file. From 2026-10-07 until then signed
 sources carried no pin (`sha256="-"`), and a download host could have served any older release
-the same key had signed under the new version's name; such a recipe still builds, with a
-warning, until `cigbuild pin` ran on it again. Signed checksum files
+the same key had signed under the new version's name. All recipes were pinned again on
+2026-11-17 (each file's signature checked once more, the hash compared with the cached file
+and with the pin the recipe had before 2026-10-07 where the version is the same); a signed
+source without a pin is now refused, `cigbuild pin` fills it in. Signed checksum files
 are checked the same way since 2026-11-03: gpgv verifies the file (inline-signed, or with its
 `<url>.asc`) and the source must match the SHA-256 or SHA-512 it lists. Signed tags need git
 on the device, so they keep a pinned SHA256 (checked against the tag on the host), as unsigned
