@@ -17,6 +17,17 @@ ln -sfn /proc/self/fd/0 /dev/stdin
 ln -sfn /proc/self/fd/1 /dev/stdout
 ln -sfn /proc/self/fd/2 /dev/stderr
 
+hwclock -s -u 2>/dev/null
+# the clock never starts earlier than the last time this system ran (rc.shutdown) or was
+# installed or built (the inventory): a flat clock battery or a firmware reset sets it back
+# years, and TLS, DNSSEC and signature checks then fail. The installer asks for the real time.
+# Before the root filesystem's check: e2fsck compares the times in the superblock with it.
+last=$(stat -c %Y /var/lib/cig/clock /usr/pkg/INVENTORY 2>/dev/null | sort -n | tail -n 1)
+if [ -n "$last" ] && [ "$(date +%s)" -lt "$last" ]; then
+    date -u -s "@$last" >/dev/null && hwclock -w -u 2>/dev/null
+    mkdir -p /run/cig && echo "$last" > /run/cig/clock-was-behind
+fi
+
 if [ -f /etc/cig/live ]; then
     # live system (install media, cig-live): the medium stays read-only; what changes
     # lives in RAM. /var/cig (sources and packages, the installer's mirror) stays on
@@ -36,21 +47,51 @@ if [ -f /etc/cig/live ]; then
     mount --bind /var/cig /run/live/var/cig
     for d in etc var home root mnt; do mount --rbind "/run/live/$d" "/$d"; done
 else
-    mount -o remount,rw /
+    # the root filesystem, as /etc/fstab describes it: checked while it is still read-only
+    # (fsck's pass column, 0 = never), then mounted read-write with fstab's options
+    rdev= rtype= ropts= rpass=0
+    if [ -r /etc/fstab ]; then
+        while read -r dev mnt type opts dump pass; do
+            case "$dev" in ''|\#*) continue ;; esac
+            [ "$mnt" = / ] || continue
+            rdev=$dev rtype=$type ropts=$opts rpass=${pass:-0}
+            break
+        done < /etc/fstab
+    fi
+    if [ -n "$rdev" ] && [ "$rpass" != 0 ]; then
+        case "$rdev" in /dev/*) dev=$rdev ;; *) dev=$(findfs "$rdev" 2>/dev/null) ;; esac
+        if [ -b "$dev" ] && command -v "fsck.$rtype" >/dev/null; then
+            "fsck.$rtype" -p "$dev"; st=$?
+            if [ $((st & 4)) -ne 0 ]; then
+                echo "rc.init: / ($dev) has errors that fsck.$rtype -p could not"
+                echo "  repair. Repair it while it is not mounted: start the cig medium,"
+                echo "  then run: fsck.$rtype $dev"
+                # root is locked unless its password was set (sulogin would only fail)
+                case "$(sed -n 's/^root:\([^:]*\):.*/\1/p' /etc/shadow)" in
+                    '!'*|'*'*) echo "  Press Enter to boot on with the errors."; read -r _ ;;
+                    *) echo "  Or give root's password for a shell here (fsck.$rtype $dev);"
+                       echo "  Ctrl-D boots on with the errors."
+                       sulogin ;;
+                esac
+            elif [ $((st & 2)) -ne 0 ]; then
+                echo "rc.init: fsck.$rtype repaired / ($dev): restarting"
+                sync; busybox reboot -f
+            elif [ "$st" -ge 8 ]; then
+                echo "rc.init: fsck.$rtype could not check / ($dev): status $st"
+            fi
+        else
+            echo "rc.init: / not checked: no device $rdev, or no fsck.$rtype"
+        fi
+    fi
+    mount -o "remount,rw${ropts:+,$ropts}" / || {
+        echo "rc.init: / mounted without its options in /etc/fstab (refused: $ropts)"
+        mount -o remount,rw /
+    }
 fi
 mount -a
 swapon -a 2>/dev/null
 
 [ -s /etc/hostname ] && hostname -F /etc/hostname
-hwclock -s -u 2>/dev/null
-# the clock never starts earlier than the last time this system ran (rc.shutdown) or was
-# installed or built (the inventory): a flat clock battery or a firmware reset sets it back
-# years, and TLS, DNSSEC and signature checks then fail. The installer asks for the real time.
-last=$(stat -c %Y /var/lib/cig/clock /usr/pkg/INVENTORY 2>/dev/null | sort -n | tail -n 1)
-if [ -n "$last" ] && [ "$(date +%s)" -lt "$last" ]; then
-    date -u -s "@$last" >/dev/null && hwclock -w -u 2>/dev/null
-    mkdir -p /run/cig && echo "$last" > /run/cig/clock-was-behind
-fi
 ip link set lo up
 [ -f /etc/sysctl.conf ] && sysctl -q -p /etc/sysctl.conf
 for f in /etc/sysctl.d/*.conf; do [ -f "$f" ] && sysctl -q -p "$f"; done
@@ -75,9 +116,10 @@ command -v alsactl >/dev/null && alsactl restore 2>/dev/null
 
 # per-user runtime directories (normally logind's job)
 mkdir -p -m 0755 /run/user
-awk -F: '$3 >= 1000 && $3 < 65534 {print $3, $4}' /etc/passwd | while read -r u g; do
-    install -d -m 700 -o "$u" -g "$g" "/run/user/$u"
-done
+while IFS=: read -r n x u g rest; do
+    case "$u" in ''|*[!0-9]*) continue ;; esac
+    [ "$u" -ge 1000 ] && [ "$u" -lt 65534 ] && install -d -m 700 -o "$u" -g "$g" "/run/user/$u"
+done < /etc/passwd
 
 # local additions
 [ -x /etc/rc.local ] && /etc/rc.local

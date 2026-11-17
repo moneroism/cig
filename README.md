@@ -54,7 +54,7 @@ version reached is listed in [`ROADMAP.md`](ROADMAP.md#versions).
 | Kernel | [linux-hardened](https://github.com/anthraxx/linux-hardened) 6.18 LTS, configured per machine |
 | C library | musl |
 | Userland | BusyBox (trimmed: no network daemons, no `su`, no setuid, no BusyBox TLS) |
-| Init | sinit (PID 1, ~100 lines) + BusyBox runit applets for supervision |
+| Init | sinit (PID 1, ~100 lines) + BusyBox runit applets for supervision. At boot `rc.init` checks the root filesystem while it is read-only (`fsck.<type> -p`; fstab's pass column, 0 = never), then mounts it read-write with its options from `/etc/fstab`. Errors the check cannot repair stop the boot with a message: root's password gives a shell there; with root locked (the default) Enter boots on, and the repair is done from the install medium |
 | Devices | devtmpfs + BusyBox mdev, libudev-zero, seatd (no udev, no logind) |
 | Boot | EFISTUB, no bootloader; the command line is compiled in |
 | Admin | doas, for members of `wheel` (the only setuid program). `/etc/doas.conf` says `persist`: after a password the same terminal is not asked again for five minutes – a choice for usability; remove the word to be asked every time |
