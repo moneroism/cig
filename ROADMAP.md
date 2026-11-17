@@ -234,7 +234,8 @@ is detected, and everything else renders with pixman. Not yet tested on the RX57
   sshd (new: an off-by-default service) answers, PipeWire + WirePlumber run, dwl, sway and
   labwc start headless with foot, the clipboard and screenshots. Not testable headless:
   wmenu and slurp (no keyboard/pointer there), sound and WiFi hardware. Then the browser
-  (Chromium, optional, off by default) and the laptop install.
+  (Chromium, optional, off by default: built 2026-11-16, Chromium 157, Wayland only, its sandbox
+  works on musl; tested in a headless dwl session, not yet on the laptop) and the laptop install.
   After the 0.3.0 audit fixes (decided 2026-11-17): cava, the terminal audio visualizer
   (needs fftw and iniparser, both new recipes; upstream signs nothing, flagged like the others)
 
