@@ -57,7 +57,7 @@ version reached is listed in [`ROADMAP.md`](ROADMAP.md#versions).
 | Init | sinit (PID 1, ~100 lines) + BusyBox runit applets for supervision |
 | Devices | devtmpfs + BusyBox mdev, libudev-zero, seatd (no udev, no logind) |
 | Boot | EFISTUB, no bootloader; the command line is compiled in |
-| Admin | doas, for members of `wheel` (the only setuid program) |
+| Admin | doas, for members of `wheel` (the only setuid program). `/etc/doas.conf` says `persist`: after a password the same terminal is not asked again for five minutes – a choice for usability; remove the word to be asked every time |
 | Packages | `cigbuild` builds, `smoke` installs: every package in its own folder under `/usr/pkg` |
 | TLS | OpenSSL 3.5 LTS |
 | Desktop | Wayland: dwl, foot (sway, labwc optional); CPU rendering (pixman) for now. No X11. |
