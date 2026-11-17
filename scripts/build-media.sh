@@ -25,6 +25,7 @@
 # The live system (cig-live) keeps the medium read-only and works in RAM; its /var/cig holds
 # every source and prebuilt package: the installer's mirror. Logins: root and cig, both with
 # the password ciglinux (only at the keyboard: nothing on the live system listens on the network).
+# The live system starts only the logins and seatd, whatever the dev system has switched on.
 
 set -euo pipefail
 umask 022
@@ -174,6 +175,15 @@ chroot "$STAGE" adduser -D -s /bin/bash -h /home/cig cig
 # not input: its members read every key typed on the machine; compositors use seatd
 for g in wheel audio video users; do chroot "$STAGE" addgroup cig "$g"; done
 printf 'root:ciglinux\ncig:ciglinux\n' | chroot "$STAGE" chpasswd -c sha512 > /dev/null
+# services: only the logins and seatd. The packages' setup enables what the dev system runs
+# (with BlueZ installed: dbus and bluetoothd, as root, reachable over Bluetooth)
+for s in "$STAGE"/etc/service/*; do
+    [ -e "$s" ] || [ -L "$s" ] || continue
+    case " getty-tty1 getty-tty2 getty-ttyS0 seatd " in
+        *" ${s##*/} "*) ;;
+        *) rm -rf -- "$s"; echo "    not started on the medium: ${s##*/}" ;;
+    esac
+done
 # every program on the live system must find its libraries (gpgv once linked libassuan and
 # npth, which only the dev system had as build tools)
 libs=$(SMOKE_ROOT=$STAGE "$SMOKE" audit --quick 2>&1 | grep ' needs ' || true)

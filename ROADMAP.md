@@ -157,6 +157,7 @@ Work:
   `assets/live-issue.txt` (the cigarette logo beside the login hints; plain ASCII,
   <= 80 columns, `{VERSION}` filled in and backslashes escaped at build time). Nothing on the
   live system listens on the network, so the known passwords only matter at the keyboard
+  (it starts only the logins and seatd, 2026-11-17)
 - media kernel: broad drivers, ISO9660 built in, root by its own partition name
   (never confused with an installed `cig-root`)
 - media contents: base system, build tools, cigbuild/smoke/installer, all sources

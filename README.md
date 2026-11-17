@@ -296,7 +296,7 @@ medium's kernel has an initramfs (`scripts/initramfs/init`, built into it): it f
 ISO by its volume label `CIG_<version>`, mounts it and starts the live system. It boots as a live system: the medium stays read-only, `/etc`, `/var`, `/home`, `/root`
 and `/mnt` live in RAM, and `/var/cig` on the medium holds every source and prebuilt
 package for the installer. Logins: `root` and `cig`, password `ciglinux` (nothing on the
-live system listens on the network). Write it to a USB stick with
+live system listens on the network; it starts only the logins and seatd). Write it to a USB stick with
 `dd if=cig-<version>.iso of=/dev/<the stick> bs=4M conv=fsync`.
 
 On a USB stick the image also has a small writable FAT partition, `CIG-DATA`. `cig-check`
