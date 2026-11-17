@@ -320,7 +320,7 @@ void install_pkg(const char *name, const char *reason_in)
 	/* checked before anything changes: the write at the end would be refused, and the
 	 * package would be installed but not recorded */
 	if (!inv_sealed())
-		die("inventory checksum mismatch - refusing to install %s (run: smoke audit)", name);
+		die("inventory checksum mismatch - refusing to install %s (smoke audit, then smoke seal)", name);
 	/* "keep": rebuilds keep the current reason (explicit for a new install) */
 	if (!strcmp(reason, "keep")) {
 		e = inv_get(name);

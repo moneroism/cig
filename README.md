@@ -198,6 +198,7 @@ smoke files   <pkg>            files of a package
 smoke mark    <reason> <pkg>   explicit | dependency | build
 smoke audit [--quick]          check the system against the inventory
 smoke hooks   <pkg>... | --all run a package's setup again
+smoke seal                     accept an inventory changed outside smoke (shows the change, asks)
 smoke libre                    how much of this system is free software (libre-meter)
 ```
 
@@ -213,7 +214,9 @@ Config files changed by the user are kept; the new version is saved as `*.new`.
 files, files in `/usr` that are not links into `/usr/pkg`, broken links, links
 replaced by real files, libraries a program cannot find or takes from a package
 its own does not depend on (it would break with another selection), changed
-configuration, orphaned dependencies, and a hand-edited inventory (smoke then refuses to write until it is resolved).
+configuration, orphaned dependencies, and a hand-edited inventory. smoke then refuses to install or remove anything
+until `smoke seal` accepted it: it prints the lines that changed since smoke last
+wrote the file (it keeps a copy, `INVENTORY.sealed`), asks, and seals the file as it is.
 `--quick` skips the package checksums. Paths in `/etc/smoke/audit.ignore` are
 skipped.
 

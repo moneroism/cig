@@ -59,15 +59,19 @@ static void load(void)
 	loaded = true;
 }
 
+/* the checksum, and a copy of what was sealed: `smoke seal` shows a later change against it */
 static void seal(void)
 {
 	char hex[65], *data = read_file(INV), *sumf = xasprintf("%s.sha256", INV), *line;
+	char *copyf = xasprintf("%s.sealed", INV);
 	if (!data)
 		die("cannot read %s", INV);
 	sha256_hex(data, strlen(data), hex);
 	line = xasprintf("%s\n", hex);
 	write_file(sumf, line);
+	write_file(copyf, data);
 	free(line);
+	free(copyf);
 	free(sumf);
 	free(data);
 }
@@ -84,6 +88,58 @@ bool inv_sealed(void)
 	free(sum);
 	free(sumf);
 	return ok;
+}
+
+/* what changed since the last seal: the lines only in the copy kept then (gone) and only in
+ * the file now (added). false: there is no copy, or it is not what the checksum sealed */
+bool inv_changes(struct strv *gone, struct strv *added)
+{
+	char hex[65], *copyf = xasprintf("%s.sealed", INV), *sumf = xasprintf("%s.sha256", INV);
+	char *copy = read_file(copyf), *sum = read_file(sumf);
+	bool ok = false;
+	if (copy && sum) {
+		sha256_hex(copy, strlen(copy), hex);
+		ok = strncmp(sum, hex, 64) == 0;
+	}
+	if (ok) {
+		struct strv was = { 0 }, now = { 0 };
+		read_lines(copyf, &was);
+		read_lines(INV, &now);
+		for (size_t i = 0; i < was.n; i++)
+			if (!sv_has(&now, was.v[i]))
+				sv_push(gone, was.v[i]);
+		for (size_t i = 0; i < now.n; i++)
+			if (!sv_has(&was, now.v[i]))
+				sv_push(added, now.v[i]);
+		sv_free(&was);
+		sv_free(&now);
+	}
+	free(copy);
+	free(sum);
+	free(copyf);
+	free(sumf);
+	return ok;
+}
+
+/* seal the file as it is now, if smoke can work with it: every line has its six fields, a
+ * package name, a known reason and a folder name, and no package is there twice */
+void inv_reseal(void)
+{
+	unload();
+	load();
+	for (size_t i = 0; i < nents; i++) {
+		const struct inv_ent *e = &ents[i];
+		if (!valid_name(e->name) || e->folder[0] == '.' || strchr(e->folder, '/'))
+			die("INVENTORY: %s: not a package or folder name; nothing sealed", e->name);
+		if (strcmp(e->reason, "explicit") && strcmp(e->reason, "dependency") && strcmp(e->reason, "build") &&
+		    strcmp(e->reason, "keep"))
+			die("INVENTORY: %s: unknown reason %s; nothing sealed", e->name, e->reason);
+		for (size_t j = 0; j < i; j++)
+			if (!strcmp(ents[j].name, e->name))
+				die("INVENTORY: %s is there twice; nothing sealed", e->name);
+	}
+	seal();
+	unload();
 }
 
 void inv_init(void)
@@ -126,7 +182,7 @@ static void save(const char *skip, const char *extra)
 	size_t len = 1;
 
 	if (!inv_sealed())
-		die("inventory checksum mismatch - refusing to write (run: smoke audit)");
+		die("inventory checksum mismatch - refusing to write (smoke audit, then smoke seal)");
 	for (size_t i = 0; i < nents; i++) {
 		if (skip && strcmp(ents[i].name, skip) == 0)
 			continue;

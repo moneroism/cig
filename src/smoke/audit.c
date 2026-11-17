@@ -345,7 +345,7 @@ int audit(bool quick)
 		return 1;
 	}
 	if (!inv_sealed())
-		flag("INVENTORY was changed outside smoke (checksum mismatch)");
+		flag("INVENTORY was changed outside smoke (checksum mismatch; smoke seal shows the change and accepts it)");
 	for (size_t i = 0; i < inv_count(); i++)
 		map_put(&folder, inv_at(i)->name, inv_at(i)->folder);
 	{

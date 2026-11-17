@@ -31,6 +31,8 @@ static const char usage_text[] =
 	"  smoke hooks   <pkg>... | --all run a package's setup again (busybox first)\n"
 	"  smoke audit [--quick]          check the system against the inventory\n"
 	"                                 (--quick skips the package checksums)\n"
+	"  smoke seal                     accept an inventory that was changed outside smoke\n"
+	"                                 (shows the change, asks)\n"
 	"  smoke libre                    how much of this system is free software (libre-meter)\n";
 
 static _Noreturn void usage(void)
@@ -260,6 +262,41 @@ static bool ask_yn(const char *q, bool def)
 			return false;
 		printf("  please answer y or n\n");
 	}
+}
+
+/* smoke seal: smoke refuses to write an inventory that was changed outside it. Show what
+ * changed since it was last sealed and, on a yes, seal it as it is now */
+static int seal_cmd(void)
+{
+	struct strv gone = { 0 }, added = { 0 };
+	if (!exists(INV))
+		die("no inventory at %s", INV);
+	if (inv_sealed()) {
+		info("the inventory is sealed: nothing to do");
+		return 0;
+	}
+	if (inv_changes(&gone, &added)) {
+		puts("The inventory was changed outside smoke since it was last sealed:");
+		for (size_t i = 0; i < gone.n; i++)
+			printf("  - %s\n", gone.v[i]);
+		for (size_t i = 0; i < added.n; i++)
+			printf("  + %s\n", added.v[i]);
+		if (!gone.n && !added.n)
+			puts("  (the same lines: only their order or the blanks differ)");
+	} else {
+		puts("The inventory was changed outside smoke. What changed cannot be shown: there is no\n"
+		     "copy of the sealed inventory (it was sealed by an older smoke), or the copy or the\n"
+		     "checksum was changed too. `smoke audit` compares the inventory with the system.");
+	}
+	sv_free(&gone);
+	sv_free(&added);
+	if (!ask_yn("Seal the inventory as it is now?", false)) {
+		puts("Nothing sealed.");
+		return 1;
+	}
+	inv_reseal();
+	info("inventory sealed (smoke audit checks it against the system)");
+	return 0;
 }
 
 /* a line "key:  value" of `cigbuild info` */
@@ -857,6 +894,8 @@ int main(int argc, char **argv)
 		if (n == 1 && strcmp(args[0], "--quick"))
 			usage();
 		return audit(n == 1);
+	} else if (!strcmp(cmd, "seal") && n == 0) {
+		return seal_cmd();
 	} else if (!strcmp(cmd, "hooks") && n >= 1) {
 		return hooks(n, args);
 	} else if (!strcmp(cmd, "libre") && n == 0) {

@@ -76,6 +76,8 @@ struct inv_ent {
 };
 void inv_init(void);
 bool inv_sealed(void);
+bool inv_changes(struct strv *gone, struct strv *added);
+void inv_reseal(void);   /* smoke seal */
 size_t inv_count(void);
 const struct inv_ent *inv_at(size_t i);
 const struct inv_ent *inv_get(const char *name);

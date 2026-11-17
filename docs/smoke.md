@@ -39,6 +39,8 @@ smoke mark <reason> <pkg>     explicit | dependency | build             (done)
 smoke autoremove              remove every orphaned dependency         (done)
 smoke audit [--quick]         check the system against the inventory    (done; --quick
                               skips checksums and unlisted package files)
+smoke seal                    accept an inventory changed outside smoke (done; shows
+                              the change, asks)
 smoke hooks <pkg>... | --all  run a package's setup again               (done)
 smoke libre                   how much of the system is free software   (done; see README,
                               (FSF's definition), with suggestions        "Libre-meter")
@@ -182,6 +184,16 @@ broken links, links replaced by real files, changed configuration, orphans, and 
 inventory. It also reads every installed ELF file's needed libraries (`DT_NEEDED`) and
 reports any that no installed package provides, so a missing runtime library shows up
 before a program fails with "Error relocating" (links are resolved inside `SMOKE_ROOT`).
+
+The inventory is sealed: `INVENTORY.sha256` holds its checksum, and smoke installs and
+removes nothing while the two disagree (a guard against hand edits and half-written
+files, not against root, who can write both). The way back is `smoke seal`, run after
+`smoke audit` showed what the inventory now claims: it prints the lines that changed
+since smoke last wrote the file (`INVENTORY.sealed` is the copy it keeps for that; an
+inventory sealed by an older smoke has none, and the change cannot be shown), asks, and
+seals the file as it is. Without a terminal it seals nothing; a file smoke could not
+work with (a line without its six fields, an unknown reason, a package twice) is
+refused.
 (done)
 
 The optional allowlisting layers (see `ROADMAP.md`, Phase 5) build on the
