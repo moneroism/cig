@@ -290,6 +290,9 @@ Also in this phase:
 - read-only root filesystem
 - reviewed cig kernel base config (replacing Alpine's), with loadpin and safesetid
 - module loading locked after boot as an installer option
+- the install medium verified before it starts: the initramfs holds a hash of the ISO's
+  filesystem (or a dm-verity root hash) and starts only a medium that matches (since
+  2026-11-17 it already stops when two devices carry the label, but does not check content)
 
 **Exit criteria:** each layer can be enabled at install time and is documented.
 
