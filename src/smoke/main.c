@@ -446,11 +446,11 @@ static void add_pkg(const char *name, enum compile compile, bool yes)
 		if ((colons = strstr(s, "::")))
 			s = colons + 2;
 		printf("  source: %s\n", s);
-	}
-	if (!sig)
-		printf("  warning: %s has no upstream signature recorded (source checked against its pinned SHA256 only)\n", name);
-	else
-		printf("  signed upstream: %s\n", sig);
+		if (!sig)
+			printf("  warning: %s has no upstream signature recorded (source checked against its pinned SHA256 only)\n", name);
+		else
+			printf("  signed upstream: %s\n", sig);
+	}   /* no source: cig's own or a meta package, nothing is downloaded */
 	printf("  build: %s\n", compile == YES ? "compile on this device (missing dependencies too)"
 	                                        : "prebuilt package");
 
