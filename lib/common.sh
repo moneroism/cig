@@ -155,10 +155,13 @@ gpgv_verify() {   # gpgv_verify <file> <signature entry> [<pinned sha256>]
     return 0
 }
 
-# fetch_sources: every source, checked against its pinned sha256 (if the recipe has one) and
-# its upstream signature with gpgv (if it has one and gpgv is installed): signed sources need
-# no sha256 in the recipe. A source with neither is trusted on first use: its sha256 is
-# recorded on this device ($CIG_VAR/tofu) and any later change refuses it.
+# fetch_sources: every source, checked against its pinned sha256 and its upstream signature
+# with gpgv (if it has one and gpgv is installed): both must match. The signature says who
+# made the file, the pin says which file: a signature alone is also valid for every older
+# release the key signed, served under the new name. "-" (signed, no pin) is what recipes
+# pinned before 2026-11-17 hold until `cigbuild pin` ran on them again; it is accepted with
+# a warning. A source with neither is trusted on first use: its sha256 is recorded on this
+# device ($CIG_VAR/tofu) and any later change refuses it.
 fetch_sources() {
     local i=0 e f url want have sig ok tofu
     local -a sums sigs
@@ -171,7 +174,10 @@ fetch_sources() {
             fetch "$url" "$CIG_VAR/sources/$f" || die "download failed: $url"
         fi
         want=${sums[$i]:-}; sig=${sigs[$i]:--}
-        [ "$want" != - ] || want=""   # "-": no pin, the signature decides
+        if [ "$want" = - ]; then
+            want=""
+            warn "$name: $f is not pinned (sha256 \"-\"): only its signature is checked, and an older signed release passes that too. On the host: cigbuild pin $name"
+        fi
         have=$(sha256sum "$CIG_VAR/sources/$f" | cut -d' ' -f1)
         if [ -n "$want" ] && [ "$want" != "$have" ]; then
             rm -f "$CIG_VAR/sources/$f"
@@ -533,36 +539,6 @@ pkg_keys() {   # pkg_keys <pkg>: verify the pinned sources again and record thei
     record_keys "$p"
 }
 
-pkg_sigonly() {   # pkg_sigonly <pkg>: signed sources drop their pinned sha256 ("-")
-    local p=$1 e f i=0 sig new="" r
-    local -a sums sigs
-    NEWKEYS=
-    load_recipe "$p"
-    r=$(recipe_path "$p")
-    [ -n "${keys:-}" ] || die "$p: no keys= yet (cigbuild keys $p first)"
-    read -r -a sums <<< "$(echo $sha256)"
-    read -r -a sigs <<< "$(echo $signature)"
-    for e in $source; do
-        f=$(src_name "$e"); sig=${sigs[$i]:--}
-        case "$sig" in
-            -|tag=*) new="$new ${sums[$i]:-}" ;;   # kept: unsigned, or a tag (checked through the pin)
-            *)
-                [ "${sums[$i]:-}" != - ] || { new="$new -"; i=$((i + 1)); continue; }
-                [ -s "$CIG_VAR/sources/$f" ] || fetch "$(src_url "$e")" "$CIG_VAR/sources/$f" \
-                    || die "download failed: $(src_url "$e")"
-                [ "$(sha256sum "$CIG_VAR/sources/$f" | cut -d' ' -f1)" = "${sums[$i]}" ] \
-                    || die "$p: $f does not match its pinned sha256"
-                verify_source "$CIG_VAR/sources/$f" "$sig"
-                check_signer "$p" "$f"
-                info "$p: $f -> $HOW OK (key $SIGNER): pin dropped, the signature decides"
-                new="$new -" ;;
-        esac
-        i=$((i + 1))
-    done
-    new=${new# }
-    sed -i "s|^sha256=.*|sha256=\"$new\"|" "$r"
-}
-
 pkg_pin() {
     local p=$1 e f have known i=0 new="" changed=0 sig sigf
     local -a sums sigs
@@ -572,7 +548,8 @@ pkg_pin() {
     read -r -a sigs <<< "$(echo $signature)"
     for e in $source; do
         f=$(src_name "$e")
-        if [ -n "${sums[$i]:-}" ]; then new="$new ${sums[$i]}"; i=$((i+1)); continue; fi
+        # "-": signed but not pinned (recipes from before 2026-11-17), pinned now like a new source
+        if [ -n "${sums[$i]:-}" ] && [ "${sums[$i]}" != - ]; then new="$new ${sums[$i]}"; i=$((i+1)); continue; fi
         # 1. a checksum recorded when the bootstrap verified this file's signature
         known=$(awk -v f="$f" '$2 == f || $2 == "./" f { print $1; exit }' /sources/SHA256SUMS 2>/dev/null || true)
         if [ -n "$known" ]; then
@@ -587,9 +564,8 @@ pkg_pin() {
                 verify_source "$CIG_VAR/sources/$f" "$sig"
                 check_signer "$p" "$f"
                 info "$p: $f -> $HOW OK (key $SIGNER)"
-                # a detached signature or a signed checksum file is checked on every device
-                # (gpgv): no hash to pin; a signed tag needs git there, so its hash is pinned
-                case "$sig" in tag=*) ;; *) have=- ;; esac
+                # the hash is pinned as well: every device checks the signature again (gpgv),
+                # but that alone would accept any older release the same key signed
             else
                 # 3. nothing to verify against
                 warn "$p: $f -> no upstream signature; trusted on first use"

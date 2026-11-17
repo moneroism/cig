@@ -116,7 +116,6 @@ cigbuild pin     <pkg>...   verify upstream signature, pin the SHA256
 cigbuild sig     <pkg> <url|->...  check pinned sources against upstream signatures, record the URLs
 cigbuild keys    <pkg>...   check pinned sources again, record their signing keys (keys=)
 cigbuild trust   <pkg> <fpr>  accept one more signing key (only after checking it independently)
-cigbuild sigonly <pkg>...   signed sources and checksum files: verify, then drop the pinned SHA256 (gpgv decides)
 cigbuild info    <pkg>      show a recipe
 cigbuild pkgfile <pkg>      path of the package file for the current recipe
 ```
@@ -135,8 +134,8 @@ license="GPL-3.0-or-later AND MIT AND CC0-1.0"   # SPDX expression (the libre-me
 source="https://codeberg.org/dwl/dwl/releases/download/v$version/dwl-v$version.tar.gz"
 signature=""                 # signature URL per source, or "-"
 keys=""                      # fingerprints allowed to sign (filled in by pin/sig/keys; new ones: cigbuild trust)
-sha256="-"                   # filled in by: cigbuild pin dwl ("-" for a signed source:
-                             # gpgv checks it on every device; unsigned sources get a hash)
+sha256=""                    # filled in by: cigbuild pin dwl (a signed source is checked against
+                             # both on every device: the signature with gpgv, then this hash)
 depends="wlroots libinput libxkbcommon wayland"
 makedepends="wayland-protocols pkgconf"
 style=make                   # gnu | meson | make | custom
