@@ -197,8 +197,8 @@ smoke why     <pkg>            why a package is installed
 smoke files   <pkg>            files of a package
 smoke mark    <reason> <pkg>   explicit | dependency | build
 smoke audit [--quick]          check the system against the inventory
-smoke hooks   <pkg>... | --all run a package's setup again
 smoke seal                     accept an inventory changed outside smoke (shows the change, asks)
+smoke hooks   <pkg>... | --all run a package's setup again
 smoke libre                    how much of this system is free software (libre-meter)
 ```
 
