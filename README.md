@@ -100,7 +100,7 @@ src/pixel/          pixel, terminal animations (C; package pixel)
 src/clock/          clock, the time in large digits for the terminal (C; package clock)
 packages/<name>/    one recipe per package (+ files/ for extra files)
 assets/             logos and banners (ASCII and braille), with their size and colour rules
-scripts/            bootstrap, the install media (build-media.sh) and VM helpers
+scripts/            bootstrap, the install media (build-media.sh), release signing and VM helpers
 VERSION             the cig release (see "Versions")
 docs/               design documents: smoke, sources (how every source is authenticated)
 kernel/             earlier kernel configs (reference)
@@ -317,6 +317,22 @@ own package (`packages/cig-check`). For the 0.3.x tests it is also a component (
 default), so an installed system can check itself (`doas cig-check`: RAM with a breakdown, the
 WiFi connection, sound, suspend); the report goes to `CIG-DATA` when the stick is plugged in,
 else to /root. Before a release it goes back to the medium only.
+
+### Verifying a release
+
+From the release after 0.3.0 on, every release has a signed git tag `v<version>` and, next
+to the ISO, `SHA256SUMS` with its detached signature `SHA256SUMS.asc` (both by the release
+key; its fingerprint is published with that first signed release). With the release key
+imported:
+
+```
+gpg --verify SHA256SUMS.asc SHA256SUMS && sha256sum -c SHA256SUMS   # the ISO
+git verify-tag v<version>                                           # the source
+```
+
+The developer signs with `CIG_SIGNING_KEY=<fingerprint> scripts/sign-release.sh
+cig-<version>.iso` (makes or checks the tag on the current commit, writes and signs
+`SHA256SUMS`, verifies both, pushes and uploads nothing). `v0.2.0` and `v0.3.0` are unsigned.
 
 ### Testing in QEMU
 
