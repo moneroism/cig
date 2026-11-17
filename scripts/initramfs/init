@@ -5,6 +5,8 @@
 # init - the install medium's initramfs (built into the medium's kernel only). Finds the ISO
 # by its volume label (CD/DVD drive or a USB stick the ISO was written to), mounts it
 # read-only and starts the live system from it. Installed systems have no initramfs.
+# More than one device with the label: it stops and names them (it cannot tell which is the
+# medium, and any disk, an internal one too, could carry a copy).
 export PATH=/usr/bin
 /usr/bin/busybox --install -s /usr/bin
 mount -t devtmpfs -o nosuid,mode=0755 devtmpfs /dev
@@ -29,16 +31,29 @@ label_of() {
     dd if="$1" bs=1 skip=32808 count=32 2>/dev/null | tr -d ' '
 }
 
+# every device that carries the label, separated by spaces
+scan() {
+    for d in /dev/sr* /dev/sd* /dev/vd* /dev/nvme*n* /dev/mmcblk*; do
+        [ -b "$d" ] && [ "$(label_of "$d")" = "$label" ] && printf ' %s' "$d"
+    done
+}
+
 found= i=0
 echo "cig: looking for the install medium ($label)"
 while [ -z "$found" ] && [ $i -lt 30 ]; do   # USB sticks and drives may take a few seconds
-    for d in /dev/sr* /dev/sd* /dev/vd* /dev/nvme*n* /dev/mmcblk*; do
-        [ -b "$d" ] || continue
-        [ "$(label_of "$d")" = "$label" ] && { found=$d; break; }
-    done
+    found=$(scan)
     [ -n "$found" ] || { sleep 1; i=$((i + 1)); }
 done
 [ -n "$found" ] || rescue "the install medium was not found: no device carries the label $label"
+# once more a little later: a device that comes up after the first one is counted too
+sleep 2
+found=$(scan)
+found=${found# }
+case "$found" in
+    '') rescue "the install medium is gone: no device carries the label $label" ;;
+    *' '*) rescue "more than one device carries the label $label: $found
+cig: the live system starts only when one does. Remove the others, then 'exit'." ;;
+esac
 mount -t iso9660 -o ro "$found" /mnt/medium || rescue "cannot mount $found"
 echo "cig: install medium on $found"
 
