@@ -72,6 +72,9 @@ version reached is listed in [`ROADMAP.md`](ROADMAP.md#versions).
   (`/etc/lock-modules`).
 - GCC hardening plugins of linux-hardened (latent_entropy, stackleak, randstruct;
   the last two since linux rel 3: kernels built before have only latent_entropy).
+- Protocol families nothing on cig uses are not built (RDS, TIPC, ATM, X.25, Phonet,
+  RxRPC, IEEE 802.15.4, CAN, vsock, SCTP, AppleTalk, NFC, L2TP, PPPoE, mISDN): as modules,
+  any user's `socket()` call would load them.
 - Built-in command line: `slab_nomerge`, `init_on_alloc`, `init_on_free`,
   `page_alloc.shuffle`, `randomize_kstack_offset`, `vsyscall=none`, `debugfs=off`.
 - sysctl: restricted kernel pointers and dmesg, ptrace scope 2, no unprivileged
