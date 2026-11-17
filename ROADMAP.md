@@ -236,6 +236,10 @@ is detected, and everything else renders with pixman. Not yet tested on the RX57
   wmenu and slurp (no keyboard/pointer there), sound and WiFi hardware. Then the browser
   (Chromium, optional, off by default: built 2026-11-16, Chromium 157, Wayland only, its sandbox
   works on musl; tested in a headless dwl session, not yet on the laptop) and the laptop install.
+  Chromium rel 2 (libgcc linked statically: rel 1 needed gcc's libgcc_s, found by
+  build-media's dependency check 2026-11-17) needs a clean build; until then it is no installer
+  component. Later: a gcc-libs runtime package (libgcc_s, libstdc++) when more C++ programs
+  need it (decided 2026-11-17; needs a takeover rule in smoke for systems that have gcc).
   After the 0.3.0 audit fixes (decided 2026-11-17): cava, the terminal audio visualizer
   (needs fftw and iniparser, both new recipes; upstream signs nothing, flagged like the others)
 

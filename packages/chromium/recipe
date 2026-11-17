@@ -15,6 +15,7 @@
 # setuid root (Chromium's own suid sandbox helper; it only sets up the sandbox and drops root).
 name=chromium
 version=157.0.8103.50
+rel=2
 _crubit=40fbac34597084a0863256d633889eac2c23b91b
 license="BSD-3-Clause"
 source="https://commondatastorage.googleapis.com/chromium-browser-official/chromium-$version-lite.tar.xz
@@ -362,7 +363,8 @@ makedepends="llvm compiler-rt rust rust-bindgen nodejs gn go esbuild typescript-
     hwdata"
 style=custom
 nostrip=1   # strip with llvm's tools (the binaries come from clang/lld)
-group="desktop"
+# not an installer component until rel 2 is built (static libgcc; rel 1 linked gcc's shared
+# libgcc_s, which installed systems do not have): group="desktop"
 _src() { echo "$WORK/chromium-$version"; }
 pre_build() {
     # Chromium's Rust code and crubit use nightly features on a stable rustc (as Alpine does)
@@ -455,6 +457,9 @@ do_build() {
     # musl has no <sys/cdefs.h>: a small stand-in (files/compat)
     export CPPFLAGS="-D__DATE__= -D__TIME__= -D__TIMESTAMP__= -isystem $PKGDIR/files/compat"
     export ESBUILD_BINARY_PATH=/usr/bin/esbuild
+    # libgcc statically (as mesa): its shared libgcc_s belongs to gcc, which installed systems
+    # do not have. Only the link steps change (rel 2 relinked the rel 1 tree)
+    export LDFLAGS="$LDFLAGS -static-libgcc"
     gn gen out/Release --args="
         is_official_build=true is_debug=false symbol_level=0 chrome_pgo_phase=0
         is_clang=true clang_base_path=\"/usr\" clang_version=\"23\" clang_use_chrome_plugins=false
