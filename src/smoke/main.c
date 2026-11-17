@@ -630,6 +630,15 @@ static bool run_hook(const char *name)
 	return ok;
 }
 
+/* after a removal: BusyBox's setup puts its command links back where the removed package
+ * had a program of its own (gawk's awk, xz, binutils' strings). Without it the command is
+ * gone, and rc.init needs awk */
+static void busybox_links(void)
+{
+	if (inv_get("busybox") && !run_hook("busybox"))
+		warn("busybox: setup failed (run: smoke hooks busybox)");
+}
+
 static int hooks(int argc, char **argv)
 {
 	struct strv names = { 0 };
@@ -809,8 +818,12 @@ int main(int argc, char **argv)
 		if (n < 1)
 			usage();
 		remove_with_depends(args, n);
+		busybox_links();
 	} else if (!strcmp(cmd, "autoremove")) {
+		size_t before = inv_count();
 		autoremove(NULL);
+		if (inv_count() != before)
+			busybox_links();
 	} else if (!strcmp(cmd, "update")) {
 		enum compile compile = ASK;
 		bool yes = false, check = false;
