@@ -231,7 +231,7 @@ edits a section, Esc goes back, Install is at the bottom.
 | Section | |
 |---|---|
 | Disk | target disk (the running system's disk is not offered); **auto** (erase, default layout: ESP 512M, system, optional swap and `/home`) or **custom** (partition editor: keep, delete, add, format, mount points) |
-| Identity | hostname, user (in `wheel`, `audio`, `video`, `input`), root locked or with password |
+| Identity | hostname, user (in `wheel`, `audio`, `video`, `users`; not in `input`, whose members can read every key typed on the machine: the compositors get their input through seatd. A program that opens `/dev/input` itself needs `addgroup <user> input`), root locked or with password |
 | Components | from the recipes' `group=` / `default=`, under category headings, `/` searches; each with its installed size (itself and the dependencies the base does not have; `size=` in each package's `.PKGINFO`, collected by build-media into `/var/cig/pkgs/sizes`) and whether its upstream signs releases; the selection's total in the main menu; base packages always |
 | Hardware, network | detected GPU and network, firmware per driver (toggle; only the files each driver loaded on the medium, not its whole `firmware=` list: amdgpu names every GPU generation's; a driver that loaded none is unchecked, and checking it installs its whole list), optional WiFi network (picked from a scan, or typed for a hidden one; WPA2/WPA3-Personal, the password typed once); DNS: **encrypted** (DNS over TLS to Quad9 and Cloudflare through unbound, default), unbound as its **own resolver** (no third party), or the **network's** DHCP DNS |
 | Security | optional layers (placeholders for now) |

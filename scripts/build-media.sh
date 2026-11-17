@@ -171,7 +171,8 @@ mount --bind /dev "$STAGE/dev"; mount -t devpts devpts "$STAGE/dev/pts" 2>/dev/n
 mount -t proc proc "$STAGE/proc"; mount -t sysfs sysfs "$STAGE/sys"; mount -t tmpfs tmpfs "$STAGE/run"
 SMOKE_ROOT=$STAGE "$SMOKE" hooks --all
 chroot "$STAGE" adduser -D -s /bin/bash -h /home/cig cig
-for g in wheel audio video input users; do chroot "$STAGE" addgroup cig "$g"; done
+# not input: its members read every key typed on the machine; compositors use seatd
+for g in wheel audio video users; do chroot "$STAGE" addgroup cig "$g"; done
 printf 'root:ciglinux\ncig:ciglinux\n' | chroot "$STAGE" chpasswd -c sha512 > /dev/null
 # every program on the live system must find its libraries (gpgv once linked libassuan and
 # npth, which only the dev system had as build tools)

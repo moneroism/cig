@@ -102,7 +102,7 @@ static void identity_screen(struct state *s)
 	static const char *const modes[] = { "locked: admin tasks only through doas (recommended)",
 	                                     "with its own password" };
 	int sel = s->root_lock ? 0 : 1;
-	int c = ui_menu("Root account", "The user is in: wheel (doas), audio, video, input, users.", modes, NULL, 2, &sel);
+	int c = ui_menu("Root account", "The user is in: wheel (doas), audio, video, users.", modes, NULL, 2, &sel);
 	if (c == 1 && password("Root account", "root", s->rootpass, sizeof(s->rootpass)))
 		s->root_lock = false;
 	else if (c == 0)

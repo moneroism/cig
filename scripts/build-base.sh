@@ -366,7 +366,7 @@ if ! awk -F: '$3 >= 1000 && $3 < 65534 { found=1 } END { exit !found }' /etc/pas
     printf '==> name for your normal user: '
     read -r NEWUSER
     adduser -D -s /bin/bash "$NEWUSER"
-    for g in audio video input users; do addgroup "$NEWUSER" "$g"; done
+    for g in audio video users; do addgroup "$NEWUSER" "$g"; done   # not input: its members read every key typed
     info "set the password for $NEWUSER:"
     passwd "$NEWUSER"
 fi

@@ -87,7 +87,7 @@ from recipe data (group, default), not from a fixed list.
 | Screen | Content |
 |---|---|
 | Disk | choose disk; auto layout or partition editor; confirmation before writing; GPT: ESP, `cig-root`, optional `cig-swap`, `cig-home` |
-| Identity | hostname, user, passwords; user in `wheel`, `audio`, `video`, `input` |
+| Identity | hostname, user, passwords; user in `wheel`, `audio`, `video`, `users` (not `input`, 2026-11-17) |
 | Components | desktop, launcher, sound, Bluetooth … (from recipes) |
 | Hardware | detected devices and the firmware they need; adjustable |
 | Security | allowlist layers 1–3 (see Phase 5) – **placeholders, shown but not selectable yet** |

@@ -736,8 +736,10 @@ void do_install(struct state *s)
 	step("Users");
 	RUN("chroot", TARGET, "adduser", "-D", "-s", "/bin/bash", "-h", xasprintf("/home/%s", s->user), s->user);
 	{
-		static const char *groups[] = { "wheel", "audio", "video", "input", "users" };
-		for (size_t i = 0; i < 5; i++)
+		/* not "input": its members read every key typed on the machine (/dev/input/event*),
+		 * and the compositors get their input through seatd */
+		static const char *groups[] = { "wheel", "audio", "video", "users" };
+		for (size_t i = 0; i < sizeof(groups) / sizeof(*groups); i++)
 			RUN("chroot", TARGET, "addgroup", s->user, (char *)groups[i]);
 		char *in = xasprintf("%s:%s\n", s->user, s->userpass);
 		char *argv[] = { "chroot", TARGET, "chpasswd", "-c", "sha512", NULL };
