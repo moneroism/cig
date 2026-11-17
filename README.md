@@ -93,6 +93,7 @@ src/smoke/          smoke, the package manager (C; package cig-tools)
 src/installer/      cig-install, the installer (C, ncurses; package cig-installer, media only);
                     test/run.sh checks the partition logic against reference results
 src/pixel/          pixel, terminal animations (C; package pixel)
+src/clock/          clock, the time in large digits for the terminal (C; package clock)
 packages/<name>/    one recipe per package (+ files/ for extra files)
 assets/             logos and banners (ASCII and braille), with their size and colour rules
 scripts/            bootstrap, the install media (build-media.sh) and VM helpers

@@ -216,7 +216,8 @@ is detected, and everything else renders with pixman. Not yet tested on the RX57
   on installed systems. Categories come from the recipes. **Wayland only** (decided
   2026-10-05): sway, labwc, wayfire and friends instead of X11 window managers; X11 may come
   later as an optional recipe. First wave of easy recipes: sway, labwc, nano, vim, htop
-  (done, plus tmux, tree, jq, rsync, strace, fastfetch, pixel; labwc 2026-10-16). The
+  (done, plus tmux, tree, jq, rsync, strace, fastfetch, pixel; labwc 2026-10-16; clock, cig's
+  own, 2026-11-17). The
   component list marks packages whose upstream signs nothing (done 2026-10-16).
   Second wave (decided 2026-11-12: terminal first, the desktop basics before a browser):
   swayidle, swaylock (setuid without PAM; drops root after reading the hash), yambar (+ libyaml),

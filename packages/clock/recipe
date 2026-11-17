@@ -1,0 +1,17 @@
+# clock - the time in large digits that fill the terminal, the date below (console and graphical terminals)
+# Part of cig (src/clock): built from the repository, like cig-tools. Nothing but libc.
+name=clock
+version=$(cat "$CIG_REPO/VERSION")
+license="GPL-3.0-or-later"
+source=""
+sha256=""
+makedepends="make"
+style=custom
+group="tools"
+do_build() {
+    rm -rf "$WORK/clock"
+    cp -R "$CIG_REPO/src/clock" "$WORK/clock"
+    make -C "$WORK/clock" clean    # copied from the checkout: drop any host build first
+    make -C "$WORK/clock" clock
+}
+do_install() { install -D -m 755 "$WORK/clock/clock" "$DEST/usr/bin/clock"; }
