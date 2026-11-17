@@ -7,7 +7,7 @@ license="ISC"
 source="https://cdn.kernel.org/pub/software/network/wireless-regdb/wireless-regdb-$version.tar.xz"
 signature="https://cdn.kernel.org/pub/software/network/wireless-regdb/wireless-regdb-$version.tar.sign"
 keys="B3F2469D78D78BD09D366F37C94035C21B4F2AEB"
-sha256="-"
+sha256="b22e0901227b820cd1c280abe681a15b773a5103a5e10dc442e94ebb34cbf58d"
 style=custom
 do_build()   { :; }
 do_install() {

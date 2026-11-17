@@ -6,7 +6,7 @@ version=24.22.3
 license="MIT"
 source="https://nodejs.org/dist/v$version/node-v$version.tar.xz"
 signature="sums=https://nodejs.org/dist/v$version/SHASUMS256.txt.asc"
-sha256="-"
+sha256="48ca3aa8a9b02133356922ef4fc80200e00598c80a4ef446f7c39a459222593d"
 keys="5BE8A3F6C8A5C01D106C0AD820B1A390B168D356"
 wrksrc="node-v$version"
 depends="openssl zlib"

@@ -6,7 +6,7 @@ license="GPL-3.0-or-later"
 source="https://ftp.gnu.org/gnu/bash/bash-$version.tar.gz"
 signature="https://ftp.gnu.org/gnu/bash/bash-$version.tar.gz.sig"
 keys="7C0135FB088AAF6C66C650B9BB5869F064EA74AB"
-sha256="-"
+sha256="0d5cd86965f869a26cf64f4b71be7b96f90a3ba8b3d74e27e8e9d9d5550f31ba"
 style=custom
 # bundled termcap, never ncurses (not in the base): configure would link ncurses when the
 # building machine happens to have it (found by the audit of an on-device install)

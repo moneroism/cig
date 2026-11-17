@@ -5,7 +5,7 @@ license="LGPL-2.1-or-later"
 source="https://cdn.kernel.org/pub/linux/bluetooth/sbc-$version.tar.xz"
 signature="https://cdn.kernel.org/pub/linux/bluetooth/sbc-$version.tar.sign"
 keys="E932D120BC2AEC444E558F0106CA9F5D1DCF2659"
-sha256="-"
+sha256="a1ada76ef35e5af9c2fbd063754dc9e37a8d989417c6eb1ecebb089b1383ae9e"
 style=gnu
 # the library only: no sbcenc/sbcdec/sbcinfo tools, no tester (libsndfile)
 configure_args="--disable-tools --disable-tester"
