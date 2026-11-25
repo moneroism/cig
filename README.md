@@ -1,19 +1,61 @@
-# cig
+<h1 align="center">cig</h1>
 
-A minimal, hardened GNU/Linux distribution built from source, in the spirit
-of GrapheneOS but for the PC: as little code as possible, every source
-verified, nothing running that isn't needed, and nothing hardcoded to one
-machine.
+<p align="center">
+  <b>A minimal, hardened GNU/Linux distribution, built from source on the machine it runs on.</b><br>
+  musl · BusyBox · sinit + runit · linux-hardened · EFISTUB · Wayland
+</p>
 
-> **Status:** 0.3.0 (beta): Phase 3 reached, on the way to 0.4.0. A bootable install medium
-> (hybrid ISO: CD/DVD or USB stick) runs a live system, and its installer installs a system that
-> boots on its own with its own linux-hardened kernel, signed modules and lockdown, and a Wayland
-> desktop (dwl + foot, or sway): tested in QEMU (UEFI) and installed on a laptop (ASUS E210MA,
-> eMMC). smoke and the installer are C; everything is built from recipes with `cigbuild`, and
-> every source's authenticity is audited ([`docs/sources.md`](docs/sources.md)). Mesa without
-> LLVM (RADV + Zink) is built for AMD GPUs but not yet tested on the hardware. Next: 0.3.x fixes
-> from the laptop (RAM with dwl, installer WiFi, sound, suspend), then Phase 4. Not for daily
-> use. See [`ROADMAP.md`](ROADMAP.md).
+<p align="center">
+  <a href="https://github.com/moneroism/cig/releases"><img alt="release" src="https://img.shields.io/github/v/release/moneroism/cig?include_prereleases&label=release"></a>
+  <a href="LICENSE"><img alt="license" src="https://img.shields.io/github/license/moneroism/cig"></a>
+  <a href="https://github.com/moneroism/cig/commits/main"><img alt="last commit" src="https://img.shields.io/github/last-commit/moneroism/cig"></a>
+  <a href="https://github.com/moneroism/cig/graphs/commit-activity"><img alt="commit activity" src="https://img.shields.io/github/commit-activity/m/moneroism/cig"></a>
+  <a href="https://github.com/moneroism/cig/issues"><img alt="issues" src="https://img.shields.io/github/issues/moneroism/cig"></a>
+  <a href="docs/sources.md"><img alt="sources" src="https://img.shields.io/badge/sources-pinned%20%2B%20audited-informational"></a>
+</p>
+
+<p align="center">
+  <img src="docs/images/desktop.png" alt="cig 0.3.0: dwl with foot running fastfetch, a clock and cava" width="900">
+  <br><sub>A riced dwl session on cig 0.3.0: fastfetch, cava and peaclock in foot. The gaps, colours,
+  wallpaper and the clock (peaclock, not a cig package) are user dotfiles; cig itself ships upstream
+  defaults (see the stock look below).</sub>
+</p>
+
+In the spirit of GrapheneOS, but for the PC: as little code as possible, every source verified,
+nothing running that isn't needed, and nothing hardcoded to one machine.
+
+| | |
+|---|---|
+| **Base** | musl, BusyBox, sinit (PID 1, ~100 lines) + BusyBox runit, mdev, no systemd / udev / logind / X11 |
+| **Kernel** | linux-hardened 6.18 LTS, configured for the machine it runs on, signed modules, lockdown, booted by EFISTUB |
+| **Desktop** | Wayland: dwl + foot by default; sway, labwc, Chromium, PipeWire, Bluetooth and more as optional components |
+| **Packages** | `cigbuild` builds from recipes, `smoke` installs, audits and updates; every source pinned and, where upstream signs, GPG-checked |
+| **Footprint** | about 100 MB of RAM after boot with dwl |
+
+> **Status:** 0.3.0 (beta), 0.4.0 in preparation. A bootable install medium (hybrid ISO: CD/DVD or
+> USB stick) runs a live system, and its installer installs a system that boots on its own with its
+> own linux-hardened kernel, signed modules and lockdown, and a Wayland desktop: tested in QEMU (UEFI)
+> and installed on a laptop (ASUS E210MA, eMMC). Phase 4 (optional components, the browser, the
+> libre-meter, `smoke update` from signed releases) is done in QEMU; its laptop test makes 0.4.0.
+> Not for daily use yet. See [`ROADMAP.md`](ROADMAP.md).
+
+## Screenshots
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/images/stock.png" alt="the stock look: dwl and foot with upstream defaults"></td>
+    <td width="50%"><img src="docs/images/smoke-add.png" alt="smoke list and smoke add showing a package's source and signature status before installing"></td>
+  </tr>
+  <tr>
+    <td><sub>The stock look: dwl and foot with their upstream defaults (smoke list, fastfetch).</sub></td>
+    <td><sub><code>smoke add</code> shows the source, its signature status and how it will be built, then asks.</sub></td>
+  </tr>
+  <tr>
+    <td><img src="docs/images/smoke-libre.png" alt="smoke remove and smoke libre showing the libre-meter"></td>
+    <td valign="top"><sub><code>smoke libre</code>, the libre-meter: how much of the installed system is free software, and
+    what could change that. Short videos of the same session are attached to the releases.</sub></td>
+  </tr>
+</table>
 
 ## Principles
 
@@ -397,12 +439,12 @@ See [`ROADMAP.md`](ROADMAP.md). In short:
 
 - [x] Phase 0 – Foundation: toolchain, userland, init, desktop, cigbuild, kernel, firmware
 - [x] Phase 1 – smoke: symlink farm, inventory with install reasons, autoremove, audit
-- [x] Phase 2 – Installer (shell TUI), tested in QEMU (0.2.0)
+- [x] Phase 2 – Installer (TUI), tested in QEMU (0.2.0)
 - [x] Phase 3 – Install media (ISO), first bare-metal install, basic usability (ALSA, clipboard, screenshots, DNS) (0.3.0)
 - [ ] 0.3.x – GPU acceleration: Mesa without LLVM (RADV + Zink); built, not yet tested on an AMD GPU
-- [ ] Phase 4 – Optional components (PipeWire, Bluetooth, wmenu), UEFI boot entries, libre-meter (first version done)
+- [ ] Phase 4 – Optional components (PipeWire, Bluetooth, sway, labwc, Chromium, ...), libre-meter, `smoke update` from signed releases: done in QEMU, laptop test pending (0.4.0)
 - [ ] Phase 5 – Security layers (allowlisting), read-only root, own kernel base config
-- [ ] Phase 6 – Browser (then: cig as a daily system), hardened_malloc, sandboxing, smoke updates
+- [ ] Phase 6 – cig as a daily system, hardened_malloc, sandboxing
 - [ ] Phase 7 – Code quality: sanitizers, strict flags, fuzzing
 
 ## License
