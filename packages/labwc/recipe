@@ -2,11 +2,10 @@
 # Release tags are unsigned: pinned by SHA256 (flagged in docs/sources.md); the tarball matches
 # the SHA-512 of Alpine's aports (community/labwc) for the same release.
 name=labwc
-version=0.20.2
-rel=2
+version=0.20.3
 license="GPL-2.0-only"
 source="labwc-$version.tar.gz::https://github.com/labwc/labwc/archive/refs/tags/$version.tar.gz"
-sha256="fae023b6fe022f7057556707a17cdb2d98e0138c5dffaedaa1dade975699f9e8"
+sha256="1e70a5b74f149c5b47da76063dbdf967c44b2d7b6e94d3fdf65f70fc252f65c9"
 depends="wlroots libxml2 glib cairo pango libpng libinput libxkbcommon wayland pixman libdrm seatd"
 makedepends="meson pkgconf wayland-protocols"
 style=meson

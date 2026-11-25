@@ -1,9 +1,9 @@
 # python-packaging - version handling (needed to build Mesa) (Python module, a build tool: installed as plain files, no pip)
 name=python-packaging
-version=26.3
+version=26.4
 license="Apache-2.0 OR BSD-2-Clause"
-source="https://files.pythonhosted.org/packages/7d/fa/3944b40b07da9ce895c0e6303a5ab7d53da063554f534556b134a54d6093/packaging-$version.tar.gz"
-sha256="94edc256424af38762eb31306eed28beb9f0efc50a8837492c9d6fd6004aed79"
+source="https://files.pythonhosted.org/packages/c3/75/ffb1dc0ed12352139fb4ca0e3fde4325a23e3d0f3f40efe89717bc4f557b/packaging-$version.tar.gz"
+sha256="c4b671c41ddb9bf26e543c37723610d28fb6bf7affc4da17cf048d419d2c062a"
 depends="python"
 style=custom
 do_build() { :; }

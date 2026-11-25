@@ -2,9 +2,9 @@
 # Unsigned upstream (its release on the project's GitHub); the checksum matches an
 # independent source (Alpine's aports, main/yaml: sha512 dadd7d8e...e8c4c02).
 name=libyaml
-version=0.2.5
+version=0.2.7
 license="MIT"
 source="https://github.com/yaml/libyaml/releases/download/$version/yaml-$version.tar.gz"
-sha256="c642ae9b75fee120b2d96c712538bd2cf283228d2337df2cf2988e3c02678ef4"
+sha256="0c39256b8be0fc689f5c7bfdea1bc9f3fb1fd648468fd3cc6fd375e09ffb6f13"
 style=gnu
 configure_args="--disable-static"

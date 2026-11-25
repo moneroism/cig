@@ -1,11 +1,11 @@
 # fribidi - Unicode bidirectional text (for pango)
 name=fribidi
-version=1.0.17
+version=1.0.18
 license="LGPL-2.1-or-later"
 source="fribidi-$version.tar.gz::https://github.com/fribidi/fribidi/archive/refs/tags/v$version.tar.gz"
 signature="tag=https://github.com/fribidi/fribidi.git#v$version"
 keys="0AD041B27CA166DDA1FE3BAEA7B3409C0CA4ED14"
-sha256="ab015bb040b2ff4bf815813c21948947dad1e0186473359e99a8881c79878d5d"
+sha256="01f15887e32a9d84503121e2da031f166ac07ca8e0c350aef2dbbeaad0f75b1d"
 makedepends="meson pkgconf"
 style=meson
 meson_args="-Ddocs=false -Dtests=false -Dbin=false"

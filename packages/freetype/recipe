@@ -1,11 +1,11 @@
 name=freetype
-version=2.14.3
+version=2.15.0
 upstream="https://gitlab.freedesktop.org/freetype/freetype.git"
 license="FTL OR GPL-2.0-or-later"
 source="https://download.savannah.gnu.org/releases/freetype/freetype-$version.tar.xz"
 signature="https://download.savannah.gnu.org/releases/freetype/freetype-$version.tar.xz.sig"
 keys="E30674707856409FF1948010BE6C3AAC63AD8E3F"
-sha256="36bc4f1cc413335368ee656c42afca65c5a3987e8768cc28cf11ba775e785a5f"
+sha256="93cd47eb719c325107f2d3cf087d06299e944c3b48a40b55537302304dea1dd5"
 depends="zlib"
 makedepends="meson pkgconf"
 style=meson

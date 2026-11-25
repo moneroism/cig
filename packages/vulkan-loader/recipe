@@ -1,9 +1,9 @@
 # vulkan-loader - finds the Vulkan drivers (Mesa's RADV) for programs and Zink; Wayland only
 name=vulkan-loader
-version=1.4.365
+version=1.4.369
 license="Apache-2.0"
 source="vulkan-loader-$version.tar.gz::https://github.com/KhronosGroup/Vulkan-Loader/archive/refs/tags/v$version.tar.gz"
-sha256="df0358f57c1936e4abd262a7327ba1f80ffb424dbbdcbcb01bb9288511f31eef"
+sha256="26e41e25d45005eb1b818b941b5877b5b41d05190dd18743948c954fdb47b280"
 makedepends="cmake make vulkan-headers python pkgconf wayland"
 depends="wayland"
 style=custom

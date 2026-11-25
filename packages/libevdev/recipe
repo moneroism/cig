@@ -1,10 +1,10 @@
 name=libevdev
-version=1.13.7
+version=1.14.0
 license="MIT"
 source="https://www.freedesktop.org/software/libevdev/libevdev-$version.tar.xz"
 signature="https://www.freedesktop.org/software/libevdev/libevdev-$version.tar.xz.sig"
 keys="3C2C43D9447D5938EF4551EBE23B7E70B467F0BF"
-sha256="0caf824971108f15bb2ad356433bae198d7d3bf1e82d43f63626e069e060bfa6"
+sha256="5a0966c7110648665983848bad696c7acba614a2160d2865d535397101007332"
 makedepends="meson python"
 style=meson
 meson_args="-Dtests=disabled -Ddocumentation=disabled"

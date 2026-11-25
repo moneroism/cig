@@ -8,14 +8,13 @@
 # What got installed is listed in /usr/share/cig/firmware.list, and each file's licence (from
 # WHENCE: free or non-free, for the libre-meter) in /usr/share/cig/firmware.licenses
 name=linux-firmware
-version=20260916
+version=20261124
 # license: per file, listed in WHENCE; many files are not free (redistributable only)
 license="LicenseRef-linux-firmware"
 source="https://cdn.kernel.org/pub/linux/kernel/firmware/linux-firmware-$version.tar.xz"
 signature="https://cdn.kernel.org/pub/linux/kernel/firmware/linux-firmware-$version.tar.sign"
 keys="4CDE8575E547BF835FE15807A31B6BD72486CFD6"
-sha256="f80dcb757a623deda62200c08e0e1a88c76fb6b54964f31b35fa74da1c90ccc5"
-rel=3
+sha256="2cabe10253005f55bf4bbc0ebb25c0964d66f7c4121ffa47853ff1e70ea1aa54"
 style=custom
 nostrip=1
 noextract=1          # the archive is large; unpack only the selected files
