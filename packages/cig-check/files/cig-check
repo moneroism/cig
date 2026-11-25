@@ -414,7 +414,7 @@ s_sound() {
         # selected), 3 s each, with every boost control at 70%; the level is the recording's
         # RMS (arecord's -vv meter shows a held peak, not the level: a click looked like a voice);
         # then the loudest recording itself is played back, so nothing depends on speaking again
-        local src srcs best= bestlvl=-1 lvl c i=0
+        local src srcs best= bestlvl=-1 lvl dc c i=0
         # the card's own controls (amixer contents), not the simple mixer: alsa-lib renames
         # 'Capture Source' there, so on the laptop no input list was found and only the
         # selected 'Internal Mic' was tried
@@ -428,15 +428,22 @@ s_sound() {
             i=$((i + 1))
             [ "${src%% *}" = - ] || amixer -q -c "$card" cset "iface=MIXER,name=Capture Source" "${src%% *}" 2>/dev/null || true
             say "  recording from '${src#* }' (3 s)..."
-            lvl=-1
+            lvl=-1 dc=0
             if arecord -D "$dev" -q -d 3 -f cd "$WORK/mic-$i.wav" 2> "$WORK/arecord.txt"; then
-                # RMS in tenths of a percent of full scale, without the header and the first 0.25 s
-                lvl=$(od -An -v -j 44144 -t d2 "$WORK/mic-$i.wav" |
-                      awk '{ for (k = 1; k <= NF; k++) { s += $k * $k; n++ } } END { printf "%d", n ? sqrt(s / n) / 32.768 : -1 }')
+                # the sound's RMS in tenths of a percent of full scale, without the header and the
+                # first 0.25 s; each channel's average (a constant offset, DC) taken out first: it
+                # is silent but counted as loud (the laptop's 'Internal Mic': 27%, nothing heard)
+                read -r lvl dc <<EOT
+$(od -An -v -j 44144 -t d2 "$WORK/mic-$i.wav" |
+  awk '{ for (k = 1; k <= NF; k++) { c = n++ % 2; s[c] += $k; q[c] += $k * $k; m[c]++ } }
+       END { if (!n) { print -1, 0; exit }
+             for (c = 0; c < 2; c++) if (m[c]) { a = s[c] / m[c]; v += q[c] / m[c] - a * a; d += (a < 0 ? -a : a) }
+             printf "%d %d\n", sqrt(v / 2) / 32.768, d / 2 / 32.768 }')
+EOT
             else
                 sed 's/^/    arecord: /' "$WORK/arecord.txt" | head -n 3 >> "$REPORT"
             fi
-            log "  microphone input '${src#* }': level $([ "$lvl" -ge 0 ] && echo "$((lvl / 10)).$((lvl % 10))%" || echo "- (recording failed)")"
+            log "  microphone input '${src#* }': level $([ "$lvl" -ge 0 ] && echo "$((lvl / 10)).$((lvl % 10))% (offset $((dc / 10)).$((dc % 10))%)" || echo "- (recording failed)")"
             [ "$lvl" -le "$bestlvl" ] || { bestlvl=$lvl best="$i $src"; }
         done <<< "$srcs"
         have amixer && amixer -c "$card" contents > "$WORK/amixer-mic.txt" 2>&1 || true
