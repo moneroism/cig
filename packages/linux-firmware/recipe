@@ -25,11 +25,13 @@ _top="linux-firmware-$version"
 _detect() {
     # firmware= entries of the cig kernel's modules for every driver loaded now
     local kdir m f
-    kdir=$(ls -dt /usr/lib/modules/*/ 2>/dev/null | head -n1)
+    # no module tree (a chroot, a kernel without modules): nothing to detect; under pipefail a
+    # failing ls would end the build
+    kdir=$(ls -dt /usr/lib/modules/*/ 2>/dev/null | head -n1 || true)
     [ -n "$kdir" ] || return 0
     lsmod | awk 'NR > 1 { print $1 }' | while read -r m; do
         f=$(find "$kdir" \( -name "$m.ko" -o -name "$(echo "$m" | tr _ -).ko" \) | head -n1)
-        [ -n "$f" ] && { strings "$f" 2>/dev/null || true; } | sed -n 's/^firmware=//p'
+        if [ -n "$f" ]; then { strings "$f" 2>/dev/null || true; } | sed -n 's/^firmware=//p'; fi
     done | sort -u
 }
 
