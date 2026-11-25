@@ -1,4 +1,6 @@
 # harfbuzz - text shaping (for pango)
+# Held at 14.6.0 (developer, 2026-11-25): 15.x is signed by 2277650A...D3531115, a DSA-1024 key
+# from 2003 that the project announces nowhere; update once releases come with a key it names.
 name=harfbuzz
 version=14.6.0
 rel=2
