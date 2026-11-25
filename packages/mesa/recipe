@@ -1,13 +1,13 @@
 # mesa - GPU drivers without LLVM: Vulkan for AMD (RADV, with its own ACO compiler) and OpenGL/GLES
 # through Vulkan (Zink); EGL and GBM for Wayland compositors. (no software renderer: without a GPU driver, wlroots uses pixman)
 name=mesa
-version=26.2.4
-rel=4
+version=26.3.1
+rel=1
 license="MIT"
 source="https://archive.mesa3d.org/mesa-$version.tar.xz"
 signature="https://archive.mesa3d.org/mesa-$version.tar.xz.sig"
-keys="57551DE15B968F6341C248F68D8E31AFC32428A6"
-sha256="bce5f7fbebb934373b86c999a064d52fb5065878dc57f287f95346648ec832e9"
+keys="57551DE15B968F6341C248F68D8E31AFC32428A6 71C4B75620BC75708B4BDB254C95FAAB3EB073EC"
+sha256="4e4e438eac7b840a9383988cbb7c08dad8041da544b9319fc26d319fa7348961"
 depends="libdrm expat zlib wayland libudev-zero elfutils vulkan-loader libdisplay-info"
 makedepends="meson pkgconf python-mako python-packaging python-pyyaml wayland-protocols bison flex glslang"
 style=meson
