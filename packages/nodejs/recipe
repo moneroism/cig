@@ -2,11 +2,11 @@
 # Not offered in the installer. Its own copies of V8, libuv, ICU (small) and the rest; cig's
 # OpenSSL and zlib.
 name=nodejs
-version=24.22.3
+version=26.13.1
 license="MIT"
 source="https://nodejs.org/dist/v$version/node-v$version.tar.xz"
 signature="sums=https://nodejs.org/dist/v$version/SHASUMS256.txt.asc"
-sha256="48ca3aa8a9b02133356922ef4fc80200e00598c80a4ef446f7c39a459222593d"
+sha256="a7f6204ff63b6a2cd274d48903285abb86ed53a99070e532d4c2fd787457d9e6"
 keys="5BE8A3F6C8A5C01D106C0AD820B1A390B168D356"
 wrksrc="node-v$version"
 depends="openssl zlib"

@@ -283,7 +283,8 @@ is detected, and everything else renders with pixman. Not yet tested on the RX57
     generations (amdgpu names every GPU's) is left out: the installer keeps only the files the
     medium's kernel logged as loaded (826a1cf, tested with a fake log; QEMU emulates no device
     whose driver loads firmware, so a real test needs hardware). Still to come: more free
-    alternatives (the list has only ath9k_htc's open firmware)
+    alternatives (the list has only ath9k_htc's open firmware); no hardware advice (developer, 2026-11-25): the report names each driver
+    without a free replacement ("no free drivers available for X", done)
 
 **Exit criteria:** every component installs and works on the PC.
 
