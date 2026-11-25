@@ -22,7 +22,8 @@ export LDFLAGS="${LDFLAGS:--Wl,-z,relro,-z,now}"
 umask 022
 export PYTHONDONTWRITEBYTECODE=1   # no bytecode caches written into /usr
 
-mkdir -p "$CIG_VAR"/{sources,build,pkgs,db,logs}
+mkdir -p "$CIG_VAR"/{sources,build,pkgs,db,logs} 2>/dev/null \
+    || die "cannot create $CIG_VAR (cigbuild's work folder): run as root, or set CIG_VAR (on the host: CIG_VAR=~/.cache/cig)"
 . "$CIG_REPO/lib/hardware.sh"
 . "$CIG_REPO/lib/fixlinks.sh"
 
