@@ -2,3 +2,4 @@
 # one per line; its public half in keys/<fingerprint>.gpg). smoke update accepts a new cig
 # release only with a valid signature by one of these keys (lib/sync.sh), and
 # scripts/sign-release.sh signs only with a key listed here.
+CD38EABE19D767349A620576BFD64F1940F00EA2
