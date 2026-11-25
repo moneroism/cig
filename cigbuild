@@ -17,6 +17,7 @@
 #   cigbuild latest  <pkg>...   newest upstream release (track= limits it to a series)
 #   cigbuild info    <pkg>      show what a recipe contains
 #   cigbuild pkgfile <pkg>      path of the package file for the current recipe
+#   cigbuild sync [--check]     fetch the newest cig release, verify it with the release key
 #
 # Installing and removing is smoke's job: smoke install / remove / list / audit
 
@@ -26,8 +27,9 @@ CIG_REPO="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
 CIG_VAR="${CIG_VAR:-/var/cig}"
 . "$CIG_REPO/lib/common.sh"
 . "$CIG_REPO/lib/styles.sh"
+. "$CIG_REPO/lib/sync.sh"
 
-usage() { sed -n '8,22p' "$0" | sed 's/^# \{0,1\}//'; exit 1; }
+usage() { sed -n '8,23p' "$0" | sed 's/^# \{0,1\}//'; exit 1; }
 
 cmd=${1:-}; shift || true
 [ -n "$cmd" ] || usage
@@ -48,5 +50,6 @@ case "$cmd" in
              if [ $# -eq 1 ]; then pkg_latest "$1"; else printf '%s\n' "$@" | xargs -P 8 -n 1 "$0" latest; fi ;;
     info)    [ $# -eq 1 ] || usage; pkg_info "$1" ;;
     list)    pkg_list ;;
+    sync)    [ $# -le 1 ] && [ "${1:---check}" = --check ] || usage; cig_sync "${1:-}" ;;
     *)       usage ;;
 esac

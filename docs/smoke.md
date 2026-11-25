@@ -27,9 +27,10 @@ smoke add -c <name|url>...    compile on this device without asking    (done)
 smoke add -p <name|url>...    use a prebuilt package without asking    (done)
 smoke add -y ...              no questions (scripts, the installer)    (done)
 smoke remove <pkg>...         remove, and its orphaned dependencies    (done)
-smoke update [<pkg>...]       rebuild what its recipe changed, report   (done; applying
-                              new upstream releases (--check: report)    upstream releases on
-                                                                         the device: planned)
+smoke update [<pkg>...]       fetch cig's newest release (signed),      (done; applying
+                              rebuild what its recipes changed, report   upstream releases on
+                              new upstream releases (--check: report;    the device: planned)
+                              -l: installed recipes only, no download)
 smoke list [-a [<word>]]      packages, reason, who needs them          (done)
                               (-a: every recipe by category, with its size and
                               whether its upstream signs; <word> searches)
@@ -83,8 +84,8 @@ dwl           https://codeberg.org/dwl/dwl                              -
 - **cig's file:** `/usr/share/cig/names` (`names` in the repository), shipped with the
   recipes in cig-tools and trusted like them; for now only words for what cig itself
   needs, each pointing at a recipe (`doas` -> `opendoas`). (done)
-- **Online list** (planned, with `smoke sync`): every package, signed by the cig project
-  key (`names.sig`); smoke refuses it when the signature doesn't match.
+- **Online list** (planned): every package, signed by the cig project
+  key (`names.sig`, arriving with the release archive `smoke update` verifies); smoke refuses it when the signature doesn't match.
 - A word that names a recipe is used as it is; a target is always a recipe or a link,
   never another word. A link stops with a message until smoke can write recipes.
 
@@ -140,16 +141,27 @@ cig's own system packages are recipes in the cig repository.
   (new version, pinned SHA256, the signature checked with `gpgv` against the key seen
   before; a different key is a loud warning, default *no*), then built like any update.
   Until then, new releases arrive as updated recipes from cig.
-- **cig itself:** recipes and tools come from the cig repository
-  (GitHub; Codeberg later), are compiled on the device and verified there.
-  The repository's tags are signed by the project key.
+- **cig itself:** `smoke update` first fetches cig's newest release (`cigbuild sync`,
+  lib/sync.sh): `cig-release.tar.gz` and `cig-release.tar.gz.sig` from GitHub's latest
+  release, made by scripts/sign-release.sh from the signed tag (decided 2026-11-25: a signed
+  release archive, so no git on the device). It is used only when gpgv finds a valid
+  signature by a key in the installed `release-key` (public halves in `keys/`), and never
+  when it is older than the installed release (an old signed release served again). It shows
+  the version and which recipes it adds, changes or removes, then plans with the new recipes:
+  cig-tools (smoke, cigbuild, the recipes) is rebuilt from it like any package whose recipe
+  changed, after the same "Update n package(s)?" question (`-y` skips it, `--check` only
+  reports and keeps nothing). A release that does not verify stops the update; no release key
+  yet, no gpgv or no network leave the installed recipes (a warning). A checkout given as
+  `CIG_REPO` (development) and `smoke update --local` skip the download. A new release key
+  arrives in a release signed by a key that is already trusted. (done 2026-11-25; needs the
+  first release signed with the project key)
 
 ## Over the network (decided 2026-10-05, planned)
 
-- **Recipes** live in their own repository (`cig-recipes` on GitHub), separate from the
-  tools. `smoke sync` fetches it: a release archive with curl, verified with its detached
-  signature before anything is used (no git needed on the device). Releases are signed by
-  the cig project key.
+- **Recipes** come with cig's release archive (one repository for now; a separate
+  `cig-recipes` stays possible): `smoke update` fetches it with curl and verifies its
+  detached signature by the cig project key before anything is used (no git needed on the
+  device; done 2026-11-25, see Updates).
 - **Signature checks on the device: `gpgv`** (GnuPG's verify-only tool), because upstreams
   sign with OpenPGP. It is a package that the installer's package screen has ticked by
   default; unticking it shows a warning (yes / no) explaining that downloads can then only

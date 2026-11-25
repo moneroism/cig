@@ -330,9 +330,17 @@ gpg --verify SHA256SUMS.asc SHA256SUMS && sha256sum -c SHA256SUMS   # the ISO
 git verify-tag v<version>                                           # the source
 ```
 
+Each release also carries `cig-release.tar.gz` (the tag's tree) and its signature
+`cig-release.tar.gz.sig`: installed systems update themselves from it (`smoke update`, see
+docs/smoke.md), accepting it only with a valid signature by a key listed in `release-key`
+and never older than what is installed.
+
 The developer signs with `CIG_SIGNING_KEY=<fingerprint> scripts/sign-release.sh
-cig-<version>.iso` (makes or checks the tag on the current commit, writes and signs
-`SHA256SUMS`, verifies both, pushes and uploads nothing). `v0.2.0` and `v0.3.0` are unsigned.
+cig-<version>.iso` (the key must be listed in `release-key` with its public half in
+`keys/<fingerprint>.gpg`, both committed; makes or checks the tag on the current commit,
+writes and signs `cig-release.tar.gz` and `SHA256SUMS`, verifies them, pushes and uploads
+nothing). The release must be GitHub's "latest" release: `smoke update` fetches
+`releases/latest/download/`. `v0.2.0` and `v0.3.0` are unsigned.
 
 ### Testing in QEMU
 

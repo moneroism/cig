@@ -1,0 +1,4 @@
+# release-key - the OpenPGP keys that sign cig's releases (fingerprint of the primary key,
+# one per line; its public half in keys/<fingerprint>.gpg). smoke update accepts a new cig
+# release only with a valid signature by one of these keys (lib/sync.sh), and
+# scripts/sign-release.sh signs only with a key listed here.

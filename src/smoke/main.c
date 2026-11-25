@@ -15,13 +15,16 @@
 #include "../libre/libre.h"
 
 const char *ROOT, *PKGROOT, *INV, *CIG_VAR, *CIG_REPO, *CIGBUILD;
+static bool repo_from_env;   /* CIG_REPO given (a checkout): its recipes are the ones to use */
 
 static const char usage_text[] =
 	"  smoke add [-c|-p] [-y] <pkg>.. add and install (-c compile here, -p prebuilt, -y no questions)\n"
 	"  smoke remove  <pkg>...         remove, then its own dependencies nothing needs\n"
 	"  smoke autoremove               remove every orphaned dependency\n"
-	"  smoke update [-c|-p] [-y] [<pkg>...]\n"
-	"                                 rebuild what its recipe changed, report new upstream releases\n"
+	"  smoke update [-c|-p] [-y] [-l] [<pkg>...]\n"
+	"                                 fetch the newest cig release (signature checked), rebuild what\n"
+	"                                 its recipes changed, report new upstream releases\n"
+	"                                 (-l/--local: the installed recipes only, no download)\n"
 	"  smoke update --check [<pkg>..] only report\n"
 	"  smoke list [-a [<word>]]       installed packages, reason, who needs them\n"
 	"                                 (-a: all available by category; a word searches them)\n"
@@ -503,14 +506,52 @@ static bool update_waits(const char *name, const struct strv *todo, const struct
 }
 
 /*
- * update: packages whose recipe is newer than the installed build (another version or rel)
- * are rebuilt, dependencies first, through the same questions as add. Newer upstream
- * releases are reported: applying one means updating the recipe (pin + signature check),
- * which smoke cannot do on the device yet.
+ * sync_repo: cig's newest release (cigbuild sync: downloaded, checked with gpgv against the
+ * release key, never older than what is installed). A newer one becomes the recipes this
+ * update plans with, so cig-tools is rebuilt from it like any package whose recipe changed.
+ * A release that does not verify stops the update; no release key, no gpgv or no network
+ * only leave the installed recipes.
  */
-static int update(int argc, char **argv, bool check, enum compile compile, bool yes)
+static void sync_repo(bool check)
+{
+	char *av[] = { (char *)CIGBUILD, "sync", check ? "--check" : NULL, NULL };
+	int st = run(av, -1);
+	if (st == 1)
+		die("the cig release was refused (above): nothing changed. smoke update --local uses the installed recipes");
+	if (st != 0) {
+		warn("cig's release could not be checked: the installed recipes are used");
+		return;
+	}
+	if (check)
+		return;
+	char *ready = xasprintf("%s/repo/READY", CIG_VAR), *dir = is_file(ready) ? read_file(ready) : NULL;
+	free(ready);
+	if (!dir)
+		return;
+	dir[strcspn(dir, "\n")] = '\0';
+	char *repo_cigbuild = xasprintf("%s/cigbuild", dir);
+	if (!is_file(repo_cigbuild))
+		die("%s: no cigbuild in the verified release", dir);
+	CIG_REPO = dir;
+	CIGBUILD = repo_cigbuild;
+	/* cigbuild and the recipes it runs find the release through these */
+	if (setenv("CIG_REPO", CIG_REPO, 1) != 0 || setenv("CIGBUILD", CIGBUILD, 1) != 0)
+		die("setenv: %s", strerror(errno));
+	info("planning with the recipes of %s", dir);
+}
+
+/*
+ * update: first cig's newest release (sync_repo), unless the recipes come from a checkout
+ * (CIG_REPO) or --local. Then packages whose recipe is newer than the installed build (another
+ * version or rel) are rebuilt, dependencies first, through the same questions as add. Newer
+ * upstream releases are reported: applying one means updating the recipe (pin + signature
+ * check), which smoke cannot do on the device yet.
+ */
+static int update(int argc, char **argv, bool check, enum compile compile, bool yes, bool local)
 {
 	struct strv names = { 0 }, todo = { 0 }, from = { 0 }, to = { 0 };
+	if (!local && !repo_from_env && !*ROOT)
+		sync_repo(check);
 	for (int i = 0; i < argc; i++) {
 		if (!inv_get(argv[i]))
 			die("%s is not installed", argv[i]);
@@ -799,6 +840,7 @@ static void settings(void)
 		die("setenv: %s", strerror(errno));
 	if ((v = getenv("CIG_REPO"))) {
 		CIG_REPO = v;
+		repo_from_env = true;
 	} else {   /* recipes live next to the smoke binary */
 		if (!realpath("/proc/self/exe", exe))
 			die("cannot find myself: %s", strerror(errno));
@@ -863,7 +905,7 @@ int main(int argc, char **argv)
 			busybox_links();
 	} else if (!strcmp(cmd, "update")) {
 		enum compile compile = ASK;
-		bool yes = false, check = false;
+		bool yes = false, check = false, local = false;
 		for (; n > 0 && args[0][0] == '-'; n--, args++) {
 			if (!strcmp(args[0], "-c") || !strcmp(args[0], "--compile"))
 				compile = YES;
@@ -873,10 +915,12 @@ int main(int argc, char **argv)
 				yes = true;
 			else if (!strcmp(args[0], "-n") || !strcmp(args[0], "--check"))
 				check = true;
+			else if (!strcmp(args[0], "-l") || !strcmp(args[0], "--local"))
+				local = true;
 			else
 				usage();
 		}
-		return update(n, args, check, compile, yes);
+		return update(n, args, check, compile, yes, local);
 	} else if (!strcmp(cmd, "list")) {
 		if (n >= 1 && n <= 2 && (!strcmp(args[0], "-a") || !strcmp(args[0], "--all")))
 			list_available(n == 2 ? args[1] : "");

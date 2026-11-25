@@ -4,7 +4,7 @@
 # smoke is C (src/smoke), compiled in the build folder, never inside the repository.
 name=cig-tools
 version=$(cat "$CIG_REPO/VERSION")
-rel=17
+rel=18
 makedepends="make"
 license="GPL-3.0-or-later"
 source=""
@@ -25,7 +25,7 @@ do_install() {
     cp "$CIG_REPO/VERSION" "$s/"
     cp "$CIG_REPO/cigbuild" "$s/"
     install -m 755 "$WORK/src/smoke/smoke" "$s/smoke"
-    cp "$CIG_REPO/names" "$s/"
+    cp "$CIG_REPO/names" "$CIG_REPO/release-key" "$s/"   # release-key: which keys sign cig releases (smoke update)
     cp -R "$CIG_REPO/lib" "$CIG_REPO/packages" "$CIG_REPO/keys" "$CIG_REPO/src" "$CIG_REPO/assets" "$CIG_REPO/libre" "$s/"   # keys: gpgv checks sources against them; src, assets: used by recipes; libre: the libre-meter's data
     local d   # sources only: a build left in the checkout (on the host: glibc) must not ship
     for d in "$s"/src/*/; do [ ! -f "$d/Makefile" ] || make -C "$d" clean >/dev/null; done
