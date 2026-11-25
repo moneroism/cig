@@ -363,8 +363,7 @@ makedepends="llvm compiler-rt rust rust-bindgen nodejs gn go esbuild typescript-
     hwdata"
 style=custom
 nostrip=1   # strip with llvm's tools (the binaries come from clang/lld)
-# not an installer component until rel 2 is built (static libgcc; rel 1 linked gcc's shared
-# libgcc_s, which installed systems do not have): group="desktop"
+group="desktop"
 _src() { echo "$WORK/chromium-$version"; }
 pre_build() {
     # Chromium's Rust code and crubit use nightly features on a stable rustc (as Alpine does)

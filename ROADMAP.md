@@ -237,8 +237,11 @@ is detected, and everything else renders with pixman. Not yet tested on the RX57
   (Chromium, optional, off by default: built 2026-11-16, Chromium 157, Wayland only, its sandbox
   works on musl; tested in a headless dwl session, not yet on the laptop) and the laptop install.
   Chromium rel 2 (libgcc linked statically: rel 1 needed gcc's libgcc_s, found by
-  build-media's dependency check 2026-11-17) needs a clean build; until then it is no installer
-  component. Later: a gcc-libs runtime package (libgcc_s, libstdc++) when more C++ programs
+  build-media's dependency check 2026-11-17): done 2026-11-25 by relinking only chrome and
+  chrome_crashpad_handler in the rel 1 tree (minutes instead of a clean ~2-day build; the
+  regenerated ninja files had changed every compile command only because the trial tree's
+  compat header path differed); installer component again (desktop, off). A clean build from
+  the recipe is still open. Later: a gcc-libs runtime package (libgcc_s, libstdc++) when more C++ programs
   need it (decided 2026-11-17; needs a takeover rule in smoke for systems that have gcc).
   After the 0.3.0 audit fixes (decided 2026-11-17): cava, the terminal audio visualizer
   (needs fftw and iniparser, both new recipes; upstream signs nothing, flagged like the others;
