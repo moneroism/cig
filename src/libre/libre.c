@@ -461,6 +461,35 @@ char *libre_report(const struct libre *l)
 			        l->v[i].alt, l->v[i].name);
 			sug++;
 		}
+	/* drivers whose non-free firmware has no free replacement: said once per driver (no
+	 * hardware advice: the developer's choice 2026-11-25) */
+	for (int i = 0; i < l->n; i++) {
+		const struct libre_item *it = &l->v[i];
+		if (it->cls != LIBRE_NONFREE || strcmp(it->kind, "firmware") || it->alt[0])
+			continue;
+		const char *bar = strchr(it->why, '|');
+		int dl = bar ? (int)(bar - it->why) : 0;
+		bool seen = false;
+		int count = 0;
+		for (int j = 0; j < l->n; j++) {
+			const struct libre_item *o = &l->v[j];
+			if (o->cls != LIBRE_NONFREE || strcmp(o->kind, "firmware") || o->alt[0])
+				continue;
+			const char *ob = strchr(o->why, '|');
+			int ol = ob ? (int)(ob - o->why) : 0;
+			bool same = dl ? ol == dl && !strncmp(o->why, it->why, (size_t)dl) : o == it;
+			if (same && j < i)
+				seen = true;
+			count += same;
+		}
+		if (seen)
+			continue;
+		if (dl)
+			bprintf(&b, "  no free drivers available for %.*s (%d non-free firmware file%s)\n",
+			        dl, it->why, count, count == 1 ? "" : "s");
+		else
+			bprintf(&b, "  no free drivers available for %s\n", it->name);
+	}
 	if (nn - sug > 0)
 		bprintf(&b, "  Non-free firmware without a free replacement can be left out on the firmware\n"
 		            "  screen; its device then may not work.\n");

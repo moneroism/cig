@@ -70,6 +70,13 @@ int main(int argc, char **argv)
 		printf("FAIL: no suggestion in the report\n");
 		fails++;
 	}
+	/* a driver without a free replacement is named once; one that has one is not */
+	if (!strstr(r, "no free drivers available for amdgpu (1 non-free firmware file)") ||
+	    !strstr(r, "no free drivers available for no/such/file.bin") ||
+	    strstr(r, "no free drivers available for ath9k_htc")) {
+		printf("FAIL: 'no free drivers' lines\n");
+		fails++;
+	}
 	if (getenv("LIBRE_SHOW"))
 		fputs(r, stdout);
 	free(r);
