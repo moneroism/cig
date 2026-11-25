@@ -1,10 +1,10 @@
 # automake - generates Makefile.in files (build tool)
 name=automake
-version=1.18.1
+version=1.20
 license="GPL-2.0-or-later"
 source="https://ftp.gnu.org/gnu/automake/automake-$version.tar.xz"
 signature="https://ftp.gnu.org/gnu/automake/automake-$version.tar.xz.sig"
-keys="17D3311B14BC0F248267BF020716748A30D155AD"
-sha256="168aa363278351b89af56684448f525a5bce5079d0b6842bd910fdd3f1646887"
+keys="17D3311B14BC0F248267BF020716748A30D155AD 6C222EA6B2BD216AA406516AC868F0B6DE38409D"
+sha256="f6f34dad4cbe395715762b0710f7c511e39bd5cf777e6b95818ccbecf7714248"
 depends="perl autoconf"
 style=gnu
