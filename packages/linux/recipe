@@ -11,10 +11,9 @@
 #
 # The module signing key is generated during the build and deleted after.
 name=linux
-_kver=6.18.54
+_kver=6.18.65
 _hardened=hardened1
 version=$_kver.$_hardened
-rel=4
 _tag="v$_kver-$_hardened"
 _aports=8f13294206888f3dd44ed74a8eb3dd9934499e81
 # updates: linux-hardened releases of the 6.18 LTS series
@@ -28,7 +27,7 @@ signature="https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-$_kver.tar.sign
     https://github.com/anthraxx/linux-hardened/releases/download/$_tag/linux-hardened-$_tag.patch.sig
     -"
 keys="647F28654894E3BD457199BE38DBBDC86092693E E240B57E2C4630BA768E2F26FC1B547C8D8172C8"
-sha256="9df30b02dd8102bbd0be52556288ef6889ddbe7f1ddb96fbf847d0becf3eacac 78fe6fe4d5e3612206e3753e8aab74fd8080137ff5beb02f9d4491bd99624069 39e09418cd8e0142ac49f1ffe21256e9cd94363bb0a6b05bce312e345a5d51cd"
+sha256="c92606f956f09dc50b5a0e2af9e86763fce27ada1647de97f8d1ac8cfc95801d 8ded676e2f382f35ba3a0b3afd5be3e246148c1d4e25d1789c8d8395f58db3b6 39e09418cd8e0142ac49f1ffe21256e9cd94363bb0a6b05bce312e345a5d51cd"
 wrksrc="linux-$_kver"
 makedepends="elfutils openssl perl bison flex gmp mpfr mpc"
 style=custom

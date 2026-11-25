@@ -1,13 +1,13 @@
 # linux-headers - kernel API headers for userspace (from the same tarball as the kernel)
 name=linux-headers
-version=6.18.54
+version=6.18.65
 # updates: the kernel's series (6.18 LTS)
 track=6.18
 license="GPL-2.0-only WITH Linux-syscall-note"
 source="https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-$version.tar.xz"
 signature="https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-$version.tar.sign"
 keys="647F28654894E3BD457199BE38DBBDC86092693E"
-sha256="9df30b02dd8102bbd0be52556288ef6889ddbe7f1ddb96fbf847d0becf3eacac"
+sha256="c92606f956f09dc50b5a0e2af9e86763fce27ada1647de97f8d1ac8cfc95801d"
 style=custom
 do_build() { make headers; }
 do_install() {
