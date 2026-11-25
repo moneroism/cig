@@ -2,13 +2,12 @@
 # (BlueZ, iwd; mako's session bus). Nothing else in cig needs it, and its service runs only
 # when such a component does.
 name=dbus
-version=1.16.2
-rel=2
+version=1.16.4
 license="AFL-2.1 OR GPL-2.0-or-later"
 source="https://dbus.freedesktop.org/releases/dbus/dbus-$version.tar.xz"
 keys="DA98F25C0871C49A59EAFF2C4DE8FF2A63C7CC90"
 signature="https://dbus.freedesktop.org/releases/dbus/dbus-$version.tar.xz.asc"
-sha256="0ba2a1a4b16afe7bceb2c07e9ce99a8c2c3508e5dec290dbb643384bd6beb7e2"
+sha256="d08b05526c2cb7966a5fb79210d6112b1aca3d135f315c1b302e14b4b0297dac"
 depends="expat"
 makedepends="meson pkgconf"
 style=meson
