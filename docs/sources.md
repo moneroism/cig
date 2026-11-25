@@ -68,7 +68,6 @@ on first download (trust on first use), and `smoke add` warns about it on every 
 | linux (Alpine config), elfutils (musl patch) | files from Alpine's aports at a pinned commit; the commit's authenticity is not checked | signed aports commits, or cig's own reviewed config (Phase 5) |
 | ca-certificates | curl.se's extract of Mozilla's CA store, unsigned | build from Mozilla's certdata at a verified revision |
 | freetype | signed (2.14.3), but the key E3067470…BE6C3AAC63AD8E3F ("Werner Lemberg <wl@gnu.org>", 2019) carries only its own signatures: his older key 58E0C111…C1A60EACE707FDA5, the one keys.openpgp.org verified for that address, does not certify it, and freetype.org names no key; trusted by the developer on 2026-11-03 (long-time maintainer, same address) | the maintainer cross-certifies the key or freetype.org publishes it |
-| rsync | signed (3.5.1), but by C0E10545…6A64E8AA2EFBCF5D ("Zen Dodd", created 2026-04), a key rsync.samba.org does not name (it names Wayne Davison and Andrew Tridgell); not trusted, the SHA256 pin stays (2026-11-03) | rsync announces the new signer on its own site |
 | lua, mandoc, sinit, tree, mtdev, font-jetbrains-mono, libudev-zero, musl-fts, musl-obstack, argp-standalone | no signature and no independently published checksum | none upstream |
 
 ## Current table
