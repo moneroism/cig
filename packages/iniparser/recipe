@@ -1,0 +1,18 @@
+# iniparser - INI file parser library (cava reads its config with it)
+# Unsigned upstream (tags not signed, no release files): the tag archive from the project's own
+# GitLab. Same tree as the GitHub mirror's v4.3.2 archive (only the logo PNGs differ), whose
+# SHA256 is in Arch's PKGBUILD (e9eb6be5...), checked 2026-11-25.
+name=iniparser
+version=4.3.2
+license="MIT"
+source="iniparser-$version.tar.gz::https://gitlab.com/iniparser/iniparser/-/archive/v$version/iniparser-v$version.tar.gz"
+sha256="d7382f72f94649afa7a9d61346a7fc31cd3ff9ae389a71f92770133d49f1b22c"
+makedepends="cmake make"
+style=custom
+wrksrc="iniparser-v$version"
+do_build() {
+    cmake -B build -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_INSTALL_LIBDIR=lib -DCMAKE_BUILD_TYPE=Release \
+        -DBUILD_STATIC_LIBS=OFF -DBUILD_TESTING=OFF -DBUILD_DOCS=OFF -DBUILD_EXAMPLES=OFF
+    make -C build
+}
+do_install() { make -C build DESTDIR="$DEST" install; }

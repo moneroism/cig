@@ -42,7 +42,7 @@ Keys are fetched by ID from public keyservers only, never from the forge that ho
 All checks also run on the host when a source is pinned (`cigbuild pin`, `cigbuild sig`). Every other source is **flagged**: its SHA256 was pinned
 on first download (trust on first use), and `smoke add` warns about it on every install.
 
-`scripts/audit-sources.sh` prints the current table (below, as of 2026-11-03).
+`scripts/audit-sources.sh` prints the current table (below, as of 2026-11-25).
 
 ## Flagged sources and why
 
@@ -54,6 +54,7 @@ on first download (trust on first use), and `smoke add` warns about it on every 
 | pango, fontconfig, tllist, wmenu, seatd, pkgconf, perl | tags are signed, but the keys are not on public keyservers (or the signatures are SSH, which is not checked yet) | find the keys on an independent source; SSH tag signatures |
 | json-c, libxkbcommon, tmux, libffi, samurai, vulkan-headers, labwc, pipewire (+ wireplumber), pipewire-bluetooth | tags unsigned (labwc: matches Alpine's SHA-512; pipewire, wireplumber: each tarball is its tag's tree, whose git archive matches Arch's BLAKE2 sum) (vulkan-headers: annotated but not verifiable), releases unsigned | none upstream |
 | libyaml | release unsigned (GitHub); the tarball matches Alpine's SHA-512 (main/yaml) | none upstream |
+| fftw, cava, iniparser | releases and tags unsigned (fftw.org: only an MD5 file on the same host); fftw and cava match Void's SHA256 and Alpine's SHA-512; iniparser's GitLab archive holds the same tree as the GitHub mirror's, whose SHA256 is in Arch's PKGBUILD | none upstream |
 | glslang, fastfetch, wl-clipboard, jq, htop, dwl, vulkan-loader, brightnessctl | lightweight tags (cannot be signed), releases unsigned (jq: Sigstore attestation, htop: a SHA256 file on the same host) | Sigstore verification for jq |
 | go | Go's source releases are not GPG-signed (the pins match go.dev's checksum list, same host); built from source alone, from Go 1.4 (C) up | signed releases |
 | gn | no releases or signed tags; gn.googlesource.com generates archives per download (never byte-identical): the pin matches cig's cached copy, a fresh download fails | a git source type pinned by commit |
@@ -89,11 +90,13 @@ on first download (trust on first use), and `smoke add` warns about it on every 
 | busybox | busybox.net | upstream GPG signature |
 | ca-certificates | curl.se | **UNVERIFIED** (pinned SHA256 only, trusted on first use) |
 | cairo | cairographics.org | signed git tag (archive = tag tree) |
+| cava | github.com | **UNVERIFIED** (pinned SHA256 only, trusted on first use) |
 | chromium | commondatastorage.googleapis.com | **UNVERIFIED** (pinned SHA256 only, trusted on first use) |
 | chromium | github.com | **UNVERIFIED** (pinned SHA256 only, trusted on first use) |
 | chromium | static.crates.io | **UNVERIFIED** (pinned SHA256 only, trusted on first use) |
 | chrony | chrony-project.org | upstream GPG signature |
 | cmake | github.com | signed checksum file |
+| compiler-rt | github.com | upstream GPG signature |
 | curl | curl.se | upstream GPG signature |
 | dbus | dbus.freedesktop.org | upstream GPG signature |
 | dosfstools | github.com | upstream GPG signature |
@@ -105,6 +108,7 @@ on first download (trust on first use), and `smoke add` warns about it on every 
 | expat | github.com | upstream GPG signature |
 | fastfetch | github.com | **UNVERIFIED** (pinned SHA256 only, trusted on first use) |
 | fcft | codeberg.org | signed git tag (archive = tag tree) |
+| fftw | www.fftw.org | **UNVERIFIED** (pinned SHA256 only, trusted on first use) |
 | file | astron.com | upstream GPG signature |
 | flex | github.com | upstream GPG signature |
 | font-jetbrains-mono | github.com | **UNVERIFIED** (pinned SHA256 only, trusted on first use) |
@@ -127,6 +131,7 @@ on first download (trust on first use), and `smoke add` warns about it on every 
 | harfbuzz | github.com | signed git tag (archive = tag tree) |
 | htop | github.com | **UNVERIFIED** (pinned SHA256 only, trusted on first use) |
 | hwdata | github.com | signed git tag (archive = tag tree) |
+| iniparser | gitlab.com | **UNVERIFIED** (pinned SHA256 only, trusted on first use) |
 | iwd | cdn.kernel.org | upstream GPG signature |
 | jq | github.com | **UNVERIFIED** (pinned SHA256 only, trusted on first use) |
 | json-c | github.com | **UNVERIFIED** (pinned SHA256 only, trusted on first use) |
@@ -195,7 +200,7 @@ on first download (trust on first use), and `smoke add` warns about it on every 
 | python-pyyaml | files.pythonhosted.org | **UNVERIFIED** (pinned SHA256 only, trusted on first use) |
 | python | www.python.org | upstream GPG signature |
 | readline | ftp.gnu.org | upstream GPG signature |
-| rsync | download.samba.org | **UNVERIFIED** (signed, but no trusted key: pinned SHA256 only) |
+| rsync | download.samba.org | upstream GPG signature |
 | rust-bindgen | github.com | **UNVERIFIED** (pinned SHA256 only, trusted on first use) |
 | rust-bindgen | static.crates.io | **UNVERIFIED** (pinned SHA256 only, trusted on first use) |
 | rust | static.rust-lang.org | upstream GPG signature |
@@ -213,6 +218,8 @@ on first download (trust on first use), and `smoke add` warns about it on every 
 | tllist | codeberg.org | **UNVERIFIED** (pinned SHA256 only, trusted on first use) |
 | tmux | github.com | **UNVERIFIED** (pinned SHA256 only, trusted on first use) |
 | tree | oldmanprogrammer.net | **UNVERIFIED** (pinned SHA256 only, trusted on first use) |
+| typescript-go | github.com | **UNVERIFIED** (pinned SHA256 only, trusted on first use) |
+| typescript-go | proxy.golang.org | **UNVERIFIED** (pinned SHA256 only, trusted on first use) |
 | unbound | nlnetlabs.nl | upstream GPG signature |
 | util-linux | cdn.kernel.org | upstream GPG signature |
 | vim | github.com | signed git tag (archive = tag tree) |
@@ -232,4 +239,4 @@ on first download (trust on first use), and `smoke add` warns about it on every 
 | zlib | github.com | upstream GPG signature |
 | zstd | github.com | upstream GPG signature |
 
-101 sources verified, 476 flagged.
+103 sources verified, 514 flagged.

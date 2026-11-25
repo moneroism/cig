@@ -1,0 +1,13 @@
+# fftw - fast Fourier transform library (double precision; cava's spectrum)
+# Unsigned upstream (fftw.org publishes only an MD5 sum next to the tarball); the checksum matches
+# independent sources (Void's template: same SHA256; Alpine's aports, main/fftw: sha512 ca1bf804...).
+name=fftw
+version=3.3.11
+license="GPL-2.0-or-later"
+source="https://www.fftw.org/fftw-$version.tar.gz"
+sha256="5630c24cdeb33b131612f7eb4b1a9934234754f9f388ff8617458d0be6f239a1"
+upstream="https://www.fftw.org/download.html"
+style=gnu
+# double precision only (what cava uses); the SIMD kernels are chosen at run time by CPU
+# detection, so the generic build is fast on every x86_64; no Fortran wrappers, no static library
+configure_args="--enable-shared --disable-static --disable-fortran --enable-sse2 --enable-avx --enable-avx2"

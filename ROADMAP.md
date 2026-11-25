@@ -241,7 +241,11 @@ is detected, and everything else renders with pixman. Not yet tested on the RX57
   component. Later: a gcc-libs runtime package (libgcc_s, libstdc++) when more C++ programs
   need it (decided 2026-11-17; needs a takeover rule in smoke for systems that have gcc).
   After the 0.3.0 audit fixes (decided 2026-11-17): cava, the terminal audio visualizer
-  (needs fftw and iniparser, both new recipes; upstream signs nothing, flagged like the others)
+  (needs fftw and iniparser, both new recipes; upstream signs nothing, flagged like the others;
+  done 2026-11-25: cava 1.0.0 with the PipeWire and ALSA inputs, so it pulls in PipeWire
+  (developer's choice); installer component in "sound", off; built and installed with
+  `smoke add -c` in a throwaway dev VM, audit clean, spectrum from a FIFO, PipeWire input
+  connects; real sound only on hardware)
 
 - components as recipes, offered in the installer:
   PipeWire (optional, off by default: done 2026-11-03, with WirePlumber and its PulseAudio

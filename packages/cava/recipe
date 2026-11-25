@@ -1,0 +1,26 @@
+# cava - audio spectrum visualizer for the terminal (PipeWire or ALSA input)
+# Unsigned upstream (tags not signed, release files unsigned): the tag archive, whose checksum
+# matches Void's template (same SHA256) and Alpine's aports (testing/cava: sha512 a1a13500...).
+# The archive has no configure script: it is generated with autoreconf.
+name=cava
+version=1.0.0
+license="MIT"
+source="cava-$version.tar.gz::https://github.com/karlstav/cava/archive/refs/tags/$version.tar.gz"
+sha256="2866cea11d0bd38406924ab2b47d5577f14909a7321ee928b6836391f375af7e"
+# PipeWire is the input that captures what is playing (decided 2026-11-25): installing cava
+# installs PipeWire, which startdwl then starts with the session
+depends="fftw iniparser ncurses alsa-lib pipewire"
+makedepends="autoconf automake libtool pkgconf make"
+style=custom
+group="sound"
+# no PulseAudio library (PipeWire's pulse server is used through the PipeWire input), no
+# PortAudio, sndio, JACK or SDL/OpenGL output; the console font stays (upstream default)
+do_build() {
+    echo "$version" > version    # what autogen.sh does outside a git checkout
+    autoreconf -fi
+    ./configure --prefix=/usr --sysconfdir=/etc \
+        --disable-input-pulse --disable-input-portaudio --disable-input-sndio --disable-input-jack \
+        --disable-output-sdl
+    make
+}
+do_install() { make DESTDIR="$DEST" install; }

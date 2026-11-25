@@ -66,3 +66,4 @@ gn.googlesource.com         gn (Chromium's build tool, its own git host)
 archive.mozilla.org         Mozilla (NSS, NSPR)
 static.crates.io            crates.io (Rust libraries: their official release channel)
 proxy.golang.org            Go module mirror (Go modules: their official channel; go.sum checks them)
+www.fftw.org                FFTW
