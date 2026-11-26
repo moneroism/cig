@@ -1,8 +1,12 @@
 # linux-firmware - device firmware. Never CPU microcode.
 #
 # Only what this machine needs is unpacked and installed:
-#   CIG_FIRMWARE=all             everything (install media)
+#   CIG_FIRMWARE=all             everything (install media), zstd-compressed (the kernel reads
+#                                .zst firmware: FW_LOADER_COMPRESS_ZSTD)
 #   CIG_FIRMWARE_LIST=<file>     explicit list, one path per line (the installer)
+#   CIG_FIRMWARE_TREE=<folder>   with a list: the files from that firmware tree instead of the
+#                                archive (the installer on the install medium: the live system's,
+#                                all of this recipe's verified archive); nothing is downloaded
 #   /etc/cig/firmware.list       explicit list on an installed system
 #   otherwise                    detect: firmware requested by the drivers in use now
 # What got installed is listed in /usr/share/cig/firmware.list, and each file's licence (from
@@ -18,6 +22,7 @@ sha256="2cabe10253005f55bf4bbc0ebb25c0964d66f7c4121ffa47853ff1e70ea1aa54"
 style=custom
 nostrip=1
 noextract=1          # the archive is large; unpack only the selected files
+if [ -n "${CIG_FIRMWARE_TREE:-}" ]; then source="" signature="" sha256="" keys=""; fi
 
 _tarball() { echo "$CIG_VAR/sources/linux-firmware-$version.tar.xz"; }
 _top="linux-firmware-$version"
@@ -56,12 +61,12 @@ do_build() {
     mkdir -p "$WORK/out"
     if [ "${CIG_FIRMWARE:-}" = all ]; then
         tar -C "$WORK" -xf "$(_tarball)"
-        ( cd "$WORK/$_top" && { sh copy-firmware.sh --ignore-duplicates "$WORK/out" 2>/dev/null \
-                                || sh copy-firmware.sh "$WORK/out"; } )
+        ( cd "$WORK/$_top" && { sh copy-firmware.sh --zstd --ignore-duplicates "$WORK/out" 2>/dev/null \
+                                || sh copy-firmware.sh --zstd "$WORK/out"; } )
         rm -rf "$WORK/out/intel-ucode" "$WORK/out/amd-ucode"
         # nor the non-free files that have a free replacement (libre/alternatives)
         awk '$1 == "firmware" { print $2 }' "$CIG_REPO/libre/alternatives" | while read -r f; do
-            rm -f "$WORK/out/$f"
+            rm -f "$WORK/out/$f" "$WORK/out/$f.zst"
         done
         return
     fi
@@ -69,6 +74,21 @@ do_build() {
     _wanted > "$WORK/wanted"
     if [ ! -s "$WORK/wanted" ]; then echo "no firmware selected"; return; fi
     echo "firmware requested: $(wc -l < "$WORK/wanted") file(s)"
+
+    if [ -n "${CIG_FIRMWARE_TREE:-}" ]; then   # plain files, as from the archive
+        while read -r f; do
+            if [ -f "$CIG_FIRMWARE_TREE/$f" ]; then
+                install -D -m 644 "$CIG_FIRMWARE_TREE/$f" "$WORK/out/$f"
+            elif [ -f "$CIG_FIRMWARE_TREE/$f.zst" ]; then
+                mkdir -p "$(dirname "$WORK/out/$f")"
+                zstd -dqc "$CIG_FIRMWARE_TREE/$f.zst" > "$WORK/out/$f"
+                chmod 644 "$WORK/out/$f"
+            else
+                echo "not in the firmware tree $CIG_FIRMWARE_TREE: $f"
+            fi
+        done < "$WORK/wanted"
+        return
+    fi
 
     # pass 1: the requested names plus WHENCE (which defines links between names)
     tar -C "$WORK" -xf "$(_tarball)" "$_top/WHENCE" \
@@ -104,12 +124,18 @@ do_build() {
 do_install() {
     mkdir -p "$DEST/usr/lib/firmware" "$DEST/usr/share/cig"
     cp -R "$WORK/out/." "$DEST/usr/lib/firmware/"
-    ( cd "$DEST/usr/lib/firmware" && find . -type f | sed 's#^\./##' | sort ) > "$DEST/usr/share/cig/firmware.list"
+    # names without .zst (the kernel finds the compressed file by the plain name)
+    ( cd "$DEST/usr/lib/firmware" && find . -type f | sed 's#^\./##; s#\.zst$##' | sort ) > "$DEST/usr/share/cig/firmware.list"
     echo "firmware files installed: $(wc -l < "$DEST/usr/share/cig/firmware.list")"
     # the licence of each installed file (libre-meter): WHENCE, and libre/firmware for free
     # firmware whose source is kept outside linux-firmware
     : > "$DEST/usr/share/cig/firmware.licenses"
-    if [ -s "$DEST/usr/share/cig/firmware.list" ]; then
+    if [ -s "$DEST/usr/share/cig/firmware.list" ] && [ -n "${CIG_FIRMWARE_TREE:-}" ]; then
+        # the tree's own licence list (made from WHENCE when the tree was built)
+        awk -F'\t' 'NR == FNR { want[$0] = 1; next } $1 in want' "$DEST/usr/share/cig/firmware.list" \
+            /usr/share/cig/firmware.licenses | sort > "$DEST/usr/share/cig/firmware.licenses"
+        echo "free firmware files: $(awk -F'\t' '$2 == "free"' "$DEST/usr/share/cig/firmware.licenses" | wc -l)"
+    elif [ -s "$DEST/usr/share/cig/firmware.list" ]; then
         awk -f "$PKGDIR/files/whence-index.awk" "$CIG_REPO/libre/firmware" "$WORK/$_top/WHENCE" \
             | awk -F'\t' 'NR == FNR { want[$0] = 1; next } $1 in want' \
                   "$DEST/usr/share/cig/firmware.list" - | sort > "$DEST/usr/share/cig/firmware.licenses"
