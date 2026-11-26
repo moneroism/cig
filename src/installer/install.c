@@ -413,6 +413,110 @@ static void efi_boot_entry(struct state *s, const struct part *esp)
 	logf_("boot entry %s \"cig\" -> \\EFI\\BOOT\\BOOTX64.EFI on partition %d\n", name, esp->num);
 }
 
+/* ---------------- the network ---------------- */
+
+/* the wpa_supplicant network block for the WiFi network chosen in Hardware: WiFi, or NULL.
+ * WPA2: the psk wpa_passphrase derives (the passphrase goes through stdin: never in a command
+ * line or the log; in_target: the new system's wpa_passphrase). WPA3 (SAE) needs the passphrase
+ * itself: sae_password, in a root-only file as with NetworkManager and iwd. Name and passphrase
+ * as hex: the config parser can't take a '"' inside a quoted value. The caller wipes and frees it */
+static char *wifi_block(struct state *s, bool in_target)
+{
+	char *in = xasprintf("%s\n", s->psk);
+	char *chr[] = { "chroot", TARGET, "wpa_passphrase", s->ssid, NULL };
+	char *live[] = { "wpa_passphrase", s->ssid, NULL };
+	char *net = capture_input(in_target ? chr : live, in), *psk = net ? strstr(net, "\n\tpsk=") : NULL;
+	memset(in, 0, strlen(in));
+	free(in);
+	if (psk && strspn(psk += 6, "0123456789abcdef") == 64 && (psk[64] == '\n' || !psk[64]))
+		psk[64] = '\0';
+	else
+		psk = NULL;
+	char *b = NULL;
+	if (psk) {
+		size_t n = strlen(s->ssid) * 2 + strlen(s->psk) * 2 + 256, k;
+		b = xmalloc(n);
+		k = (size_t)snprintf(b, n, "network={\n\tssid=");
+		for (const unsigned char *c = (const unsigned char *)s->ssid; *c; c++)
+			k += (size_t)snprintf(b + k, n - k, "%02x", *c);
+		k += (size_t)snprintf(b + k, n - k, "\n\tpsk=%s\n\tsae_password=", psk);
+		for (const unsigned char *c = (const unsigned char *)s->psk; *c; c++)
+			k += (size_t)snprintf(b + k, n - k, "%02x", *c);
+		snprintf(b + k, n - k, "\n\tkey_mgmt=WPA-PSK SAE\n\tieee80211w=1\n}\n");
+	}
+	if (net) {
+		memset(net, 0, strlen(net));   /* #psk="<passphrase>" comes before psk= */
+		free(net);
+	}
+	return b;
+}
+
+/* does the medium carry prebuilt packages (an offline medium)? A netinstall medium has none */
+static bool medium_has_packages(void)
+{
+	DIR *d = opendir("/var/cig/pkgs");
+	struct dirent *e;
+	bool yes = false;
+	while (d && !yes && (e = readdir(d)))
+		yes = strstr(e->d_name, ".tar.gz") != NULL;
+	if (d)
+		closedir(d);
+	return yes;
+}
+
+/* a DHCP lease on ifname (BusyBox udhcpc: its script writes /etc/resolv.conf, in RAM on the
+ * live system); tries: discover attempts, 3 s apart */
+static bool dhcp(const char *ifname, const char *tries)
+{
+	char *up[] = { "ip", "link", "set", (char *)ifname, "up", NULL };
+	char *dh[] = { "udhcpc", "-i", (char *)ifname, "-n", "-q", "-t", (char *)tries, NULL };
+	run(up);
+	return run(dh) == 0;
+}
+
+/* the live system online: a network cable first, then the WiFi network chosen for the new
+ * system. With prebuilt packages, cig's package pool must answer with an index signed by a cig
+ * release key (cigbuild pool). Before anything on the disk changes */
+static void live_network(struct state *s)
+{
+	step("Connecting to the network");
+	bool up = file_exists("/sys/class/net/eth0") && dhcp("eth0", "4");
+	if (!up && *s->ssid && file_exists("/sys/class/net/wlan0")) {
+		const char *conf = "/run/cig-install-wpa.conf";
+		char *net = wifi_block(s, false);
+		FILE *f = net ? fopen(conf, "w") : NULL;
+		bool ok = f && chmod(conf, 0600) == 0;
+		if (f) {
+			fprintf(f, "ctrl_interface=/run/wpa_supplicant\n%s", net);
+			ok = fclose(f) == 0 && ok;
+		}
+		if (net) {
+			memset(net, 0, strlen(net));
+			free(net);
+		}
+		char *rf[] = { "rfkill", "unblock", "wifi", NULL };
+		char *ws[] = { "wpa_supplicant", "-B", "-i", "wlan0", "-c", (char *)conf, NULL };
+		run(rf);   /* optional: not every system has rfkill or a block */
+		if (ok) {
+			char *up_[] = { "ip", "link", "set", "wlan0", "up", NULL };
+			run(up_);
+			up = run(ws) == 0 && dhcp("wlan0", "10");
+		}
+		unlink(conf);   /* wpa_supplicant has read it */
+	}
+	if (!up)
+		fail(*s->ssid ? "no network: neither a network cable nor the WiFi network gave an address.\n"
+		                "Packages come from the network (this medium carries none)."
+		              : "no network: plug in a network cable, or choose a WiFi network\n"
+		                "(Hardware: WiFi). Packages come from the network (this medium carries none).");
+	if (!s->compile_pkgs) {
+		char *argv[] = { "env", "CIG_VAR=/run/cig-pool", (char *)s->cigbuild, "pool", NULL };
+		if (run(argv) != 0)
+			fail("cig's package pool did not answer with a verified index (see the log).\n"
+			     "Try again later, or choose to compile the packages here.");
+	}
+}
+
 /* ---------------- the install ---------------- */
 
 void do_install(struct state *s)
@@ -435,6 +539,9 @@ void do_install(struct state *s)
 		if (run(argv) != 0)
 			logf_("    ! cig-check did not finish (the install goes on)\n");
 	}
+
+	if (!medium_has_packages() && !getenv("CIG_INSTALL_DEMO"))
+		live_network(s);
 
 	/* ---- partitioning ---- */
 	step("Partitioning /dev/%s", s->disk);
@@ -623,8 +730,13 @@ void do_install(struct state *s)
 		free(f);
 		step("Selecting firmware");
 		setenv("CIG_FIRMWARE_LIST", TARGET "/etc/cig/firmware.list", 1);
+		/* from the live system's firmware (the medium's, all of linux-firmware, zstd-compressed)
+		 * instead of downloading the whole linux-firmware archive for a few files */
+		if (file_exists("/etc/cig/live") && file_exists("/usr/share/cig/firmware.licenses"))
+			setenv("CIG_FIRMWARE_TREE", "/usr/lib/firmware", 1);
 		RUN(s->cigbuild, "build", "linux-firmware");
 		unsetenv("CIG_FIRMWARE_LIST");
+		unsetenv("CIG_FIRMWARE_TREE");
 	}
 	if (!s->compile_pkgs)
 		setenv("CIG_PKG_MIRROR", media_pkgs, 1);   /* only after kernel and firmware */
@@ -665,34 +777,9 @@ void do_install(struct state *s)
 	unsetenv("CIG_SOURCE_MIRROR");
 	unsetenv("CIG_PKG_MIRROR");
 
-	/* the medium's prebuilt package of every recipe stays on the new system (in
-	 * /var/cig/prebuilt, not installed; about 300 MiB): without them it could add nothing later,
-	 * not even the build tools needed to compile (there is no package server). Apart from
-	 * /var/cig/pkgs, so smoke uses them only when prebuilt is chosen (smoke add -c compiles every
-	 * missing dependency). Packages compiled for this machine above are not duplicated. The
-	 * media-only installer and live system stay out. */
-	step("Prebuilt packages for later (smoke add)");
-	{
-		char *argv[] = { "sh", "-c",
-			"for r in \"$0\"/packages/*/recipe; do p=${r%/recipe}; p=${p##*/};"
-			" case $p in linux|linux-firmware|cig-installer|cig-live) continue ;; esac;"
-			" f=$(CIG_VAR=\"$1\" \"$0\"/cigbuild pkgfile \"$p\" 2>/dev/null) && [ -f \"$f\" ] || continue;"
-			" [ ! -e \"$3/${f##*/}\" ] || continue; b=\"$2/${f##*/}\"; [ -e \"$b\" ] || cp \"$f\" \"$b\" || exit 1;"
-			" [ ! -f \"$f.sha256\" ] || [ -e \"$b.sha256\" ] || cp \"$f.sha256\" \"$b.sha256\" || exit 1;"
-			" done",
-			s->share, (char *)media_var, TARGET "/var/cig/prebuilt", TARGET "/var/cig/pkgs", NULL };
-		mkdirs(TARGET "/var/cig/prebuilt");
-		if (run(argv) != 0) {
-			logf_("    ! not every prebuilt package could be kept\n");
-			snprintf(s->warnings + strlen(s->warnings), sizeof(s->warnings) - strlen(s->warnings),
-			         "Not every prebuilt package could be kept for later (see the log).\n");
-		}
-		/* their installed sizes, for smoke list -a */
-		char *sz = xasprintf("%s/pkgs/sizes", media_var);
-		if (file_exists(sz))
-			RUN("cp", sz, TARGET "/var/cig/prebuilt/sizes");
-		free(sz);
-	}
+	/* later additions come from cig's package pool or are compiled (smoke add -p / -c): the
+	 * medium's prebuilt packages are no longer kept on the new system (they were ~300 MiB). Its
+	 * verified pool index stays in /var/cig/pool: an older one is refused from now on */
 	RUN("sh", "-c", "rm -rf " TARGET "/var/cig/build/*");
 
 	step("Running package setup inside the new system");
@@ -794,34 +881,16 @@ void do_install(struct state *s)
 		RUN("ln", "-sfn", "/etc/sv/wpa_supplicant", TARGET "/etc/service/wpa_supplicant");
 		RUN("ln", "-sfn", "/etc/sv/udhcpc-wlan0", TARGET "/etc/service/udhcpc-wlan0");
 		if (*s->ssid) {
-			/* WPA2: the psk wpa_passphrase derives (the passphrase goes through stdin: never in
-			 * a command line or the log). WPA3 (SAE) needs the passphrase itself: sae_password,
-			 * in a root-only file as with NetworkManager and iwd. Name and passphrase as hex:
-			 * the config parser can't take a '"' inside a quoted value */
-			char *in = xasprintf("%s\n", s->psk);
-			char *argv[] = { "chroot", TARGET, "wpa_passphrase", s->ssid, NULL };
-			char *net = capture_input(argv, in), *psk = net ? strstr(net, "\n\tpsk=") : NULL;
-			memset(in, 0, strlen(in));
-			free(in);
-			if (psk && strspn(psk += 6, "0123456789abcdef") == 64 && (psk[64] == '\n' || !psk[64]))
-				psk[64] = '\0';
-			else
-				psk = NULL;
 			const char *conf = TARGET "/etc/wpa_supplicant/wpa_supplicant.conf";
-			FILE *f = psk ? fopen(conf, "a") : NULL;
+			char *net = wifi_block(s, true);
+			FILE *f = net ? fopen(conf, "a") : NULL;
 			bool ok = f && chmod(conf, 0600) == 0;
 			if (f) {
-				fputs("\nnetwork={\n\tssid=", f);
-				for (const unsigned char *c = (const unsigned char *)s->ssid; *c; c++)
-					fprintf(f, "%02x", *c);
-				fprintf(f, "\n\tpsk=%s\n\tsae_password=", psk);
-				for (const unsigned char *c = (const unsigned char *)s->psk; *c; c++)
-					fprintf(f, "%02x", *c);
-				fputs("\n\tkey_mgmt=WPA-PSK SAE\n\tieee80211w=1\n}\n", f);
+				fprintf(f, "\n%s", net);
 				ok = fclose(f) == 0 && ok;
 			}
 			if (net) {
-				memset(net, 0, strlen(net));   /* #psk="<passphrase>" comes before psk= */
+				memset(net, 0, strlen(net));
 				free(net);
 			}
 			/* optional: a WiFi network that can't be set up is a warning, never a failed
