@@ -37,6 +37,14 @@ gpg --list-secret-keys "$FPR" > /dev/null 2>&1 || die "no secret key $FPR in gpg
 W=$(mktemp -d); trap 'rm -rf "$W"' EXIT
 mkdir -m 700 "$W/gv"
 for k in $(awk '!/^#/ && NF { print $1 }' "$REPO/release-key"); do cat "$REPO/keys/$k.gpg" >> "$W/gv/keyring.gpg"; done
+# installed size in KiB: the package's size= (packages built before it was recorded: the
+# sum of the archive's file sizes)
+pkg_kib() {
+    local kib
+    kib=$(tar -xzOf "$1" ./.PKGINFO 2>/dev/null | sed -n 's/^size=//p')
+    [ -n "$kib" ] || kib=$(tar -tzvf "$1" | awk '{ s += $3 } END { printf "%d", (s + 1023) / 1024 }')
+    echo "${kib:-0}"
+}
 verify() { gpgv --homedir "$W/gv" --keyring "$W/gv/keyring.gpg" --status-fd 1 "$1" "$2" 2>/dev/null | grep -q '^\[GNUPG:\] VALIDSIG '; }
 
 # ---- the pool as it is: its index (verified), its files
@@ -64,7 +72,7 @@ fi
 [ -f "$W/INDEX" ] || printf '# cig package pool index (scripts/publish-packages.sh)\n' > "$W/INDEX"
 
 # ---- what to publish: each recipe's current package file
-: > "$W/new"; : > "$W/upload"; kept=0; skipped=
+: > "$W/new"; : > "$W/upload"; : > "$W/resize"; kept=0; skipped=
 for r in "$REPO"/packages/*/recipe; do
     p=${r%/recipe}; p=${p##*/}
     case " $SKIP " in *" $p "*) continue ;; esac
@@ -77,22 +85,25 @@ for r in "$REPO"/packages/*/recipe; do
     if [ -n "$old" ]; then
         [ "$old" = "$sha" ] || echo "   ! $base: the pool has other content under this name (kept; bump $p's rel to publish this build)"
         kept=$((kept + 1))
+        if [ "$old" = "$sha" ] && awk -v f="$base" '!/^#/ && NF == 4 && $1 == f && $4 == 0 { x = 1 } END { exit !x }' "$W/INDEX"; then
+            echo "$base $(pkg_kib "$f")" >> "$W/resize"   # listed without its size (published before pkg_kib)
+        fi
         grep -qx "$base" "$W/assets" || echo "$f" >> "$W/upload"   # listed, but its upload had failed
         continue
     fi
-    kib=$(tar -xzOf "$f" ./.PKGINFO 2>/dev/null | sed -n 's/^size=//p')
-    echo "$base $sha $p ${kib:-0}" >> "$W/new"
+    echo "$base $sha $p $(pkg_kib "$f")" >> "$W/new"
     echo "$f" >> "$W/upload"
 done
 [ -z "$skipped" ] || echo "no package for the current recipe (not published):$skipped" | fold -s -w 100
 echo "new: $(wc -l < "$W/new") package files; already in the pool: $kept"
-[ -s "$W/upload" ] || [ -s "$W/new" ] || { echo "nothing to publish"; exit 0; }
+[ ! -s "$W/resize" ] || echo "sizes added to the index: $(wc -l < "$W/resize") package files"
+[ -s "$W/upload" ] || [ -s "$W/new" ] || [ -s "$W/resize" ] || { echo "nothing to publish"; exit 0; }
 
 # ---- the new index: the old entries, the new ones, a newer date; signed and checked
 {
     printf '# cig package pool index (scripts/publish-packages.sh)\n'
     printf 'date %s\n' "$(date +%s)"
-    awk '!/^#/ && NF == 4' "$W/INDEX"
+    awk 'FILENAME == ARGV[1] { kib[$1] = $2; next } !/^#/ && NF == 4 { if ($1 in kib) $4 = kib[$1]; print }' "$W/resize" "$W/INDEX"
     cat "$W/new"
 } > "$W/INDEX.new"
 mv "$W/INDEX.new" "$W/INDEX"
