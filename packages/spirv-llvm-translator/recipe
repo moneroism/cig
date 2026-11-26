@@ -12,9 +12,27 @@ makedepends="cmake samurai spirv-headers"
 style=custom
 wrksrc="SPIRV-LLVM-Translator-$version"
 track=23.1
+# LLVM's CMake files list its static libraries, which the llvm package does not have (cigbuild
+# drops *.a), and CMake stops at the first missing one. This build reads a copy that points at
+# /usr and only notes them (cmake --log-level=VERBOSE): the translator links libLLVM.so
+# (LLVM_LINK_LLVM_DYLIB=ON). Tested on the host: find_package(LLVM) loads, prefix /usr.
+# (The lasting fix: llvm exports only what it installs, LLVM_DISTRIBUTION_COMPONENTS.)
+pre_build() {
+    local c="$WORK/llvm-cmake"
+    mkdir -p "$c"
+    cp /usr/lib/cmake/llvm/*.cmake "$c/"
+    sed -i -e 's|^get_filename_component(LLVM_INSTALL_PREFIX "${CMAKE_CURRENT_LIST_FILE}" REALPATH)$|set(LLVM_INSTALL_PREFIX "/usr/lib/cmake/llvm/LLVMConfig.cmake")|' \
+        -e "s|^set(LLVM_CMAKE_DIR .*|set(LLVM_CMAKE_DIR \"$c\")|" "$c/LLVMConfig.cmake"
+    sed -i -e 's|^get_filename_component(_IMPORT_PREFIX "${CMAKE_CURRENT_LIST_FILE}" PATH)$|set(_IMPORT_PREFIX "/usr/lib/cmake/llvm")|' \
+        -e 's|message(FATAL_ERROR "The imported target|message(VERBOSE "not packaged (static): the imported target|' "$c/LLVMExports.cmake"
+    grep -q '^set(LLVM_INSTALL_PREFIX "/usr' "$c/LLVMConfig.cmake" && grep -q "^set(LLVM_CMAKE_DIR \"$c\")" "$c/LLVMConfig.cmake" \
+        && grep -q '^set(_IMPORT_PREFIX "/usr/lib/cmake/llvm")' "$c/LLVMExports.cmake" \
+        || die "LLVM's CMake files changed: the copy for this build needs updating"
+}
 do_build() {
     cmake -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_INSTALL_LIBDIR=lib \
         -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DLLVM_INCLUDE_TESTS=OFF \
+        -DLLVM_DIR="$WORK/llvm-cmake" \
         -DLLVM_EXTERNAL_SPIRV_HEADERS_SOURCE_DIR=/usr \
         -DCMAKE_SKIP_INSTALL_RPATH=ON
     samu -C build
