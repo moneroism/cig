@@ -202,24 +202,27 @@ cleanup
 
 # no source or package mirror (netinstall): only what the installer needs from the medium
 step "Installer files (package sizes, generic kernel)"
-# hard links where the staging folder is on the same filesystem, copies otherwise
-link() { cp -al "$@" 2>/dev/null || cp -a "$@"; }
 # build, db, logs: cigbuild creates them when it starts, and on the read-only medium it could
 # not (the installer's cigbuild pkgfile calls failed: only installed packages were kept)
 mkdir -p "$STAGE"/var/cig/{sources,pkgs,build,db,logs}
 # installed sizes for the installer's catalog (KiB, the size= of each current package's
-# .PKGINFO: the packages the pool serves; ones without it are shown without a size)
+# .PKGINFO: the packages the pool serves; ones built before size= was recorded: the sum of
+# the archive's file sizes, as in publish-packages.sh)
 for r in "$REPO"/packages/*/recipe; do
     p=${r%/recipe}; p=${p##*/}
     f=$("$CIGBUILD" pkgfile "$p" 2>/dev/null) && [ -f "$f" ] || continue
     sz=$(tar -xzOf "$f" ./.PKGINFO 2>/dev/null | sed -n 's/^size=//p')
-    [ -z "$sz" ] || echo "$p $sz"
+    [ -n "$sz" ] || sz=$(tar -tzvf "$f" | awk '{ s += $3 } END { printf "%d", (s + 1023) / 1024 }')
+    echo "$p $sz"
 done | sort -u > "$STAGE/var/cig/pkgs/sizes"
 # the generic install kernel (chosen and checked at the top): the recipe's version only
 mkdir -p "$STAGE"/var/cig/generic/{sources,pkgs,build,db,logs}
 f=$(CIG_VAR=$generic "$CIGBUILD" pkgfile linux)
-link "$f" "$STAGE/var/cig/generic/pkgs/"
-[ ! -f "$f.sha256" ] || link "$f.sha256" "$STAGE/var/cig/generic/pkgs/"
+# copies owned by root: the installer copies the kernel package to the new system, where a
+# file kept with the build user's uid belonged to the first user (0.4.1's QEMU test)
+cp "$f" "$STAGE/var/cig/generic/pkgs/"
+[ ! -f "$f.sha256" ] || cp "$f.sha256" "$STAGE/var/cig/generic/pkgs/"
+chown 0:0 "$STAGE"/var/cig/generic/pkgs/*; chmod 644 "$STAGE"/var/cig/generic/pkgs/*
 
 # ---- the ISO: Rock Ridge (owners, modes, links as they are), the ESP image for El Torito
 # and as an appended GPT partition (the same file: UEFI finds it on a CD and on a USB stick)

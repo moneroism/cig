@@ -706,7 +706,8 @@ void do_install(struct state *s)
 	step("Preparing packages (%s)", s->compile_pkgs ? "compile" : "prebuilt");
 	if (s->generic_kernel) {   /* the media's generic kernel (only looked up when chosen) */
 		char *media_linux = cigbuild_pkgfile("linux", media_generic);
-		RUN("cp", "-a", media_linux, TARGET "/var/cig/pkgs/");
+		/* a plain copy: root's, whoever owned the file on the medium */
+		RUN("cp", media_linux, TARGET "/var/cig/pkgs/");
 		free(media_linux);
 	}
 	/* kernel and firmware are always made for this machine's selection */
