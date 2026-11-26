@@ -474,6 +474,16 @@ static bool dhcp(const char *ifname, const char *tries)
 	return run(dh) == 0;
 }
 
+bool needs_network(void)
+{
+	return !medium_has_packages() && !getenv("CIG_INSTALL_DEMO");
+}
+
+bool cable_network(void)
+{
+	return file_exists("/sys/class/net/eth0") && dhcp("eth0", "2");
+}
+
 /* the live system online: a network cable first, then the WiFi network chosen for the new
  * system. With prebuilt packages, cig's package pool must answer with an index signed by a cig
  * release key (cigbuild pool). Before anything on the disk changes */

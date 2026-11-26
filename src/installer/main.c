@@ -722,6 +722,21 @@ int main(int argc, char **argv)
 	ui_init();
 	if (!getenv("CIG_INSTALL_DEMO"))
 		clock_screen();
+	/* a netinstall medium: without a network cable, the WiFi network comes first (the
+	 * installer connects with it before the disk changes, and the new system keeps it) */
+	if (needs_network()) {
+		ui_wait("Network", "Looking for a network cable (a few seconds)...");
+		if (!cable_network()) {
+			if (!file_exists("/sys/class/net/wlan0"))
+				ui_msg("Network", "No network cable and no WiFi device found.\n"
+				                  "Packages come from the network (this medium carries none):\n"
+				                  "plug in a network cable before you choose Install.");
+			else if (ui_yesno("Network", "No network cable found. Packages come from the network (this medium "
+			                             "carries none).\n\nChoose a WiFi network now? The new system keeps it "
+			                             "(Hardware, network).", true))
+				wifi_screen(&s);
+		}
+	}
 
 	int sel = 0;
 	for (;;) {

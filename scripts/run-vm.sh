@@ -12,6 +12,7 @@ set -euo pipefail
 # CIG_VM_EXTRA:  more QEMU options, e.g. "-rtc base=2024-03-01T12:00:00" (a wrong clock)
 # CIG_VM_MONITOR: a QEMU monitor on this unix socket (screendump, sendkey: tests without a
 #             person at the VM window)
+# CIG_VM_NIC:  QEMU's -nic value (default user,model=e1000e; none = no network card)
 # CIG_VM_SERIAL:  the serial console (getty-ttyS0) on this unix socket instead of this
 #             terminal: scripts log in and run commands there
 CDROM="${CIG_CDROM:-}"
@@ -70,5 +71,5 @@ exec qemu-system-x86_64 \
     "${DISKS[@]}" "${MON[@]}" ${CIG_VM_EXTRA:-} \
     -device virtio-vga \
     -device qemu-xhci -device usb-tablet \
-    -nic user,model=e1000e \
+    -nic "${CIG_VM_NIC:-user,model=e1000e}" \
     "${SERIAL[@]}"

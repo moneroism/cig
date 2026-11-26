@@ -46,6 +46,8 @@ const char *dns_value(const struct state *s);
 bool comp_on(const struct state *s, const char *name);
 
 void do_install(struct state *s);   /* returns only on success */
+bool needs_network(void);           /* a netinstall medium on the live system */
+bool cable_network(void);           /* a DHCP lease on eth0 */
 void disk_screen(struct state *s);
 char *disk_auto(struct state *s);   /* --answers: auto layout, NULL or why not */
 char *size_h(unsigned long long bytes);   /* 512M / 40G / 1.8T */
