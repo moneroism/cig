@@ -58,6 +58,28 @@ static void cleanup_mounts(void)
 }
 
 /* the last thing on screen must be the failure, never something that reads like success */
+/* a copy of the log on the install medium's writable CIG-DATA partition (a USB stick): the
+ * live system runs from RAM, and its log is gone after a reboot. The log holds no passwords
+ * (they go to programs through stdin). Returns whether it was saved */
+static bool log_to_medium(void)
+{
+	char *find[] = { "findfs", "LABEL=CIG-DATA", NULL }, *dev;
+	if (!file_exists("/etc/cig/live") || !(dev = capture(find)) || !*dev)
+		return false;
+	const char *dir = "/run/cig-data";
+	char *mk[] = { "mkdir", "-p", (char *)dir, NULL };
+	char *mnt[] = { "mount", "-t", "vfat", dev, (char *)dir, NULL };
+	char *cp[] = { "cp", (char *)LOG, "/run/cig-data/cig-install.log", NULL };
+	char *um[] = { "umount", (char *)dir, NULL };
+	bool ok = run(mk) == 0 && run(mnt) == 0;
+	if (ok) {
+		ok = run(cp) == 0;
+		ok = run(um) == 0 && ok;
+	}
+	free(dev);
+	return ok;
+}
+
 static _Noreturn void fail(const char *why)
 {
 	char *msg, *tail = NULL, *log = read_text(LOG);
@@ -76,8 +98,11 @@ static _Noreturn void fail(const char *why)
 			chmod(dst, 0600);
 	}
 	cleanup_mounts();
-	msg = xasprintf("!! INSTALLATION FAILED at: %s\n!! /dev/%s is NOT bootable. Full log: %s\n\n%s\n\n"
-	                "Last lines of the log:\n%s", step_name, S->disk, LOG, why, tail ? tail : "");
+	bool saved = log_to_medium();
+	msg = xasprintf("!! INSTALLATION FAILED at: %s\n!! /dev/%s is NOT bootable. Full log: %s%s\n\n%s\n\n"
+	                "Last lines of the log:\n%s", step_name, S->disk, LOG,
+	                saved ? "\n!! A copy is on the medium's CIG-DATA partition: cig-install.log" : "", why,
+	                tail ? tail : "");
 	ui_msg("INSTALLATION FAILED", msg);
 	ui_end();
 	printf("\n!! INSTALLATION FAILED at: %s\n!! /dev/%s is NOT bootable. Full log: %s\n", step_name, S->disk, LOG);
@@ -506,6 +531,13 @@ static void live_network(struct state *s)
 		}
 		char *rf[] = { "rfkill", "unblock", "wifi", NULL };
 		char *ws[] = { "wpa_supplicant", "-B", "-i", "wlan0", "-c", (char *)conf, NULL };
+		/* one left running by an earlier attempt (another network, or the install failed
+		 * after connecting) holds the control socket: a second one refuses to start */
+		char *term[] = { "wpa_cli", "-p", "/run/wpa_supplicant", "-i", "wlan0", "terminate", NULL };
+		if (file_exists("/run/wpa_supplicant/wlan0")) {
+			run(term);
+			sleep(1);
+		}
 		run(rf);   /* optional: not every system has rfkill or a block */
 		if (ok) {
 			char *up_[] = { "ip", "link", "set", "wlan0", "up", NULL };
