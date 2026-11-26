@@ -1,0 +1,20 @@
+# fuzzel - application launcher and fuzzy menu for Wayland (from foot's author; wlroots
+# compositors: dwl, sway, labwc). Lists the installed programs' .desktop files; also a dmenu
+# replacement (--dmenu)
+name=fuzzel
+version=1.15.0
+license="MIT"
+source="fuzzel-$version.tar.gz::https://codeberg.org/dnkl/fuzzel/archive/$version.tar.gz"
+signature="tag=https://codeberg.org/dnkl/fuzzel.git#$version"
+keys="B19964FBBA09664CC81027ED5BBD4992C116573F"
+sha256="95b6c022fc1f1c7ab586d47c1594417cc311bf41ea8f5f8b5641478da7b5cf3b"
+depends="fcft wayland pixman libxkbcommon fontconfig libpng"
+makedepends="tllist wayland-protocols meson pkgconf"
+style=meson
+wrksrc="fuzzel"
+# icons: PNG through libpng, SVG through its bundled nanosvg (upstream's defaults); no cairo
+# (only used for rounded corners)
+meson_args="-Denable-cairo=disabled -Dpng-backend=libpng -Dsvg-backend=nanosvg"
+group="desktop"
+# the man pages need scdoc (no option to skip them): left out, like foot's (-Ddocs=disabled)
+pre_build() { sed -i "/^subdir('doc')/d" meson.build; }
