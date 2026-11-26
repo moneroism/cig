@@ -81,7 +81,9 @@ do_build() {
                 install -D -m 644 "$CIG_FIRMWARE_TREE/$f" "$WORK/out/$f"
             elif [ -f "$CIG_FIRMWARE_TREE/$f.zst" ]; then
                 mkdir -p "$(dirname "$WORK/out/$f")"
-                zstd -dqc "$CIG_FIRMWARE_TREE/$f.zst" > "$WORK/out/$f"
+                # through stdin: the live system's files are farm links, and zstd skips a
+                # link named as an argument ("is a symbolic link, ignoring": exit status 1)
+                zstd -dqc < "$CIG_FIRMWARE_TREE/$f.zst" > "$WORK/out/$f"
                 chmod 644 "$WORK/out/$f"
             else
                 echo "not in the firmware tree $CIG_FIRMWARE_TREE: $f"
