@@ -42,7 +42,7 @@ Keys are fetched by ID from public keyservers only, never from the forge that ho
 All checks also run on the host when a source is pinned (`cigbuild pin`, `cigbuild sig`). Every other source is **flagged**: its SHA256 was pinned
 on first download (trust on first use), and `smoke add` warns about it on every install.
 
-`scripts/audit-sources.sh` prints the current table (below, as of 2026-11-25).
+`scripts/audit-sources.sh` prints the current table (below, as of 2026-11-26).
 
 ## Flagged sources and why
 
@@ -69,6 +69,7 @@ on first download (trust on first use), and `smoke add` warns about it on every 
 | ca-certificates | curl.se's extract of Mozilla's CA store, unsigned | build from Mozilla's certdata at a verified revision |
 | freetype | signed (2.14.3), but the key E3067470…BE6C3AAC63AD8E3F ("Werner Lemberg <wl@gnu.org>", 2019) carries only its own signatures: his older key 58E0C111…C1A60EACE707FDA5, the one keys.openpgp.org verified for that address, does not certify it, and freetype.org names no key; trusted by the developer on 2026-11-03 (long-time maintainer, same address) | the maintainer cross-certifies the key or freetype.org publishes it |
 | lua, mandoc, sinit, tree, mtdev, font-jetbrains-mono, libudev-zero, musl-fts, musl-obstack, argp-standalone | no signature and no independently published checksum | none upstream |
+| spirv-headers, spirv-tools, spirv-llvm-translator | build tools only (they build mesa-clc for Mesa's Intel drivers; never installed on a target): lightweight tags, no release files; spirv-headers and spirv-tools match Void's SHA256, spirv-llvm-translator Gentoo's SHA512 | none upstream |
 
 ## Current table
 
@@ -168,6 +169,7 @@ on first download (trust on first use), and `smoke add` warns about it on every 
 | make | ftp.gnu.org | upstream GPG signature |
 | mako | github.com | upstream GPG signature |
 | mandoc | mandoc.bsd.lv | **UNVERIFIED** (pinned SHA256 only, trusted on first use) |
+| mesa-clc | archive.mesa3d.org | upstream GPG signature |
 | mesa | archive.mesa3d.org | upstream GPG signature |
 | meson | github.com | upstream GPG signature |
 | mpc | ftp.gnu.org | upstream GPG signature |
@@ -209,6 +211,9 @@ on first download (trust on first use), and `smoke add` warns about it on every 
 | seatd | git.sr.ht | **UNVERIFIED** (pinned SHA256 only, trusted on first use) |
 | sinit | dl.suckless.org | **UNVERIFIED** (pinned SHA256 only, trusted on first use) |
 | slurp | github.com | upstream GPG signature |
+| spirv-headers | github.com | **UNVERIFIED** (pinned SHA256 only, trusted on first use) |
+| spirv-llvm-translator | github.com | **UNVERIFIED** (pinned SHA256 only, trusted on first use) |
+| spirv-tools | github.com | **UNVERIFIED** (pinned SHA256 only, trusted on first use) |
 | strace | github.com | upstream GPG signature |
 | sway | github.com | upstream GPG signature |
 | swaybg | github.com | upstream GPG signature |
@@ -238,4 +243,4 @@ on first download (trust on first use), and `smoke add` warns about it on every 
 | zlib | github.com | upstream GPG signature |
 | zstd | github.com | upstream GPG signature |
 
-103 sources verified, 514 flagged.
+104 sources verified, 517 flagged.

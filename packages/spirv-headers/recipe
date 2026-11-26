@@ -1,0 +1,20 @@
+# spirv-headers - the SPIR-V grammar and headers (a build tool: SPIRV-Tools and the SPIR-V/LLVM
+# translator need them, which build mesa-clc for Mesa's Intel drivers)
+# Unsigned upstream (lightweight tags, no release files): the Vulkan SDK tag, the same one as
+# spirv-tools (the SDK pairs them). The tarball's SHA256 is the one in Void's template, checked
+# 2026-11-26.
+name=spirv-headers
+version=1.4.363.0
+license="MIT"
+source="spirv-headers-$version.tar.gz::https://github.com/KhronosGroup/SPIRV-Headers/archive/refs/tags/vulkan-sdk-$version.tar.gz"
+sha256="5b3a0d099f5c7649e29c0938476c462e71d66ad89a0bde42fa1ba3eb476956c9"
+makedepends="cmake samurai"
+style=custom
+wrksrc="SPIRV-Headers-vulkan-sdk-$version"
+stable='^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$'
+do_build() {
+    cmake -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr -DSPIRV_HEADERS_ENABLE_TESTS=OFF \
+        -DSPIRV_HEADERS_ENABLE_INSTALL=ON
+    samu -C build
+}
+do_install() { DESTDIR="$DEST" samu -C build install; }

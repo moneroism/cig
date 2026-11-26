@@ -1,0 +1,29 @@
+# mesa-clc - Mesa's OpenCL C to SPIR-V compiler (mesa_clc) and vtn_bindgen2: build tools only.
+# Mesa's Intel drivers (iris, anv) compile their internal shaders with them; mesa uses these
+# (-Dmesa-clc=system), so the drivers are built without LLVM and installed systems never carry
+# it. Always the same version as mesa (its pre_build checks).
+name=mesa-clc
+version=26.3.1
+license="MIT"
+source="https://archive.mesa3d.org/mesa-$version.tar.xz"
+signature="https://archive.mesa3d.org/mesa-$version.tar.xz.sig"
+keys="57551DE15B968F6341C248F68D8E31AFC32428A6 71C4B75620BC75708B4BDB254C95FAAB3EB073EC"
+sha256="4e4e438eac7b840a9383988cbb7c08dad8041da544b9319fc26d319fa7348961"
+depends="llvm spirv-tools spirv-llvm-translator zlib expat gcc"
+makedepends="meson pkgconf python-mako python-packaging python-pyyaml bison flex"
+style=custom
+wrksrc="mesa-$version"
+# no drivers, no APIs: only the two tools
+do_build() {
+    meson setup build --prefix=/usr --libdir=lib --buildtype=release \
+        -Dplatforms= -Dgallium-drivers= -Dvulkan-drivers= -Dglx=disabled -Degl=disabled \
+        -Dgbm=disabled -Dopengl=false -Dgles1=disabled -Dgles2=disabled \
+        -Dllvm=enabled -Dshared-llvm=enabled -Dmesa-clc=enabled -Dinstall-mesa-clc=true \
+        -Dspirv-tools=enabled -Dvalgrind=disabled -Dlibunwind=disabled -Dzstd=disabled \
+        -Dlmsensors=disabled -Dbuild-tests=false -Dtools= -Dvideo-codecs= -Dvulkan-layers=
+    meson compile -C build src/compiler/clc/mesa_clc src/compiler/spirv/vtn_bindgen2
+}
+do_install() {
+    install -D -m 755 build/src/compiler/clc/mesa_clc "$DEST/usr/bin/mesa_clc"
+    install -D -m 755 build/src/compiler/spirv/vtn_bindgen2 "$DEST/usr/bin/vtn_bindgen2"
+}
