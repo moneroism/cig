@@ -69,7 +69,7 @@ on first download (trust on first use), and `smoke add` warns about it on every 
 | ca-certificates | curl.se's extract of Mozilla's CA store, unsigned | build from Mozilla's certdata at a verified revision |
 | freetype | signed (2.14.3), but the key E3067470…BE6C3AAC63AD8E3F ("Werner Lemberg <wl@gnu.org>", 2019) carries only its own signatures: his older key 58E0C111…C1A60EACE707FDA5, the one keys.openpgp.org verified for that address, does not certify it, and freetype.org names no key; trusted by the developer on 2026-11-03 (long-time maintainer, same address) | the maintainer cross-certifies the key or freetype.org publishes it |
 | lua, mandoc, sinit, tree, mtdev, font-jetbrains-mono, libudev-zero, musl-fts, musl-obstack, argp-standalone | no signature and no independently published checksum | none upstream |
-| spirv-headers, spirv-tools, spirv-llvm-translator | build tools only (they build mesa-clc for Mesa's Intel drivers; never installed on a target): lightweight tags, no release files; spirv-headers and spirv-tools match Void's SHA256, spirv-llvm-translator Gentoo's SHA512 | none upstream |
+| spirv-headers, spirv-tools, spirv-llvm-translator | build tools only (they build mesa-clc for Mesa's Intel drivers; never installed on a target): lightweight tags, no release files; spirv-headers and spirv-tools match Void's SHA256, spirv-llvm-translator and the SPIRV-Headers commit it bundles Gentoo's SHA512/BLAKE2B | none upstream |
 
 ## Current table
 
@@ -116,6 +116,7 @@ on first download (trust on first use), and `smoke add` warns about it on every 
 | foot | codeberg.org | signed git tag (archive = tag tree) |
 | freetype | download.savannah.gnu.org | upstream GPG signature |
 | fribidi | github.com | signed git tag (archive = tag tree) |
+| fuzzel | codeberg.org | signed git tag (archive = tag tree) |
 | gawk | ftp.gnu.org | upstream GPG signature |
 | gcc | ftp.gnu.org | upstream GPG signature |
 | git | cdn.kernel.org | upstream GPG signature |
@@ -243,4 +244,4 @@ on first download (trust on first use), and `smoke add` warns about it on every 
 | zlib | github.com | upstream GPG signature |
 | zstd | github.com | upstream GPG signature |
 
-104 sources verified, 517 flagged.
+105 sources verified, 518 flagged.
