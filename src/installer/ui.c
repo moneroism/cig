@@ -28,9 +28,9 @@ void ui_init(void)
 	if (has_colors()) {
 		start_color();
 		use_default_colors();
-		init_pair(1, COLOR_BLACK, COLOR_CYAN);    /* selection */
-		init_pair(2, COLOR_CYAN, -1);             /* titles, frames */
-		init_pair(3, COLOR_RED, -1);              /* warnings */
+		/* greys only (the developer, 2026-11-26: cyan was painful to look at) */
+		init_pair(1, COLOR_BLACK, COLOR_WHITE);   /* selection */
+		init_pair(2, -1, -1);                     /* titles, frames */
 	}
 }
 
