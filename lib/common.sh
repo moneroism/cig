@@ -303,11 +303,10 @@ pkg_build() {
     case "$BUILDING" in *" $p "*) die "dependency loop at $p";; esac
     BUILDING="$BUILDING$p "
     load_recipe "$p"
-    # a prebuilt package from the install media (CIG_PKG_MIRROR, set only when the
-    # user chose prebuilt packages): copied only when it is actually installed
-    if [ ! -f "$PKGFILE" ] && [ -n "${CIG_PKG_MIRROR:-}" ] && [ -f "$CIG_PKG_MIRROR/${PKGFILE##*/}" ]; then
-        cp "$CIG_PKG_MIRROR/${PKGFILE##*/}" "$PKGFILE"
-    fi
+    # a prebuilt package (CIG_PKG_MIRROR, set only when the user chose prebuilt packages): the
+    # local ones or cig's package pool (lib/pool.sh), fetched only when it is actually installed;
+    # without one it is compiled
+    prebuilt_get "$PKGFILE" || true
     if [ -f "$PKGFILE" ]; then info "$name $version-$rel: package exists"; BUILDING=${BUILDING/ $p / }; return; fi
     # dependencies must be installed before we can build
     # Building happens on THIS machine, so everything needed to build must be

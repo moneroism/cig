@@ -22,6 +22,31 @@ release_keys() {
     awk '!/^#/ && NF { print $1 }' "$CIG_REPO/release-key"
 }
 
+# release_verify <signature> <file>: prints the fingerprint of the cig release key that made a
+# valid signature of the file (gpgv against release-key's keys only). 1 = no valid signature by
+# a release key (or a listed key missing in keys/), 2 = cannot be checked here (no release key
+# yet, no gpgv). Used for cig's releases and for the package pool's index (lib/pool.sh).
+release_verify() {
+    local keys k d out signer
+    keys=$(release_keys)
+    [ -n "$keys" ] || { warn "nothing can be checked against cig's release key: none in $CIG_REPO/release-key yet"; return 2; }
+    command -v gpgv >/dev/null || { warn "cig's release signatures cannot be checked without gpgv (smoke add gpgv)"; return 2; }
+    d=$(mktemp -d "${TMPDIR:-/tmp}/cig-verify.XXXXXX")
+    for k in $keys; do
+        [ -s "$CIG_REPO/keys/$k.gpg" ] || { rm -rf "$d"; warn "release key $k is not in keys/"; return 1; }
+        cat "$CIG_REPO/keys/$k.gpg" >> "$d/keyring.gpg"
+    done
+    mkdir "$d/gnupg"; chmod 700 "$d/gnupg"
+    out=$(gpgv --homedir "$d/gnupg" --keyring "$d/keyring.gpg" --status-fd 1 "$1" "$2" 2>/dev/null || true)
+    rm -rf "$d"
+    # status lines only: VALIDSIG's last field is the primary key's fingerprint
+    signer=$(echo "$out" | awk '$1 == "[GNUPG:]" && $2 == "VALIDSIG" { print $NF; exit }')
+    case " $(echo $keys) " in
+        *" ${signer:-none} "*) echo "$signer"; return 0 ;;
+    esac
+    return 1
+}
+
 # sync_get <name> <out>: from CIG_SYNC_DIR (a folder holding a release's files: offline
 # updates, tests) or from the release on the network
 sync_get() {
@@ -56,29 +81,21 @@ sync_changes() {
 # release, a malformed archive); 2 = cannot be checked here (no release key yet, no gpgv,
 # offline).
 cig_sync() {
-    local check=${1:-} keys d k out signer new cur top
+    local check=${1:-} d signer rc new cur top
     [ -z "$check" ] && rm -f "$CIG_VAR/repo/READY"
-    keys=$(release_keys)
-    [ -n "$keys" ] || { warn "cig updates cannot be checked: no release key in $CIG_REPO/release-key yet"; return 2; }
+    [ -n "$(release_keys)" ] || { warn "cig updates cannot be checked: no release key in $CIG_REPO/release-key yet"; return 2; }
     command -v gpgv >/dev/null || { warn "cig updates cannot be checked without gpgv (smoke add gpgv)"; return 2; }
     d=$(mktemp -d "${TMPDIR:-/tmp}/cig-sync.XXXXXX")
     info "checking for a new cig release"
     if ! sync_get cig-release.tar.gz "$d/cig-release.tar.gz" || ! sync_get cig-release.tar.gz.sig "$d/cig-release.tar.gz.sig"; then
         rm -rf "$d"; warn "no cig release could be downloaded (offline, or the newest release has no cig-release.tar.gz): $CIG_SYNC_URL"; return 2
     fi
-    for k in $keys; do
-        [ -s "$CIG_REPO/keys/$k.gpg" ] || { rm -rf "$d"; warn "release key $k is not in keys/"; return 1; }
-        cat "$CIG_REPO/keys/$k.gpg" >> "$d/keyring.gpg"
-    done
-    mkdir "$d/gnupg"; chmod 700 "$d/gnupg"
-    out=$(gpgv --homedir "$d/gnupg" --keyring "$d/keyring.gpg" --status-fd 1 \
-          "$d/cig-release.tar.gz.sig" "$d/cig-release.tar.gz" 2>/dev/null || true)
-    # status lines only: VALIDSIG's last field is the primary key's fingerprint
-    signer=$(echo "$out" | awk '$1 == "[GNUPG:]" && $2 == "VALIDSIG" { print $NF; exit }')
-    case " $(echo $keys) " in
-        *" ${signer:-none} "*) ;;
-        *) rm -rf "$d"; warn "THE CIG RELEASE DID NOT VERIFY: no valid signature by a cig release key ($(echo $keys)). Nothing was used."; return 1 ;;
-    esac
+    rc=0; signer=$(release_verify "$d/cig-release.tar.gz.sig" "$d/cig-release.tar.gz") || rc=$?
+    if [ "$rc" -ne 0 ]; then
+        rm -rf "$d"
+        [ "$rc" -eq 2 ] && return 2
+        warn "THE CIG RELEASE DID NOT VERIFY: no valid signature by a cig release key ($(echo $(release_keys))). Nothing was used."; return 1
+    fi
     mkdir "$d/x"
     tar -xzof "$d/cig-release.tar.gz" -C "$d/x" || { rm -rf "$d"; warn "the cig release archive does not unpack"; return 1; }
     top=$(ls "$d/x")

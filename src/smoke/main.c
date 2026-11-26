@@ -99,8 +99,14 @@ static void list_available(const char *word)
 {
 	char *dir = xasprintf("%s/packages", CIG_REPO);
 	struct strv names = { 0 }, groups = { 0 }, descs = { 0 };
-	/* installed sizes of the prebuilt packages (the installer keeps the medium's list) */
-	char *sp = xasprintf("%s/prebuilt/sizes", CIG_VAR), *sizes = read_file(sp);
+	/* installed sizes of the prebuilt packages: the package pool's (lib/pool.sh), the list an
+	 * older installer kept, or the install medium's */
+	char *sp = xasprintf("%s/pool/sizes", CIG_VAR), *sizes = read_file(sp);
+	if (!sizes) {
+		free(sp);
+		sp = xasprintf("%s/prebuilt/sizes", CIG_VAR);
+		sizes = read_file(sp);
+	}
 	if (!sizes) {
 		free(sp);
 		sp = xasprintf("%s/pkgs/sizes", CIG_VAR);   /* the install medium */
@@ -314,9 +320,10 @@ static char *info_field(const char *info_out, const char *key)
 	return val;
 }
 
-/* prebuilt packages: the install media's (CIG_PKG_MIRROR), or the ones the installer kept on
- * this system ($CIG_VAR/prebuilt). cigbuild takes a package from CIG_PKG_MIRROR only while it
- * is set, so compiling unsets it: every missing dependency is then compiled too */
+/* prebuilt packages: the install media's (CIG_PKG_MIRROR), the ones an older installer kept on
+ * this system ($CIG_VAR/prebuilt), or cig's package pool (cigbuild prebuilt, lib/pool.sh: a
+ * signed index lists every file's SHA256). cigbuild takes prebuilt packages only while
+ * CIG_PKG_MIRROR is set, so compiling unsets it: every missing dependency is then compiled too */
 static void use_prebuilt(bool yes)
 {
 	if (!yes) {
@@ -329,15 +336,13 @@ static void use_prebuilt(bool yes)
 	}
 }
 
-/* a package file from the prebuilt packages, when there is one */
-static void prebuilt_from_mirror(const char *f)
+/* the prebuilt package file f of name, when there is one: local, or from the package pool */
+static void prebuilt_get(const char *name, const char *f)
 {
-	const char *mirror = getenv("CIG_PKG_MIRROR");
-	const char *base = strrchr(f, '/') ? strrchr(f, '/') + 1 : f;
-	char *m = mirror ? xasprintf("%s/%s", mirror, base) : NULL;
-	if (m && is_file(m) && !is_file(f))
-		copy_file(m, f);
-	free(m);
+	if (is_file(f))
+		return;
+	char *argv[] = { (char *)CIGBUILD, "prebuilt", (char *)name, NULL };
+	run(argv, -1);   /* its messages explain a miss; the callers check the file */
 }
 
 enum compile { ASK, YES, NO };
@@ -415,9 +420,9 @@ static void add_pkg(const char *name, enum compile compile, bool yes)
 	use_prebuilt(compile == NO);
 	f = pkgfile_of(name, false);
 	if (compile == NO)   /* a prebuilt package from the install media */
-		prebuilt_from_mirror(f);
+		prebuilt_get(name, f);
 	if (compile == NO && !is_file(f))
-		die("%s: no prebuilt package on this system; add it with -c to compile", name);
+		die("%s: no prebuilt package (on this system or in cig's package pool); add it with -c to compile", name);
 	/* compiling for this system needs build tools; offer them once */
 	if (compile == YES && !*ROOT && !in_path("cc")) {
 		puts("Build tools (compiler, make, ...) are not installed; they are needed to compile.");
@@ -660,9 +665,9 @@ static int update(int argc, char **argv, bool check, enum compile compile, bool 
 		}
 		char *f = pkgfile_of(todo.v[pick], false);
 		if (compile == NO) {
-			prebuilt_from_mirror(f);
+			prebuilt_get(todo.v[pick], f);
 			if (!is_file(f))
-				die("%s: no prebuilt package for %s on this system; update with -c to compile",
+				die("%s: no prebuilt package for %s (on this system or in cig's package pool); update with -c to compile",
 				    todo.v[pick], to.v[pick]);
 		}
 		free(f);

@@ -18,6 +18,9 @@
 #   cigbuild info    <pkg>      show what a recipe contains
 #   cigbuild pkgfile <pkg>      path of the package file for the current recipe
 #   cigbuild sync [--check]     fetch the newest cig release, verify it with the release key
+#   cigbuild prebuilt <pkg>     the prebuilt package of the current recipe (while CIG_PKG_MIRROR is
+#                               set): local prebuilt packages, or cig's package pool (lib/pool.sh)
+#   cigbuild pool               fetch and verify the package pool's index (exit 1: none verified)
 #
 # Installing and removing is smoke's job: smoke install / remove / list / audit
 
@@ -28,8 +31,9 @@ CIG_VAR="${CIG_VAR:-/var/cig}"
 . "$CIG_REPO/lib/common.sh"
 . "$CIG_REPO/lib/styles.sh"
 . "$CIG_REPO/lib/sync.sh"
+. "$CIG_REPO/lib/pool.sh"
 
-usage() { sed -n '8,23p' "$0" | sed 's/^# \{0,1\}//'; exit 1; }
+usage() { sed -n '8,26p' "$0" | sed 's/^# \{0,1\}//'; exit 1; }
 
 cmd=${1:-}; shift || true
 [ -n "$cmd" ] || usage
@@ -51,5 +55,7 @@ case "$cmd" in
     info)    [ $# -eq 1 ] || usage; pkg_info "$1" ;;
     list)    pkg_list ;;
     sync)    [ $# -le 1 ] && [ "${1:---check}" = --check ] || usage; cig_sync "${1:-}" ;;
+    prebuilt) [ $# -eq 1 ] || usage; load_recipe "$1"; prebuilt_get "$PKGFILE" ;;
+    pool)    [ $# -eq 0 ] || usage; pool_index && info "package pool: $(awk '!/^#/ && NF == 4' "$CIG_VAR/pool/INDEX" | wc -l) packages, index verified" ;;
     *)       usage ;;
 esac
