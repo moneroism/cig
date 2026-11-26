@@ -1,8 +1,9 @@
 # mesa - GPU drivers without LLVM: Vulkan for AMD (RADV, with its own ACO compiler) and OpenGL/GLES
-# through Vulkan (Zink); EGL and GBM for Wayland compositors. (no software renderer: without a GPU driver, wlroots uses pixman)
+# through Vulkan (Zink); for Intel OpenGL/GLES (Iris) and Vulkan (ANV); EGL and GBM for Wayland
+# compositors. (no software renderer: without a GPU driver, wlroots uses pixman)
 name=mesa
 version=26.3.1
-rel=1
+rel=2
 license="MIT"
 source="https://archive.mesa3d.org/mesa-$version.tar.xz"
 signature="https://archive.mesa3d.org/mesa-$version.tar.xz.sig"
@@ -12,14 +13,30 @@ depends="libdrm expat zlib wayland libudev-zero elfutils vulkan-loader libdispla
 makedepends="meson pkgconf python-mako python-packaging python-pyyaml wayland-protocols bison flex glslang"
 style=meson
 group="graphics"
-# Wayland only, no LLVM, no X11; only what the drivers above need
-meson_args="-Dplatforms=wayland -Dgallium-drivers=zink -Dvulkan-drivers=amd -Dllvm=disabled
+# Wayland only, no LLVM, no X11; only what the drivers above need. The drivers follow the GPUs
+# this build is for (lib/hardware.sh; CIG_PROFILE=generic, the prebuilt packages: all). Intel's
+# drivers compile their internal shaders with mesa-clc's tools (-Dmesa-clc=system), so LLVM is
+# needed only to build mesa-clc, never by mesa or on an installed system
+_gallium=zink _vulkan=
+if has_gpu amd; then _vulkan=amd; fi
+if has_gpu intel; then
+    _gallium="$_gallium,iris" _vulkan="${_vulkan:+$_vulkan,}intel"
+    makedepends="$makedepends mesa-clc"
+fi
+meson_args="-Dplatforms=wayland -Dgallium-drivers=$_gallium -Dvulkan-drivers=$_vulkan -Dllvm=disabled
+    -Dmesa-clc=system -Dspirv-tools=disabled
     -Dglx=disabled -Degl=enabled -Dgbm=enabled -Dgles1=disabled -Dgles2=enabled -Dopengl=true
     -Dvalgrind=disabled -Dlibunwind=disabled -Dzstd=disabled -Dlmsensors=disabled
     -Dvideo-codecs= -Dvulkan-layers= -Dtools= -Dbuild-tests=false -Dmicrosoft-clc=disabled
     -Dandroid-libbacktrace=disabled -Dgallium-va=disabled
     -Dgallium-extra-hud=false -Dvulkan-beta=false"
-
 # the C++ runtime (libstdc++, libgcc_s) belongs to gcc, which installed systems do not have:
 # link it in statically (this build only: pre_build runs in the package's build process)
-pre_build() { export LDFLAGS="$LDFLAGS -static-libgcc -static-libstdc++"; }
+pre_build() {
+    export LDFLAGS="$LDFLAGS -static-libgcc -static-libstdc++"
+    # mesa-clc's tools must come from the same Mesa release as this build
+    if has_gpu intel; then
+        [ "$(sed -n 's/^version=//p' "$CIG_REPO/packages/mesa-clc/recipe")" = "$version" ] \
+            || die "mesa-clc's recipe is not at mesa $version: bump both together"
+    fi
+}

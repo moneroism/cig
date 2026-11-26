@@ -99,13 +99,15 @@ grep -q " $SYS/etc/resolv.conf " /proc/mounts || mount --bind /etc/resolv.conf "
 # ---- enter ----
 # /etc/profile sets PATH (cig-base: /usr/bin:/usr/sbin), so /cig goes first only after it:
 # else `cigbuild` is cig-tools' installed copy, which builds with its own lib/ and recipes.
-# The prompt is set there too: bash drops PS1 in the non-interactive wrapper
+# The prompt is set there too: bash drops PS1 in the non-interactive wrapper.
+# CIG_PROFILE=generic: the dev system builds the prebuilt packages everyone installs, so the
+# hardware-dependent ones (mesa, wlroots) get every GPU vendor, not this PC's (lib/hardware.sh)
 [ ${#CMD[@]} -gt 0 ] || echo "==> entering the new system. Type 'exit' to leave."
 chroot "$SYS" /usr/bin/env -i \
     HOME=/root TERM="${TERM:-xterm}" \
     CIG_PS1='(chroot) \u:\w\$ ' \
     PATH=/cig:/usr/bin:/usr/sbin \
-    CIG_REPO=/cig CIGBUILD=/cig/cigbuild \
+    CIG_REPO=/cig CIGBUILD=/cig/cigbuild CIG_PROFILE=generic \
     MAKEFLAGS="-j$(nproc)" \
     /bin/bash -c '[ -r /etc/profile ] && . /etc/profile; PATH=/cig:$PATH; export PS1=$CIG_PS1; exec /bin/bash --norc "$@"' \
     bash "${CMD[@]:--i}"
