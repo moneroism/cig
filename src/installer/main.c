@@ -308,7 +308,7 @@ static bool generic_kernel_ok(struct state *s)
 static void build_screen(struct state *s)
 {
 	static const char *const pk[] = { "compile everything on this machine from verified source (hours)",
-	                                  "use the prebuilt packages from the install media (fast)" };
+	                                  "use prebuilt packages: downloaded from cig's package pool, checked against its signed index (fast)" };
 	static const char *const kn[] = { "compile for this machine: only its drivers, a unique module signing key",
 	                                  "generic kernel from the install media" };
 	int sel = s->compile_pkgs ? 0 : 1;
