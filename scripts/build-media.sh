@@ -59,9 +59,10 @@ for p in linux linux-firmware; do
     f=$(CIG_VAR=$MEDIA_VAR "$CIGBUILD" pkgfile "$p")
     [ -f "$f" ] || die "no media $p package ($f): build it first (see the top of this script)"
 done
-# the live firmware must be the compressed build (an older all-firmware package is 2 GiB)
-tar -tzf "$(CIG_VAR=$MEDIA_VAR "$CIGBUILD" pkgfile linux-firmware)" | grep -q '\.zst$' \
-    || die "the media firmware package is not zstd-compressed: delete it and build it again (see the top)"
+# the live firmware must be the compressed build (an older all-firmware package is 2 GiB);
+# grep -c reads the whole list: grep -q would stop tar with SIGPIPE, a failure under pipefail
+zst=$(tar -tzf "$(CIG_VAR=$MEDIA_VAR "$CIGBUILD" pkgfile linux-firmware)" | grep -c '\.zst$' || true)
+[ "${zst:-0}" -gt 0 ] || die "the media firmware package is not zstd-compressed: delete it and build it again (see the top)"
 
 # the generic install kernel (root=PARTLABEL=cig-root): the all-drivers one from the media
 # build if there is one, otherwise the dev system's test kernel
