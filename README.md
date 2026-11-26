@@ -294,12 +294,14 @@ another system's ESP can stay), formats, writes fstab by UUID,
 installs the packages with smoke, compiles the kernel for the detected hardware
 (root found by PARTUUID, its own module signing key), runs the package setup,
 creates the users, and enables networking. An optional component that fails to build is
-skipped and listed at the end (a base package stops the install). The medium's prebuilt package of every recipe stays on the new system in
-`/var/cig/prebuilt` (not installed, about 300 MiB), so `smoke add -p` can install anything
-later, including the build tools needed to compile; `smoke add -c` never uses them (the build
-tools themselves excepted, on a system without a compiler). It ends with `smoke audit` against the new
-system: it must contain exactly what was chosen. Sources and prebuilt packages come
-from the medium only when a chosen package needs them. Log: `/var/log/cig-install.log`.
+skipped and listed at the end (a base package stops the install). The medium is a
+**netinstall** medium (since 0.4.1): before it changes the disk, the installer connects (a
+network cable, or the WiFi network chosen in Hardware: WiFi) and, for prebuilt packages,
+checks cig's package pool (its index must carry a valid signature by a cig release key; see
+docs/smoke.md). Prebuilt packages come from the pool, sources from their upstreams, and the
+machine's firmware files from the live system's firmware (no download). Later, `smoke add -p`
+fetches a package from the pool when it is added. It ends with `smoke audit` against the new
+system: it must contain exactly what was chosen. Log: `/var/log/cig-install.log`.
 
 The kernel is installed as `EFI/BOOT/BOOTX64.EFI`, the path every UEFI firmware finds
 (some find no other), and the installer also adds a firmware boot entry "cig" for that
@@ -340,12 +342,12 @@ system as ISO 9660 with Rock Ridge, and an EFI system partition (the medium's ke
 `EFI/BOOT/BOOTX64.EFI`) used for El Torito and appended as a GPT partition. Only the
 medium's kernel has an initramfs (`scripts/initramfs/init`, built into it): it finds the
 ISO by its volume label `CIG_<version>`, mounts it and starts the live system. It boots as a live system: the medium stays read-only, `/etc`, `/var`, `/home`, `/root`
-and `/mnt` live in RAM, and `/var/cig` on the medium holds every source and prebuilt
-package for the installer. Logins: `root` and `cig`, password `ciglinux` (nothing on the
+and `/mnt` live in RAM; the medium carries the live system (all of linux-firmware,
+zstd-compressed), the installer and the generic install kernel, no packages or sources. Logins: `root` and `cig`, password `ciglinux` (nothing on the
 live system listens on the network; it starts only the logins and seatd). If more than one
 device carries the label, it stops and names them: a disk with a copy of the ISO is not
 started by mistake. Write it to a USB stick with
-`dd if=cig-<version>.iso of=/dev/<the stick> bs=4M conv=fsync`.
+`xzcat cig-<version>.iso.xz | dd of=/dev/<the stick> bs=4M conv=fsync` (or Etcher / Rufus).
 
 On a USB stick the image also has a small writable FAT partition, `CIG-DATA`. `cig-check`
 (log in as root on the live system) checks the machine's hardware and stress-tests it:
@@ -364,11 +366,13 @@ else to /root. Before a release it goes back to the medium only.
 
 From the release after 0.3.0 on, every release has a signed git tag `v<version>` and, next
 to the ISO, `SHA256SUMS` with its detached signature `SHA256SUMS.asc` (both by the release
-key; its fingerprint is published with that first signed release). With the release key
-imported:
+key, `CD38EABE19D767349A620576BFD64F1940F00EA2`, in `release-key` and `keys/`). The ISO is
+published compressed, `cig-<version>.iso.xz` (Etcher and Rufus write it directly). With the
+release key imported:
 
 ```
-gpg --verify SHA256SUMS.asc SHA256SUMS && sha256sum -c SHA256SUMS   # the ISO
+gpg --verify SHA256SUMS.asc SHA256SUMS && sha256sum -c --ignore-missing SHA256SUMS
+xz -d cig-<version>.iso.xz                                          # the ISO (also listed)
 git verify-tag v<version>                                           # the source
 ```
 
@@ -380,8 +384,8 @@ and never older than what is installed.
 The developer signs with `CIG_SIGNING_KEY=<fingerprint> scripts/sign-release.sh
 cig-<version>.iso` (the key must be listed in `release-key` with its public half in
 `keys/<fingerprint>.gpg`, both committed; makes or checks the tag on the current commit,
-writes and signs `cig-release.tar.gz` and `SHA256SUMS`, verifies them, pushes and uploads
-nothing). The release must be GitHub's "latest" release: `smoke update` fetches
+writes `cig-<version>.iso.xz`, writes and signs `cig-release.tar.gz` and `SHA256SUMS`,
+verifies them, pushes and uploads nothing). The release must be GitHub's "latest" release: `smoke update` fetches
 `releases/latest/download/`. `v0.2.0` and `v0.3.0` are unsigned.
 
 ### Testing in QEMU

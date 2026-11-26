@@ -12,7 +12,8 @@
 #       CIG_KERNEL_INITRAMFS=/cig/media-build/initramfs \
 #       CIG_KERNEL_CMDLINE_EXTRA="console=ttyS0,115200 console=tty0" cigbuild build linux
 #   CIG_VAR=/cig/media-build CIG_SOURCE_MIRROR=/var/cig/sources CIG_FIRMWARE=all \
-#       cigbuild build linux-firmware
+#       cigbuild build linux-firmware       (zstd-compressed: the live system's firmware, and
+#                                            the installer copies a machine's files from it)
 #   CIG_VAR=/cig/media-build/generic CIG_SOURCE_MIRROR=/var/cig/sources CIG_KERNEL_PROFILE=generic \
 #       cigbuild build linux       (the installer's "generic kernel": all drivers, root by name)
 #   /cig/scripts/build-media.sh [output.iso]      (default: the repository, cig-<version>.iso)
@@ -22,8 +23,10 @@
 # medium's kernel as EFI/BOOT/BOOTX64.EFI, used for El Torito (CD/DVD) and appended as a GPT
 # partition (USB stick). The kernel's built-in initramfs (scripts/initramfs/init) finds the
 # ISO by its label, mounts it and starts the live system.
-# The live system (cig-live) keeps the medium read-only and works in RAM; its /var/cig holds
-# every source and prebuilt package: the installer's mirror. Logins: root and cig, both with
+# The live system (cig-live) keeps the medium read-only and works in RAM. It is a netinstall
+# medium: the installer fetches prebuilt packages from cig's package pool (lib/pool.sh,
+# scripts/publish-packages.sh) and sources from their upstreams; the medium carries only the
+# generic install kernel and the package sizes for the installer. Logins: root and cig, both with
 # the password ciglinux (only at the keyboard: nothing on the live system listens on the network).
 # The live system starts only the logins and seatd, whatever the dev system has switched on.
 
@@ -56,6 +59,9 @@ for p in linux linux-firmware; do
     f=$(CIG_VAR=$MEDIA_VAR "$CIGBUILD" pkgfile "$p")
     [ -f "$f" ] || die "no media $p package ($f): build it first (see the top of this script)"
 done
+# the live firmware must be the compressed build (an older all-firmware package is 2 GiB)
+tar -tzf "$(CIG_VAR=$MEDIA_VAR "$CIGBUILD" pkgfile linux-firmware)" | grep -q '\.zst$' \
+    || die "the media firmware package is not zstd-compressed: delete it and build it again (see the top)"
 
 # the generic install kernel (root=PARTLABEL=cig-root): the all-drivers one from the media
 # build if there is one, otherwise the dev system's test kernel
@@ -155,11 +161,11 @@ done
 # are the media's own builds
 step "Installing packages into the live system"
 pkgs=$(SMOKE_ROOT= "$SMOKE" list | awk 'NR > 1 { print $1 }' | grep -vx 'linux\|linux-firmware' || true)
-export CIG_VAR=$MEDIA_VAR CIG_PKG_MIRROR=$DEV_VAR/pkgs CIG_SOURCE_MIRROR=$DEV_VAR/sources
+export CIG_VAR=$MEDIA_VAR CIG_PKG_MIRROR=$DEV_VAR/pkgs CIG_SOURCE_MIRROR=$DEV_VAR/sources CIG_POOL_URL=
 for p in linux linux-firmware $pkgs cig-installer cig-live cig-check; do
     SMOKE_ROOT=$STAGE "$SMOKE" add -p -y "$p" > /dev/null || die "could not install $p"
 done
-unset CIG_VAR CIG_PKG_MIRROR CIG_SOURCE_MIRROR
+unset CIG_VAR CIG_PKG_MIRROR CIG_SOURCE_MIRROR CIG_POOL_URL
 
 # the ESP: a small FAT image, mounted while the kernel hook deploys the kernel
 step "EFI system partition"
@@ -193,44 +199,26 @@ libs=$(SMOKE_ROOT=$STAGE "$SMOKE" audit --quick 2>&1 | grep ' needs ' || true)
     || die "the ESP image ($ESP_MB MiB, the El Torito limit) is full: the kernel is too large for it"
 cleanup
 
-# every signed source's signature next to it, so an install can compile offline and still
-# check each source with gpgv (the dev system has signatures only for what it built since
-# gpgv came). Not fatal: a host that does not answer only costs the offline check there.
-step "Signatures for the installer mirror"
-miss=
-for r in "$REPO"/packages/*/recipe; do
-    p=${r%/recipe}; p=${p##*/}
-    grep -q '^signature="[^-]' "$r" || continue
-    CIG_VAR=$DEV_VAR "$CIGBUILD" fetch "$p" > /dev/null 2>&1 || miss="$miss $p"
-done
-[ -z "$miss" ] || echo "    not fetched (an offline compile of these needs the network):$miss"
-
-# the installer's mirror: every source and prebuilt package (hard links, no copies);
-# target kernels are always built per machine, and the generic one has its own place
-step "Installer mirror (sources, packages)"
+# no source or package mirror (netinstall): only what the installer needs from the medium
+step "Installer files (package sizes, generic kernel)"
 # hard links where the staging folder is on the same filesystem, copies otherwise
 link() { cp -al "$@" 2>/dev/null || cp -a "$@"; }
 # build, db, logs: cigbuild creates them when it starts, and on the read-only medium it could
 # not (the installer's cigbuild pkgfile calls failed: only installed packages were kept)
 mkdir -p "$STAGE"/var/cig/{sources,pkgs,build,db,logs}
-link "$DEV_VAR/sources/." "$STAGE/var/cig/sources/"
-for f in "$DEV_VAR"/pkgs/*.tar.gz $(for p in $REPO_PKGS; do echo "$MEDIA_VAR/pkgs/$p-[0-9]*.tar.gz"; done); do
-    [ -f "$f" ] || continue
-    case "${f##*/}" in linux-[0-9]*|linux-firmware-*) continue ;; esac
-    link "$f" "$STAGE/var/cig/pkgs/"
-    [ -f "$f.sha256" ] && link "$f.sha256" "$STAGE/var/cig/pkgs/"
-done
-# installed sizes for the installer's catalog (KiB, the size= of each package's .PKGINFO;
-# packages built before cigbuild recorded it are left out and shown without a size)
-for f in "$STAGE"/var/cig/pkgs/*.tar.gz; do
-    [ -f "$f" ] || continue
-    info=$(tar -xzOf "$f" ./.PKGINFO 2>/dev/null || true)
-    n=$(printf '%s\n' "$info" | sed -n 's/^name=//p'); sz=$(printf '%s\n' "$info" | sed -n 's/^size=//p')
-    [ -z "$n" ] || [ -z "$sz" ] || echo "$n $sz"
+# installed sizes for the installer's catalog (KiB, the size= of each current package's
+# .PKGINFO: the packages the pool serves; ones without it are shown without a size)
+for r in "$REPO"/packages/*/recipe; do
+    p=${r%/recipe}; p=${p##*/}
+    f=$("$CIGBUILD" pkgfile "$p" 2>/dev/null) && [ -f "$f" ] || continue
+    sz=$(tar -xzOf "$f" ./.PKGINFO 2>/dev/null | sed -n 's/^size=//p')
+    [ -z "$sz" ] || echo "$p $sz"
 done | sort -u > "$STAGE/var/cig/pkgs/sizes"
-# the generic install kernel (chosen and checked at the top)
-mkdir -p "$STAGE"/var/cig/generic/{sources,build,db,logs}
-link "$generic/pkgs" "$STAGE/var/cig/generic/"
+# the generic install kernel (chosen and checked at the top): the recipe's version only
+mkdir -p "$STAGE"/var/cig/generic/{sources,pkgs,build,db,logs}
+f=$(CIG_VAR=$generic "$CIGBUILD" pkgfile linux)
+link "$f" "$STAGE/var/cig/generic/pkgs/"
+[ ! -f "$f.sha256" ] || link "$f.sha256" "$STAGE/var/cig/generic/pkgs/"
 
 # ---- the ISO: Rock Ridge (owners, modes, links as they are), the ESP image for El Torito
 # and as an appended GPT partition (the same file: UEFI finds it on a CD and on a USB stick)

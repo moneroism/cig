@@ -10,7 +10,9 @@
 #      cig-release.tar.gz.sig: what smoke update fetches (lib/sync.sh), checked there with
 #      gpgv against the keys in release-key, so the key must be listed in release-key and its
 #      public half in keys/<fingerprint>.gpg, both committed before the tag
-#   3. SHA256SUMS next to the ISO, listing both, and its detached signature SHA256SUMS.asc
+#   3. cig-VERSION.iso.xz next to the ISO: the download (GitHub takes files up to 2 GiB; the
+#      ISO itself may be larger). Written with xz, which Etcher and Rufus read directly
+#   4. SHA256SUMS next to the ISO, listing all three, and its detached signature SHA256SUMS.asc
 # Every signature is verified before it ends. Nothing is pushed or uploaded: it prints what
 # to publish. Users check a release as README ("Verifying a release") describes.
 set -euo pipefail
@@ -58,7 +60,13 @@ gpgv --homedir "$GV" --keyring "$GV/keyring.gpg" --status-fd 1 "$DIR/cig-release
 rm -rf "$GV"
 
 cd "$DIR"
-sha256sum "$NAME" cig-release.tar.gz > SHA256SUMS
+if [ ! -f "$NAME.xz" ] || [ "$NAME.xz" -ot "$NAME" ]; then
+    echo "compressing $NAME (xz -9, several minutes)"
+    xz -9 -T0 -k -f "$NAME"
+fi
+xz -t "$NAME.xz" || die "$NAME.xz is damaged"
+[ "$(stat -c %s "$NAME.xz")" -lt 2147483648 ] || echo "   ! $NAME.xz is 2 GiB or more: GitHub will not take it"
+sha256sum "$NAME" "$NAME.xz" cig-release.tar.gz > SHA256SUMS
 gpg --local-user "$KEY" --armor --detach-sign --yes --output SHA256SUMS.asc SHA256SUMS
 gpg --status-fd 1 --verify SHA256SUMS.asc SHA256SUMS 2>/dev/null | signed_by_key \
     || die "SHA256SUMS.asc does not verify with $KEY"
@@ -68,6 +76,6 @@ cat <<EOF
 
 Signed. To publish (nothing was pushed or uploaded):
   git -C $REPO push origin $TAG
-  upload to the release $TAG: $NAME, cig-release.tar.gz, cig-release.tar.gz.sig,
+  upload to the release $TAG: $NAME.xz, cig-release.tar.gz, cig-release.tar.gz.sig,
       SHA256SUMS, SHA256SUMS.asc (smoke update finds the newest release's files)
 EOF

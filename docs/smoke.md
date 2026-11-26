@@ -54,9 +54,11 @@ There is no `smoke install`: adding an app *is* installing it.
 1. **Resolve** `foo`: a full link is used as-is; a name is looked up in the
    name file (below).
 2. **Compile on device?** `[Y/n]` – skipped (yes) with `-c`.
-   - yes: every missing dependency is compiled too (the installer's prebuilt packages in
-     `/var/cig/prebuilt` are used only for prebuilt installs). If build tools are missing,
-     smoke asks whether to install them first (prebuilt: nothing could compile them).
+   - yes: every missing dependency is compiled too (prebuilt packages are used only for
+     prebuilt installs). If build tools are missing, smoke asks whether to install them
+     first (prebuilt: nothing could compile them).
+   - `-p`: the prebuilt package from cig's package pool (below), checked against the pool's
+     signed index.
    - no: use a prebuilt release from upstream (must run on musl; glibc
      compatibility is planned as an option).
 3. **Show** source link, version, signature status, and the recipe if it was
@@ -166,12 +168,18 @@ cig's own system packages are recipes in the cig repository.
   sign with OpenPGP. It is a package that the installer's package screen has ticked by
   default; unticking it shows a warning (yes / no) explaining that downloads can then only
   be checked against their pinned SHA256, not against their authors' keys.
-- **Prebuilt packages** are optional and signed by the project key. **Reproducible builds**
+- **Prebuilt packages** are optional and come from cig's **package pool**: the release
+  `packages` of github.com/moneroism/pool. One index, `INDEX`, lists every package file with
+  its SHA256 and the date it was made; it is signed by a cig release key (`INDEX.sig`, the
+  same keys as cig's own updates, `release-key`). A package is used only when its file matches
+  the verified index; an index older than the last one this system verified is refused
+  (`lib/pool.sh`; `cigbuild pool` checks it, `scripts/publish-packages.sh` publishes).
+  Planned: **reproducible builds**
   make them checkable: anyone can rebuild a recipe and compare the checksum, so trusting
   the prebuilt package never means trusting the cig developer. Compiling on the device
   stays the default.
-- **No mirrors.** Sources come from their upstreams; cig's own downloads (recipes, prebuilt
-  packages) from the repository's release pages. HTTPS only, and nothing is used before
+- **No source mirrors.** Sources come from their upstreams; cig's own downloads from its
+  release pages (recipes: moneroism/cig, prebuilt packages: moneroism/pool). HTTPS only, and nothing is used before
   its signature or pinned checksum has been verified.
 
 ## Layout
