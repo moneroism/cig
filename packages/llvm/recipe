@@ -3,12 +3,13 @@
 # Targets: x86 only; no sanitizer runtimes (they do not build on musl, nothing here needs them).
 name=llvm
 version=23.1.5
+rel=2
 license="Apache-2.0 WITH LLVM-exception"
 source="https://github.com/llvm/llvm-project/releases/download/llvmorg-$version/llvm-project-$version.src.tar.xz"
 signature="https://github.com/llvm/llvm-project/releases/download/llvmorg-$version/llvm-project-$version.src.tar.xz.sig"
 sha256="fb50b1eac93ddeb3aa8dab4cfe324dff74f4a9c2bdee6160c9e36188f8d06a6e"
 keys="FFB3368980F3E6BB5737145A316C56D064CACBA5"
-depends="zlib zstd libffi"
+depends="zlib zstd libffi gcc"
 makedepends="cmake samurai python"
 style=custom
 do_build() {

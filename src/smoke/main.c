@@ -682,7 +682,7 @@ static int update(int argc, char **argv, bool check, enum compile compile, bool 
 	puts("-- libraries");
 	int bad = audit_libraries();
 	if (bad) {
-		fprintf(stderr, "!! smoke update: %d program(s) need a library that is no longer installed (above)\n", bad);
+		fprintf(stderr, "!! smoke update: %d library problem(s) (above): a library no package provides, or one from a package not declared in depends=\n", bad);
 		return 1;
 	}
 	return 0;
