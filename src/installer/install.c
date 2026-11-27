@@ -70,11 +70,47 @@ static bool log_to_medium(void)
 	char *mk[] = { "mkdir", "-p", (char *)dir, NULL };
 	char *mnt[] = { "mount", "-t", "vfat", dev, (char *)dir, NULL };
 	char *cp[] = { "cp", (char *)LOG, "/run/cig-data/cig-install.log", NULL };
+	char *sync_[] = { "sync", NULL };
 	char *um[] = { "umount", (char *)dir, NULL };
+	char *loop = NULL;
 	bool ok = run(mk) == 0 && run(mnt) == 0;
+	if (!ok) {
+		/* the live system holds the whole stick (the ISO is mounted from it), so its partition
+		 * cannot be opened on its own ("Resource busy"): a loop device at the partition's
+		 * offset, as cig-check does (the FAT area lies after the ISO data) */
+		const char *part = strrchr(dev, '/') ? strrchr(dev, '/') + 1 : dev;
+		char *sys = xasprintf("/sys/class/block/%s", part), *start_f = xasprintf("%s/start", sys);
+		char *real = realpath(sys, NULL), *start = read_text(start_f), *slash = real ? strrchr(real, '/') : NULL;
+		if (slash && start && atoll(start) > 0) {
+			*slash = '\0';   /* the disk's folder: .../block/sda/sda3 -> .../block/sda */
+			char *disk = xasprintf("/dev/%s", strrchr(real, '/') + 1), *ofs = xasprintf("%lld", atoll(start) * 512);
+			char *mp[] = { "modprobe", "loop", NULL }, *free_[] = { "losetup", "-f", NULL };
+			run(mp);
+			loop = capture(free_);
+			char *ls[] = { "losetup", "-o", ofs, loop, disk, NULL };
+			char *lmnt[] = { "mount", "-t", "vfat", loop, (char *)dir, NULL };
+			if (loop && *loop && run(ls) == 0) {
+				ok = run(lmnt) == 0;
+			} else {
+				free(loop);
+				loop = NULL;
+			}
+			free(disk);
+			free(ofs);
+		}
+		free(sys);
+		free(start_f);
+		free(real);
+		free(start);
+	}
 	if (ok) {
-		ok = run(cp) == 0;
+		ok = run(cp) == 0 && run(sync_) == 0;
 		ok = run(um) == 0 && ok;
+	}
+	if (loop) {
+		char *ld[] = { "losetup", "-d", loop, NULL };
+		run(ld);
+		free(loop);
 	}
 	free(dev);
 	return ok;
