@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-or-later */
 /* Copyright (C) 2026 moneroism */
-/* wifi.h - the WiFi networks in range (wpa_cli scan), for the Hardware: WiFi screen */
+/* wifi.h - the WiFi networks in range (wpa_cli scan), for the Network: WiFi screen */
 #ifndef WIFI_H
 #define WIFI_H
 

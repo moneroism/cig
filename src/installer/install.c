@@ -476,7 +476,7 @@ static void efi_boot_entry(struct state *s, const struct part *esp)
 
 /* ---------------- the network ---------------- */
 
-/* the wpa_supplicant network block for the WiFi network chosen in Hardware: WiFi, or NULL.
+/* the wpa_supplicant network block for the WiFi network chosen at the start, or NULL.
  * WPA2: the psk wpa_passphrase derives (the passphrase goes through stdin: never in a command
  * line or the log; in_target: the new system's wpa_passphrase). WPA3 (SAE) needs the passphrase
  * itself: sae_password, in a root-only file as with NetworkManager and iwd. Name and passphrase
@@ -586,7 +586,7 @@ static void live_network(struct state *s)
 		fail(*s->ssid ? "no network: neither a network cable nor the WiFi network gave an address.\n"
 		                "Packages come from the network (this medium carries none)."
 		              : "no network: plug in a network cable, or choose a WiFi network\n"
-		                "(Hardware: WiFi). Packages come from the network (this medium carries none).");
+		                "(restart cig-install). Packages come from the network (this medium carries none).");
 	if (!s->compile_pkgs) {
 		char *argv[] = { "env", "CIG_VAR=/run/cig-pool", (char *)s->cigbuild, "pool", NULL };
 		if (run(argv) != 0)

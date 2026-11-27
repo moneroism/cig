@@ -175,7 +175,7 @@ static void wifi_screen(struct state *s)
 	static struct wifi_net nets[WIFI_MAX];
 	char ssid[64] = "", shown[136] = "";
 	for (int sel = 0;;) {
-		ui_wait("Hardware: WiFi", "Looking for WiFi networks (up to 10 seconds)...");
+		ui_wait("Network: WiFi", "Looking for WiFi networks (up to 10 seconds)...");
 		int n = wifi_scan("wlan0", nets, WIFI_MAX);
 		const char **items = xmalloc((size_t)(n > 0 ? n + 2 : 2) * sizeof(char *));
 		const char **values = xmalloc((size_t)(n > 0 ? n + 2 : 2) * sizeof(char *));
@@ -193,7 +193,7 @@ static void wifi_screen(struct state *s)
 		values[k++] = NULL;
 		if (sel >= k)
 			sel = 0;
-		int c = ui_menu("Hardware: WiFi", n < 0 ? "No scan was possible (see the install log). Type the name of the network."
+		int c = ui_menu("Network: WiFi", n < 0 ? "No scan was possible (see the install log). Type the name of the network."
 		                                  : n == 0 ? "No WPA2/WPA3-Personal network found."
 		                                           : "WPA2/WPA3-Personal networks in range, strongest first.",
 		                items, values, k, &sel);
@@ -207,10 +207,10 @@ static void wifi_screen(struct state *s)
 			continue;
 		if (c == k - 2) {
 			snprintf(ssid, sizeof(ssid), "%s", s->ssid);
-			if (!ui_input("Hardware: WiFi", "Network name (SSID):", ssid, sizeof(ssid), false) || !*ssid)
+			if (!ui_input("Network: WiFi", "Network name (SSID):", ssid, sizeof(ssid), false) || !*ssid)
 				continue;
 			if (strlen(ssid) > 32) {
-				ui_msg("Hardware: WiFi", "A network name has at most 32 characters.");
+				ui_msg("Network: WiFi", "A network name has at most 32 characters.");
 				continue;
 			}
 			snprintf(shown, sizeof(shown), "%s", ssid);
@@ -223,7 +223,7 @@ static void wifi_screen(struct state *s)
 	char *q = xasprintf("Password for %s:", shown);
 	for (;;) {
 		char psk[256] = "";
-		if (!ui_input("Hardware: WiFi", q, psk, sizeof(psk), true))
+		if (!ui_input("Network: WiFi", q, psk, sizeof(psk), true))
 			break;
 		/* WPA2/WPA3-Personal: 8 to 63 printable ASCII characters (as wpa_supplicant wants);
 		 * ui_input only takes printable ASCII */
@@ -235,7 +235,7 @@ static void wifi_screen(struct state *s)
 			break;
 		}
 		memset(psk, 0, sizeof(psk));
-		ui_msg("Hardware: WiFi", "A WiFi password has 8 to 63 characters (letters, digits, symbols).");
+		ui_msg("Network: WiFi", "A WiFi password has 8 to 63 characters (letters, digits, symbols).");
 	}
 	free(q);
 }
@@ -263,15 +263,10 @@ static void hardware_screen(struct state *s)
 		}
 		free(items);
 		free(on);
+	} else {
+		ui_msg("Hardware", "No driver of this machine requests firmware.");
 	}
-	if (!file_exists("/sys/class/net/wlan0")) {
-		ui_msg("Hardware", s->ndrv ? "No WiFi device found." : "No driver of this machine requests firmware.\nNo WiFi device found.");
-	} else if (ui_yesno("Hardware: WiFi", "Set up a WiFi network for the new system? (WPA2/WPA3-Personal)", !!*s->ssid)) {
-		wifi_screen(s);
-	} else {   /* no: also forget a network chosen on an earlier visit */
-		s->ssid[0] = '\0';
-		memset(s->psk, 0, sizeof(s->psk));
-	}
+	/* the WiFi network is chosen once, at the start (laptop test 2026-11-27: asked twice) */
 	dns_screen(s);
 }
 
@@ -722,21 +717,23 @@ int main(int argc, char **argv)
 	ui_init();
 	if (!getenv("CIG_INSTALL_DEMO"))
 		clock_screen();
-	/* a netinstall medium: without a network cable, the WiFi network comes first (the
-	 * installer connects with it before the disk changes, and the new system keeps it) */
+	/* the WiFi network, asked only here: on a netinstall medium without a network cable the
+	 * installer connects with it before the disk changes; the new system keeps it either way */
+	bool offline = false;
 	if (needs_network()) {
 		ui_wait("Network", "Looking for a network cable (a few seconds)...");
-		if (!cable_network()) {
-			if (!file_exists("/sys/class/net/wlan0"))
-				ui_msg("Network", "No network cable and no WiFi device found.\n"
-				                  "Packages come from the network (this medium carries none):\n"
-				                  "plug in a network cable before you choose Install.");
-			else if (ui_yesno("Network", "No network cable found. Packages come from the network (this medium "
-			                             "carries none).\n\nChoose a WiFi network now? The new system keeps it "
-			                             "(Hardware, network).", true))
-				wifi_screen(&s);
-		}
+		offline = !cable_network();
 	}
+	if (!file_exists("/sys/class/net/wlan0")) {
+		if (offline)
+			ui_msg("Network", "No network cable and no WiFi device found.\n"
+			                  "Packages come from the network (this medium carries none):\n"
+			                  "plug in a network cable before you choose Install.");
+	} else if (offline ? ui_yesno("Network", "No network cable found. Packages come from the network (this medium "
+	                                         "carries none).\n\nChoose a WiFi network now? The new system keeps it.",
+	                              true)
+	                   : ui_yesno("Network", "Set up a WiFi network for the new system? (WPA2/WPA3-Personal)", false))
+		wifi_screen(&s);
 
 	int sel = 0;
 	for (;;) {

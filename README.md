@@ -296,7 +296,7 @@ installs the packages with smoke, compiles the kernel for the detected hardware
 creates the users, and enables networking. An optional component that fails to build is
 skipped and listed at the end (a base package stops the install). The medium is a
 **netinstall** medium (since 0.4.1): before it changes the disk, the installer connects (a
-network cable, or the WiFi network chosen in Hardware: WiFi) and, for prebuilt packages,
+network cable, or the WiFi network chosen at the start) and, for prebuilt packages,
 checks cig's package pool (its index must carry a valid signature by a cig release key; see
 docs/smoke.md). Prebuilt packages come from the pool, sources from their upstreams, and the
 machine's firmware files from the live system's firmware (no download). Later, `smoke add -p`
