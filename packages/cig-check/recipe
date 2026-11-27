@@ -1,7 +1,7 @@
 # cig-check - hardware check and stress test of the machine it runs on, with a report (on the
 # medium's CIG-DATA partition when it is plugged in, else /root; see scripts/build-media.sh).
-# Temporary: on the medium, and for now also a component (default on) so test installs can
-# measure themselves (RAM, sound, suspend); before a release: default off or no group=. The
+# Temporary: on the medium, and also a component (Tools, off by default: developer's decision
+# for 0.4.1) so an installed system can measure itself (RAM, sound, suspend). The
 # installer also runs the medium's copy once in quick, no-questions mode and keeps the report in
 # its log. Removing it: delete this folder and its name in build-media.sh and in install.c.
 name=cig-check
@@ -11,7 +11,6 @@ source=""
 sha256=""
 depends="alsa-utils"   # it plays and records sound
 group="tools"
-default=on
 style=custom
 nostrip=1
 do_build() { :; }
