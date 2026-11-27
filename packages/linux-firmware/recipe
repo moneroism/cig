@@ -77,7 +77,13 @@ do_build() {
 
     if [ -n "${CIG_FIRMWARE_TREE:-}" ]; then   # plain files, as from the archive
         while read -r f; do
-            if [ -f "$CIG_FIRMWARE_TREE/$f" ]; then
+            # only the tree's linux-firmware files (its firmware.list): other packages put
+            # files there too, and one copied here would belong to two packages (laptop test
+            # 2026-11-27: cfg80211's regulatory.db, from wireless-regdb; smoke then refused
+            # wireless-regdb, and wpa_supplicant, which needs it, was not installed)
+            if [ -f /usr/share/cig/firmware.list ] && ! grep -qxF "$f" /usr/share/cig/firmware.list; then
+                echo "not in linux-firmware $version: $f"
+            elif [ -f "$CIG_FIRMWARE_TREE/$f" ]; then
                 install -D -m 644 "$CIG_FIRMWARE_TREE/$f" "$WORK/out/$f"
             elif [ -f "$CIG_FIRMWARE_TREE/$f.zst" ]; then
                 mkdir -p "$(dirname "$WORK/out/$f")"
